@@ -656,5 +656,23 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 </script>
 
+<!-- 资源加载优先级：核心工具库优先（defer），业务库异步（async） -->
+    <!-- 核心依赖（必须先加载） -->
+    <script src="js/workbench-utils.js?v=1.0.0" defer></script>
+    <script src="js/workbench-storage.js?v=1.0.0" defer></script>
+    <script src="js/workbench-config.js?v=1.0.0" defer></script>
+    <script src="js/workbench-auth.js?v=1.0.0" defer></script>
+    <!-- 业务模块（异步加载，不阻塞渲染） -->
+    <script src="js/workbench-app.js?v=1.0.0" async></script>
+    <script src="js/workbench-crm.js?v=1.0.0" async></script>
+    <script src="js/workbench-dashboard.js?v=1.0.0" async></script>
+    <script src="js/workbench-expenses.js?v=1.0.0" async></script>
+    <script src="js/workbench-finance.js?v=1.0.0" async></script>
+    <script src="js/workbench-firebase.js?v=1.0.0" async></script>
+    <script src="js/workbench-modal.js?v=1.0.0" async></script>
+    <script src="js/workbench-orders.js?v=1.0.0" async></script>
+    <script src="js/workbench-state.js?v=1.0.0" async></script>
+    <script src="js/workbench-suppliers.js?v=1.0.0" async></script>
+
 </body>
 </html>
