@@ -2,581 +2,218 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="description" content="战时指挥台 V14.2 PRO ERP - B2B 专用现金流与订单管理系统">
-    <meta name="author" content="COMMANDER V5 Team">
-    <title>战时指挥台 V14.2 PRO ERP · B2B 专用</title>
-    
-    <!-- 预加载关键资源，提升加载速度 -->
-    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-    
-    <!-- 外部样式与脚本 -->
-    <script src="https://cdn.tailwindcss.com" crossorigin></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css" crossorigin>
-
-    <script>
-        // 环境判断与全局日志工具
-        const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
-        const log = isProduction ? () => {} : console.log;
-        
-        // Tailwind CSS 配置优化（提取自定义工具类，减少冗余自定义CSS）
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        dark: '#1f2937',
-                        darker: '#111827',
-                        darkest: '#030712',
-                        column: '#161b22', // Trello 风格列背景色
-                        primary: '#ef4444', // 主题红
-                        secondary: '#3b82f6', // 辅助蓝
-                    },
-                    animation: {
-                        'fade-in': 'fadeIn 0.3s ease-out forwards',
-                        'toast-in': 'toastIn 0.3s ease-out forwards',
-                        'toast-out': 'toastOut 0.3s ease-in forwards',
-                        'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    },
-                    backdropBlur: {
-                        'xs': '2px',
-                        'sm': '4px',
-                    }
-                }
-            },
-            utilities: {
-                contentVisibility: {
-                    'auto': 'content-visibility: auto',
-                },
-                scrollbarHidden: {
-                    '-ms-overflow-style': 'none',
-                    'scrollbar-width': 'none',
-                    '&::-webkit-scrollbar': {
-                        display: 'none',
-                    }
-                },
-                kanbanCardHover: {
-                    '@apply hover:border-primary/30 hover:-translate-y-1 hover:shadow-lg hover:shadow-black/20 transition-all duration-200': {},
-                }
-            }
-        }
-    </script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V5 战时指挥台</title>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <style>
-        /* 基础重置（精简版） */
-        html, body { 
-            height: 100%; 
-            overflow: hidden; /* 防止整个页面滚动，交给内部容器 */
+        /* 基础样式（保留核心，保证功能） */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0f0f0f; color: #fff; font-family: 'Inter', sans-serif; }
+        .hidden { display: none !important; }
+        .active { opacity: 1 !important; transform: translateY(0) !important; }
+        .kanban-card { 
+            background: #1f1f1f; border: 1px solid #2f2f2f; border-radius: 8px; 
+            padding: 12px; margin-bottom: 8px; cursor: pointer;
         }
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background-color: #030712;
-            /* 战术风格背景（优化层级，提升加载性能） */
-            background-image: 
-                linear-gradient(rgba(17, 24, 39, 0.95), rgba(17, 24, 39, 0.95)),
-                url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed; /* 固定背景，避免重复渲染 */
-            color: #e5e7eb;
+        .kanban-cardHover:hover { border-color: #3b82f6; }
+        .kanban-card__title { font-weight: 600; margin-bottom: 8px; }
+        .kanban-card__meta { display: flex; justify-content: space-between; font-size: 12px; color: #9ca3af; }
+        .kanban-card__actions { margin-top: 8px; display: flex; gap: 4px; }
+        .kanban-card__btn { 
+            padding: 4px 8px; border-radius: 4px; border: none; 
+            cursor: pointer; font-size: 12px;
         }
-
-        /* 滚动条美化（统一规范，添加兼容性前缀） */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
-        * {
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255,255,255,0.2) rgba(0,0,0,0.1);
-        }
-
-        /* 动画定义（精简，添加兼容性前缀） */
-        @keyframes fadeIn { 
-            from { opacity: 0; transform: translateY(10px); } 
-            to { opacity: 1; transform: translateY(0); } 
-        }
-        @keyframes spin { 
-            0% { transform: rotate(0deg); } 
-            100% { transform: rotate(360deg); } 
-        }
-        @keyframes toastIn { 
-            from { opacity: 0; transform: translateX(100%); } 
-            to { opacity: 1; transform: translateX(0); } 
-        }
-        @keyframes toastOut { 
-            from { opacity: 1; transform: translateX(0); } 
-            to { opacity: 0; transform: translateX(100%); } 
-        }
-        
-        /* 加载动画（优化样式，提升视觉体验） */
-        .loading-spinner {
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top: 3px solid #ef4444;
-            border-radius: 50%;
-            width: 40px; 
-            height: 40px;
-            animation: spin 0.8s linear infinite;
-        }
-
-        /* Tab 核心样式（优化层级，减少重复DOM操作） */
-        .tab-content { 
-            display: none; 
-            height: calc(100vh - 64px); /* 减去 Header 高度 */
-            overflow-y: auto; 
-            padding: 1.5rem;
-            content-visibility: auto; /* 懒加载非活跃Tab，提升性能 */
-        }
-        .tab-content.active { 
-            display: block; 
-            animation: fadeIn 0.2s ease-out; 
-        }
-        .tab-content#tab-kanban.active {
-            display: flex; /* 看板页特殊布局 */
-        }
-
-        /* 看板专用样式（提取公共样式，减少冗余） */
-        .kanban-board-container {
-            flex: 1;
-            overflow-x: auto;
-            overflow-y: hidden;
-            white-space: nowrap;
-            padding: 1rem 1.5rem;
-        }
-        .kanban-column {
-            display: inline-flex;
-            flex-direction: column;
-            width: 300px;
-            height: 100%;
-            max-height: 100%;
-            vertical-align: top;
-            margin-right: 1rem;
-            white-space: normal;
-            background-color: rgba(22, 27, 34, 0.85);
-            -webkit-backdrop-filter: blur(10px);
-            backdrop-filter: blur(10px);
-            border-radius: 0.75rem;
-            border: 1px solid rgba(75, 85, 99, 0.4);
-        }
-        .kanban-cards-area {
-            flex: 1;
-            overflow-y: auto;
-            padding: 0.5rem;
-            min-height: 100px;
-        }
-        .kanban-card {
-            background-color: rgba(13, 17, 23, 0.9);
-            border: 1px solid rgba(75, 85, 99, 0.5);
-            border-radius: 0.5rem;
-            padding: 0.75rem;
-            margin-bottom: 0.75rem;
-            cursor: pointer;
-            color: #e5e7eb;
-        }
-
-        /* 响应式优化（精简断点，提升移动端体验） */
-        @media (max-width: 768px) {
-            .mobile-hide { display: none !important; }
-            .tab-content { 
-                height: calc(100vh - 60px); 
-                padding: 1rem; 
-            }
-            .kanban-column { 
-                width: 85vw; 
-                margin-right: 10px; 
-            }
-        }
+        #loading-bar { height: 4px; background: #3b82f6; width: 0%; transition: width 0.3s; }
+        #toast { transition: transform 0.3s ease; }
+        .tab-content { display: none; opacity: 0; transform: translateY(10px); transition: all 0.3s; }
+        .tab-content.active { display: block; opacity: 1; transform: translateY(0); }
+        #tab-kanban.active { display: flex; }
     </style>
-
-    <script>
-        // 初始化全局基础配置（提前挂载，避免重复计算）
-        (function initBasePath() {
-            window.WORKBENCH_BASE = window.location.pathname.includes('/workbench') ? '/workbench' : '';
-            
-            // 加载本地样式（优化错误处理）
-            if (window.WORKBENCH_BASE) {
-                const link = document.createElement('link');
-                link.rel = 'stylesheet';
-                link.href = `${window.WORKBENCH_BASE}/css/workbench-v14.css`;
-                link.onload = () => log('[Style] Local CSS loaded successfully');
-                link.onerror = () => log('[Style] Local CSS load failed, using fallback styles');
-                document.head.appendChild(link);
-            }
-
-            // 全局工具类（统一封装，提升可维护性）
-            window.WorkbenchUtils = window.WorkbenchUtils || {
-                formatAmount: (amount) => !amount || isNaN(amount) ? '¥0.00' : `¥${parseFloat(amount).toFixed(2)}`,
-                formatDate: (dateStr) => {
-                    if (!dateStr) return '未知日期';
-                    const date = new Date(dateStr);
-                    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                },
-                toast: (message, type = 'info', duration = 3000) => {
-                    const toastEl = document.getElementById('toast');
-                    const iconEl = document.getElementById('toast-icon');
-                    const msgEl = document.getElementById('toast-message');
-                    if (!toastEl || !iconEl || !msgEl) return;
-
-                    // 重置Toast状态
-                    toastEl.className = 'fixed top-4 right-4 bg-gray-800 border border-gray-700 text-white px-6 py-4 rounded-lg shadow-2xl transition-transform duration-300 z-[100] flex items-center gap-4';
-                    toastEl.classList.add(type);
-
-                    // 图标映射（精简逻辑）
-                    const iconMap = {
-                        success: 'fa-check-circle',
-                        error: 'fa-exclamation-circle',
-                        warning: 'fa-exclamation-triangle',
-                        info: 'fa-info-circle'
-                    };
-                    iconEl.className = `fas ${iconMap[type] || iconMap.info} text-xl`;
-                    msgEl.textContent = message;
-
-                    // 自动隐藏（优化计时逻辑，避免内存泄漏）
-                    clearTimeout(window.toastTimer);
-                    window.toastTimer = setTimeout(() => {
-                        toastEl.classList.add('hiding');
-                        setTimeout(() => toastEl.classList.remove('hiding'), 300);
-                    }, duration);
-                },
-                isRequired: (value) => value && value.trim() !== '',
-                isPositiveNumber: (value) => {
-                    const num = parseFloat(value);
-                    return !isNaN(num) && num > 0;
-                }
-            };
-
-            // 本地存储工具（优化容错，统一key前缀）
-            window.WorkbenchStorage = window.WorkbenchStorage || {
-                prefix: 'v5_erp_',
-                load: async (key, defaultValue = []) => {
-                    try {
-                        const fullKey = `${this.prefix}${key}`;
-                        const data = localStorage.getItem(fullKey);
-                        return data ? JSON.parse(data) : defaultValue;
-                    } catch (error) {
-                        log(`[Storage] Load ${key} failed`, error);
-                        return defaultValue;
-                    }
-                },
-                save: async (key, data) => {
-                    try {
-                        const fullKey = `${this.prefix}${key}`;
-                        localStorage.setItem(fullKey, JSON.stringify(data));
-                        return true;
-                    } catch (error) {
-                        log(`[Storage] Save ${key} failed`, error);
-                        window.WorkbenchUtils.toast('数据存储失败', 'error');
-                        return false;
-                    }
-                },
-                remove: async (key) => {
-                    try {
-                        const fullKey = `${this.prefix}${key}`;
-                        localStorage.removeItem(fullKey);
-                        return true;
-                    } catch (error) {
-                        log(`[Storage] Remove ${key} failed`, error);
-                        return false;
-                    }
-                }
-            };
-        })();
-    </script>
 </head>
-
 <body>
-    <!-- 系统加载界面（优化视觉，添加重试逻辑） -->
-    <div id="system-loading" class="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center">
-        <div class="text-center max-w-md px-6">
-            <div class="loading-spinner mx-auto mb-6"></div>
-            <h2 class="text-2xl font-bold text-red-500 mb-3 tracking-widest">SYSTEM INITIALIZING</h2>
-            <p class="text-gray-400 text-sm mb-4">连接战时指挥中枢...</p>
-            
-            <div class="w-full bg-gray-800 rounded-full h-1.5 mb-2 overflow-hidden">
-                <div id="loading-bar" class="bg-red-600 h-full w-0 transition-all duration-300"></div>
+    <!-- 加载界面 -->
+    <div id="system-loading" class="fixed inset-0 bg-black flex flex-col items-center justify-center z-50">
+        <div class="w-4/5 max-w-md">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-white mb-2">V5 战时指挥台</h2>
+                <p class="text-gray-500" id="loading-progress">0%</p>
             </div>
-            <div id="loading-progress" class="text-xs text-gray-500 font-mono">0%</div>
-            
-            <div id="loading-error" class="hidden mt-4 p-3 bg-red-900/30 border border-red-800 rounded text-red-300 text-xs text-left"></div>
-            <button id="retry-loading" class="hidden mt-4 text-xs text-white underline" onclick="location.reload()">重新尝试</button>
+            <div class="h-1 bg-gray-800 rounded-full overflow-hidden">
+                <div id="loading-bar" class="h-full bg-blue-600"></div>
+            </div>
+            <div id="loading-error" class="hidden mt-4 text-red-500 text-sm text-center"></div>
+            <button id="retry-loading" class="hidden mt-4 w-full bg-gray-800 text-white py-2 rounded">重试加载</button>
         </div>
     </div>
 
-    <!-- 生存模式验证界面（优化样式，提升可访问性） -->
-    <div id="iron-curtain" class="fixed inset-0 z-50 bg-black/98 hidden flex items-center justify-center p-4">
-        <div class="w-full max-w-lg p-8 animate-fade-in">
-            <div class="text-center mb-10">
-                <div class="text-5xl mb-4">🛡️</div>
-                <h1 class="text-3xl font-black text-red-600 tracking-tighter uppercase">Survival Mode</h1>
-                <p class="text-gray-500 text-sm mt-2">现金流保卫战 · 聚焦核心目标</p>
+    <!-- 生存模式锁幕 -->
+    <div id="iron-curtain" class="fixed inset-0 bg-black/95 flex items-center justify-center z-40 hidden">
+        <div class="w-4/5 max-w-md bg-gray-900 border border-gray-800 rounded-xl p-8">
+            <h3 class="text-xl font-bold mb-6 text-center">今日核心目标</h3>
+            <div class="space-y-4 mb-6">
+                <input id="action-1" type="text" placeholder="第1优先级（必填）" class="w-full bg-gray-800 border border-gray-700 rounded p-3 text-white" oninput="app.survival.checkInputs()">
+                <input id="action-2" type="text" placeholder="第2优先级（必填）" class="w-full bg-gray-800 border border-gray-700 rounded p-3 text-white" oninput="app.survival.checkInputs()">
+                <input id="action-3" type="text" placeholder="第3优先级（必填）" class="w-full bg-gray-800 border border-gray-700 rounded p-3 text-white" oninput="app.survival.checkInputs()">
             </div>
-
-            <div class="space-y-4 mb-8">
-                <div class="relative">
-                    <span class="absolute left-3 top-3 text-red-500 font-bold">1.</span>
-                    <input id="action-1" type="text" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg py-3 pl-8 pr-4 text-white focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition" placeholder="今日搞钱动作 (必填)" oninput="app.survival.checkInputs()" aria-label="今日搞钱动作">
-                </div>
-                <div class="relative">
-                    <span class="absolute left-3 top-3 text-red-500 font-bold">2.</span>
-                    <input id="action-2" type="text" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg py-3 pl-8 pr-4 text-white focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition" placeholder="核心推进事项" oninput="app.survival.checkInputs()" aria-label="核心推进事项">
-                </div>
-                <div class="relative">
-                    <span class="absolute left-3 top-3 text-red-500 font-bold">3.</span>
-                    <input id="action-3" type="text" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg py-3 pl-8 pr-4 text-white focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition" placeholder="客户跟进/维护" oninput="app.survival.checkInputs()" aria-label="客户跟进维护">
-                </div>
-            </div>
-
-            <button id="battle-start-btn" disabled onclick="app.survival.startBattle()" class="w-full bg-red-700 hover:bg-red-600 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-lg transition-all shadow-lg shadow-red-900/20 flex items-center justify-center gap-2" aria-label="启动系统">
-                <i class="fas fa-power-off"></i> 启动系统
-            </button>
-            
-            <div class="mt-6 text-center">
-                <button onclick="app.survival.emergencyOverride()" class="text-xs text-gray-600 hover:text-red-400 transition underline" aria-label="紧急模式入口">
-                    ⚡ 紧急模式入口 (10min)
-                </button>
-            </div>
+            <button id="battle-start-btn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold disabled:opacity-30 disabled:cursor-not-allowed" onclick="app.survival.startBattle()" disabled>确认启动系统</button>
+            <button class="w-full mt-3 bg-gray-800 text-gray-300 py-2 rounded-lg text-sm" onclick="app.survival.emergencyOverride()">10分钟紧急模式</button>
         </div>
     </div>
 
-    <!-- 头部导航（优化布局，提升移动端体验） -->
-    <header class="h-16 bg-[#0d1117] border-b border-gray-800 flex items-center justify-between px-4 lg:px-6 fixed top-0 left-0 right-0 z-40">
-        <div class="flex items-center gap-3">
-            <div class="font-black text-lg tracking-tight text-white">
-                <span class="text-red-600">V5</span> COMMANDER
-            </div>
-            <div id="emergency-mode-warning" class="hidden px-2 py-0.5 bg-red-900/40 border border-red-500/30 rounded text-red-400 text-[10px] font-bold animate-pulse-slow" aria-live="polite">
-                ⚠️ EMERGENCY <span id="emergency-timer">10</span> MIN
-            </div>
-        </div>
+    <!-- 紧急模式提示 -->
+    <div id="emergency-mode-warning" class="fixed top-4 left-4 bg-red-900/80 border border-red-800 text-white px-4 py-2 rounded-lg hidden z-30">
+        <span>紧急模式剩余: <span id="emergency-timer">10:00</span></span>
+    </div>
 
-        <nav class="hidden md:flex items-center gap-1">
-            <button onclick="app.switchTab('dashboard')" class="nav-tab px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition rounded-md active" data-tab="dashboard" aria-label="仪表盘">
-                <i class="fas fa-chart-pie mr-2"></i>仪表盘
-            </button>
-            <button onclick="app.switchTab('kanban')" class="nav-tab px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition rounded-md" data-tab="kanban" aria-label="订单战场">
-                <i class="fas fa-columns mr-2"></i>订单战场
-            </button>
-            <button onclick="app.switchTab('crm')" class="nav-tab px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition rounded-md" data-tab="crm" aria-label="客户档案">
-                <i class="fas fa-address-book mr-2"></i>客户
-            </button>
-            <button onclick="app.switchTab('suppliers')" class="nav-tab px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition rounded-md" data-tab="suppliers" aria-label="供应商管理">
-                <i class="fas fa-industry mr-2"></i>供应商
-            </button>
-            <button onclick="app.switchTab('expenses')" class="nav-tab px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition rounded-md" data-tab="expenses" aria-label="资金流水">
-                <i class="fas fa-wallet mr-2"></i>支出
-            </button>
-        </nav>
+    <!-- 今日行动展示 -->
+    <div id="actions-display" class="fixed top-4 left-4 grid grid-cols-3 gap-4 z-20 hidden lg:flex"></div>
 
-        <div class="flex items-center gap-3">
-            <button class="md:hidden text-gray-400 p-2" onclick="document.querySelector('.mobile-nav').classList.add('active')" aria-label="打开移动端导航">
-                <i class="fas fa-bars text-xl"></i>
-            </button>
-            <div class="hidden md:flex items-center gap-2">
-                <span id="sync-status" class="text-xs text-gray-500"><i class="fas fa-circle text-green-500 text-[8px] mr-1"></i>在线</span>
-                <button onclick="app.logout()" class="text-gray-500 hover:text-white p-2" aria-label="退出系统"><i class="fas fa-power-off"></i></button>
+    <!-- 导航栏 -->
+    <nav class="bg-gray-900 border-b border-gray-800 p-4">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between">
+            <h1 class="text-xl font-bold text-white">V5 战时指挥台</h1>
+            <div class="hidden md:flex gap-6">
+                <button class="nav-tab text-white border-b-2 border-red-600" data-tab="dashboard">仪表盘</button>
+                <button class="nav-tab text-gray-400" data-tab="kanban">订单看板</button>
+                <button class="nav-tab text-gray-400" data-tab="crm">客户管理</button>
+                <button class="nav-tab text-gray-400" data-tab="suppliers">供应商</button>
+                <button class="nav-tab text-gray-400" data-tab="expenses">支出管理</button>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="app.exportData()" class="bg-gray-800 text-white px-3 py-2 rounded text-sm"><i class="fas fa-download mr-1"></i> 备份</button>
+                <button onclick="app.logout()" class="bg-red-900 text-white px-3 py-2 rounded text-sm"><i class="fas fa-sign-out-alt mr-1"></i> 退出</button>
             </div>
         </div>
-    </header>
+    </nav>
 
-    <!-- 移动端导航（优化切换逻辑，提升流畅度） -->
-    <div class="mobile-nav flex flex-col p-6 fixed inset-0 z-45 bg-darker/98 transform translate-x-full transition-transform duration-300">
-        <div class="flex justify-end mb-8">
-            <button onclick="document.querySelector('.mobile-nav').classList.remove('active')" class="text-gray-400 text-2xl" aria-label="关闭移动端导航">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="flex flex-col gap-4">
-            <button onclick="app.switchTab('dashboard'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 py-2 border-b border-gray-800" data-mobile-tab="dashboard">仪表盘</button>
-            <button onclick="app.switchTab('kanban'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 py-2 border-b border-gray-800" data-mobile-tab="kanban">订单战场</button>
-            <button onclick="app.switchTab('crm'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 py-2 border-b border-gray-800" data-mobile-tab="crm">客户档案</button>
-            <button onclick="app.switchTab('suppliers'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 py-2 border-b border-gray-800" data-mobile-tab="suppliers">供应商</button>
-            <button onclick="app.switchTab('expenses'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 py-2 border-b border-gray-800" data-mobile-tab="expenses">运营支出</button>
+    <!-- 移动端导航 -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 p-3 z-10">
+        <div class="grid grid-cols-5 gap-2">
+            <button data-mobile-tab="dashboard" class="flex flex-col items-center text-sm text-red-500"><i class="fas fa-tachometer-alt text-lg mb-1"></i> 仪表盘</button>
+            <button data-mobile-tab="kanban" class="flex flex-col items-center text-sm text-gray-400"><i class="fas fa-columns text-lg mb-1"></i> 看板</button>
+            <button data-mobile-tab="crm" class="flex flex-col items-center text-sm text-gray-400"><i class="fas fa-users text-lg mb-1"></i> 客户</button>
+            <button data-mobile-tab="suppliers" class="flex flex-col items-center text-sm text-gray-400"><i class="fas fa-industry text-lg mb-1"></i> 供应商</button>
+            <button data-mobile-tab="expenses" class="flex flex-col items-center text-sm text-gray-400"><i class="fas fa-receipt text-lg mb-1"></i> 支出</button>
         </div>
     </div>
 
-    <!-- 主内容区域（整合仪表盘缺失DOM，统一ID规范） -->
-    <main class="pt-16 h-full">
-        <!-- 仪表盘 Tab（补充缺失统计卡片，优化布局） -->
-        <div id="tab-dashboard" class="tab-content active container mx-auto">
-            <!-- 新增统计卡片（解决元素未找到错误，统一ID命名） -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <div class="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-5 hover:border-blue-500/30 transition">
-                    <div class="text-xs text-gray-500 uppercase mb-1">总订单数</div>
-                    <div class="text-2xl font-bold text-white font-mono" id="dashboard-total-orders">0</div>
+    <!-- 核心内容区 -->
+    <main class="max-w-7xl mx-auto p-4 pb-20">
+        <!-- 仪表盘 Tab -->
+        <div id="tab-dashboard" class="tab-content active">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                    <h3 class="text-gray-400 text-sm mb-2">本月营收</h3>
+                    <p class="text-2xl font-bold text-white" id="dashboard-month-income">¥0.00</p>
                 </div>
-                <div class="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-5 hover:border-yellow-500/30 transition">
-                    <div class="text-xs text-gray-500 uppercase mb-1">待处理订单</div>
-                    <div class="text-2xl font-bold text-yellow-400 font-mono" id="dashboard-pending-orders">0</div>
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                    <h3 class="text-gray-400 text-sm mb-2">净利润</h3>
+                    <p class="text-2xl font-bold text-white" id="dashboard-net-profit">¥0.00</p>
                 </div>
-                <div class="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-5 hover:border-green-500/30 transition">
-                    <div class="text-xs text-gray-500 uppercase mb-1">已完成订单</div>
-                    <div class="text-2xl font-bold text-green-400 font-mono" id="dashboard-completed-orders">0</div>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <div class="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-5 hover:border-blue-500/30 transition">
-                    <div class="text-xs text-gray-500 uppercase mb-1">总营收</div>
-                    <div class="text-2xl font-bold text-blue-400 font-mono" id="dashboard-total-income">¥0.00</div>
-                </div>
-                <div class="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-5 hover:border-green-500/30 transition">
-                    <div class="text-xs text-gray-500 uppercase mb-1">本月营收</div>
-                    <div class="text-2xl font-bold text-green-400 font-mono" id="dashboard-month-income">¥0.00</div>
-                </div>
-                <div class="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-5 hover:border-purple-500/30 transition">
-                    <div class="text-xs text-gray-500 uppercase mb-1">供应商总数</div>
-                    <div class="text-2xl font-bold text-purple-400 font-mono" id="dashboard-total-suppliers">0</div>
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                    <h3 class="text-gray-400 text-sm mb-2">距上次进账</h3>
+                    <p class="text-2xl font-bold text-white"><span id="hours-since-income">0</span> 小时</p>
                 </div>
             </div>
-            <div class="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-5 mb-8 hover:border-red-500/30 transition">
-                <div class="text-xs text-gray-500 uppercase mb-1">净利润</div>
-                <div class="text-2xl font-bold text-red-400 font-mono" id="dashboard-net-profit">¥0.00</div>
-            </div>
-
-            <!-- 原有仪表盘内容（保留并优化） -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                <div class="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-5 hover:border-blue-500/30 transition">
-                    <div class="text-xs text-gray-500 uppercase mb-1">Total Revenue</div>
-                    <div class="text-2xl font-bold text-blue-400 font-mono" id="kpiRevenue">¥0.00</div>
-                    <div class="text-xs text-gray-600 mt-2">本月累计营收</div>
-                </div>
-                <div class="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-5 hover:border-green-500/30 transition">
-                    <div class="text-xs text-gray-500 uppercase mb-1">Gross Profit</div>
-                    <div class="text-2xl font-bold text-green-400 font-mono" id="kpiGross">¥0.00</div>
-                    <div class="text-xs text-gray-600 mt-2">真实毛利 (扣除采购)</div>
-                </div>
-                <div class="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-5 hover:border-purple-500/30 transition">
-                    <div class="text-xs text-gray-500 uppercase mb-1">Net Profit</div>
-                    <div class="text-2xl font-bold text-purple-400 font-mono" id="kpiNet">¥0.00</div>
-                    <div class="text-xs text-gray-600 mt-2">净利润 (扣除运营)</div>
-                </div>
-                <div class="bg-red-900/10 backdrop-blur border border-red-900/30 rounded-xl p-5 hover:border-red-500/50 transition relative overflow-hidden">
-                    <div class="absolute -right-2 -top-2 text-6xl text-red-500/10"><i class="fas fa-hourglass-half"></i></div>
-                    <div class="text-xs text-red-400 uppercase mb-1">Survival Status</div>
-                    <div class="text-xl font-bold text-white">72h Safe</div>
-                    <div class="text-xs text-red-400/70 mt-2">距上次进账: <span id="hours-since-income">0</span>h</div>
-                </div>
-            </div>
-
-            <div class="mb-8">
-                <h3 class="text-sm font-bold text-gray-400 uppercase mb-4 flex items-center gap-2">
-                    <i class="fas fa-bullseye text-red-500"></i> Today's Focus
-                </h3>
-                <div id="actions-display" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
-            </div>
-
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <button onclick="app.kanban.openQuickAdd()" class="p-4 bg-gray-800/50 rounded-lg hover:bg-blue-900/20 hover:text-blue-400 transition text-sm font-medium border border-transparent hover:border-blue-500/30" aria-label="新增订单">
-                    <i class="fas fa-plus mb-2 block text-lg"></i> 新增订单
-                </button>
-                <button onclick="app.crm.openAddModal()" class="p-4 bg-gray-800/50 rounded-lg hover:bg-green-900/20 hover:text-green-400 transition text-sm font-medium border border-transparent hover:border-green-500/30" aria-label="录入客户">
-                    <i class="fas fa-user-plus mb-2 block text-lg"></i> 录入客户
-                </button>
-                <button onclick="app.expenses.openAddModal()" class="p-4 bg-gray-800/50 rounded-lg hover:bg-yellow-900/20 hover:text-yellow-400 transition text-sm font-medium border border-transparent hover:border-yellow-500/30" aria-label="记一笔账">
-                    <i class="fas fa-receipt mb-2 block text-lg"></i> 记一笔账
-                </button>
-                <button onclick="app.exportData()" class="p-4 bg-gray-800/50 rounded-lg hover:bg-gray-700 transition text-sm font-medium border border-transparent hover:border-gray-600" aria-label="备份数据">
-                    <i class="fas fa-download mb-2 block text-lg"></i> 备份数据
-                </button>
-            </div>
-        </div>
-
-        <!-- 订单看板 Tab（保留核心功能，优化样式） -->
-        <div id="tab-kanban" class="tab-content">
-            <div class="h-14 px-6 flex items-center justify-between border-b border-gray-800 bg-[#0d1117]">
-                <h2 class="text-lg font-bold text-white flex items-center gap-2">
-                    <i class="fas fa-columns text-blue-500"></i> 作战指挥板
-                </h2>
-                <div class="flex gap-2">
-                    <button onclick="app.kanban.openQuickAdd()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-sm font-bold transition shadow-lg shadow-blue-900/20" aria-label="新增订单立项">
-                        <i class="fas fa-plus mr-1"></i> 立项
-                    </button>
-                </div>
-            </div>
-
-            <div class="kanban-board-container" id="kanban-wrapper">
-                <div class="kanban-column">
-                    <div class="p-3 font-bold border-b border-gray-700/50 flex justify-between items-center bg-gray-800/50 rounded-t-lg">
-                        <span class="text-blue-400 text-sm uppercase tracking-wide">New Inquiry</span>
-                        <span class="bg-gray-900 px-2 py-0.5 rounded text-xs text-gray-400 font-mono" data-count="inquiry">0</span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                    <h3 class="text-lg font-bold mb-4">订单统计</h3>
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                            <p class="text-gray-400 text-sm">总订单</p>
+                            <p class="text-xl font-bold" id="dashboard-total-orders">0</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-sm">待收款</p>
+                            <p class="text-xl font-bold text-yellow-500" id="dashboard-pending-orders">0</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-sm">已收款</p>
+                            <p class="text-xl font-bold text-green-500" id="dashboard-completed-orders">0</p>
+                        </div>
                     </div>
-                    <div id="kanban-inquiry" class="kanban-cards-area space-y-2.5"></div>
                 </div>
-
-                <div class="kanban-column">
-                    <div class="p-3 font-bold border-b border-gray-700/50 flex justify-between items-center bg-gray-800/50 rounded-t-lg">
-                        <span class="text-yellow-400 text-sm uppercase tracking-wide">PI Sent</span>
-                        <span class="bg-gray-900 px-2 py-0.5 rounded text-xs text-gray-400 font-mono" data-count="pi">0</span>
-                    </div>
-                    <div id="kanban-pi" class="kanban-cards-area space-y-2.5"></div>
-                </div>
-
-                <div class="kanban-column">
-                    <div class="p-3 font-bold border-b border-gray-700/50 flex justify-between items-center bg-gray-800/50 rounded-t-lg">
-                        <span class="text-purple-400 text-sm uppercase tracking-wide">Production</span>
-                        <span class="bg-gray-900 px-2 py-0.5 rounded text-xs text-gray-400 font-mono" data-count="production">0</span>
-                    </div>
-                    <div id="kanban-production" class="kanban-cards-area space-y-2.5"></div>
-                </div>
-
-                <div class="kanban-column">
-                    <div class="p-3 font-bold border-b border-gray-700/50 flex justify-between items-center bg-gray-800/50 rounded-t-lg">
-                        <span class="text-cyan-400 text-sm uppercase tracking-wide">Shipped</span>
-                        <span class="bg-gray-900 px-2 py-0.5 rounded text-xs text-gray-400 font-mono" data-count="shipped">0</span>
-                    </div>
-                    <div id="kanban-shipped" class="kanban-cards-area space-y-2.5"></div>
-                </div>
-
-                <div class="kanban-column">
-                    <div class="p-3 font-bold border-b border-gray-700/50 flex justify-between items-center bg-gray-800/50 rounded-t-lg">
-                        <span class="text-green-400 text-sm uppercase tracking-wide">Paid & Done</span>
-                        <span class="bg-gray-900 px-2 py-0.5 rounded text-xs text-gray-400 font-mono" data-count="paid">0</span>
-                    </div>
-                    <div id="kanban-paid" class="kanban-cards-area space-y-2.5"></div>
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                    <h3 class="text-lg font-bold mb-4">供应商统计</h3>
+                    <p class="text-xl font-bold" id="dashboard-total-suppliers">0</p>
+                    <p class="text-gray-400 text-sm">总供应商数量</p>
                 </div>
             </div>
         </div>
 
-        <!-- 客户 CRM Tab（保留核心功能，优化可访问性） -->
-        <div id="tab-crm" class="tab-content container mx-auto">
+        <!-- 订单看板 Tab -->
+        <div id="tab-kanban" class="tab-content hidden flex gap-4 overflow-x-auto pb-4">
+            <!-- 询价中 -->
+            <div class="w-64 flex-shrink-0">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-bold">询价中 <span data-count="inquiry" class="text-gray-400 text-sm">0</span></h3>
+                    <button onclick="app.kanban.openQuickAdd()" class="bg-blue-600 text-white p-1 rounded text-xs"><i class="fas fa-plus"></i></button>
+                </div>
+                <div id="kanban-inquiry" class="min-h-[400px] bg-gray-900/50 rounded-lg p-2 border border-gray-800"></div>
+            </div>
+            <!-- PI阶段 -->
+            <div class="w-64 flex-shrink-0">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-bold">PI阶段 <span data-count="pi" class="text-gray-400 text-sm">0</span></h3>
+                </div>
+                <div id="kanban-pi" class="min-h-[400px] bg-gray-900/50 rounded-lg p-2 border border-gray-800"></div>
+            </div>
+            <!-- 生产中 -->
+            <div class="w-64 flex-shrink-0">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-bold">生产中 <span data-count="production" class="text-gray-400 text-sm">0</span></h3>
+                </div>
+                <div id="kanban-production" class="min-h-[400px] bg-gray-900/50 rounded-lg p-2 border border-gray-800"></div>
+            </div>
+            <!-- 已发货 -->
+            <div class="w-64 flex-shrink-0">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-bold">已发货 <span data-count="shipped" class="text-gray-400 text-sm">0</span></h3>
+                </div>
+                <div id="kanban-shipped" class="min-h-[400px] bg-gray-900/50 rounded-lg p-2 border border-gray-800"></div>
+            </div>
+            <!-- 已收款 -->
+            <div class="w-64 flex-shrink-0">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-bold">已收款 <span data-count="paid" class="text-gray-400 text-sm">0</span></h3>
+                </div>
+                <div id="kanban-paid" class="min-h-[400px] bg-gray-900/50 rounded-lg p-2 border border-gray-800"></div>
+            </div>
+        </div>
+
+        <!-- 客户管理 Tab -->
+        <div id="tab-crm" class="tab-content hidden">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-white">客户资产库</h2>
-                <button onclick="app.crm.openAddModal()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-bold" aria-label="录入客户">
-                    <i class="fas fa-user-plus mr-2"></i> 录入客户
-                </button>
+                <h2 class="text-xl font-bold">客户档案</h2>
+                <button onclick="app.crm.openAddModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i> 添加客户</button>
             </div>
             <div id="customer-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
         </div>
 
-        <!-- 供应商 Tab（保留核心功能，优化布局） -->
-        <div id="tab-suppliers" class="tab-content container mx-auto">
+        <!-- 供应商 Tab -->
+        <div id="tab-suppliers" class="tab-content hidden">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-white">供应链管理</h2>
-                <button onclick="app.suppliers.openAddModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-bold" aria-label="新增供应商">
-                    <i class="fas fa-plus mr-2"></i> 新增供应商
-                </button>
+                <h2 class="text-xl font-bold">供应商档案</h2>
+                <button onclick="app.suppliers.openAddModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i> 添加供应商</button>
             </div>
             <div id="supplierList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
         </div>
 
-        <!-- 支出 Tab（保留核心功能，优化表格样式） -->
-        <div id="tab-expenses" class="tab-content container mx-auto">
+        <!-- 支出管理 Tab -->
+        <div id="tab-expenses" class="tab-content hidden">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-white">资金流水</h2>
-                <button onclick="app.expenses.openAddModal()" class="bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-2 rounded-lg text-sm font-bold" aria-label="记录支出">
-                    <i class="fas fa-plus mr-2"></i> 记一笔
-                </button>
+                <h2 class="text-xl font-bold">支出记录</h2>
+                <button onclick="app.expenses.openAddModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i> 添加支出</button>
             </div>
-            <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-                <table class="w-full text-sm text-left text-gray-400">
-                    <thead class="bg-gray-800 text-gray-200">
-                        <tr>
-                            <th class="px-6 py-4">日期</th>
-                            <th class="px-6 py-4">类别</th>
-                            <th class="px-6 py-4">摘要</th>
-                            <th class="px-6 py-4 text-right">金额 (CNY)</th>
-                            <th class="px-6 py-4 text-center">操作</th>
+            <div class="overflow-x-auto">
+                <table class="w-full bg-gray-900 rounded-lg border border-gray-800">
+                    <thead>
+                        <tr class="bg-gray-800">
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-300">日期</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-300">分类</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-300">备注</th>
+                            <th class="px-6 py-3 text-right text-sm font-medium text-gray-300">金额</th>
+                            <th class="px-6 py-3 text-center text-sm font-medium text-gray-300">操作</th>
                         </tr>
                     </thead>
                     <tbody id="expense-list"></tbody>
@@ -585,764 +222,820 @@
         </div>
     </main>
 
-    <!-- 模态框区域（统一归类，优化层级） -->
-    <!-- 供应商模态框 -->
-    <div id="supplier-modal" class="fixed inset-0 z-50 bg-black/80 hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-gray-900 border border-gray-700 p-6 rounded-xl w-full max-w-md shadow-2xl">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-white">新增供应商</h3>
-                <button onclick="app.suppliers.closeModal()" class="text-gray-500 hover:text-white" aria-label="关闭新增供应商模态框"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="space-y-4">
-                <input id="supp-name" type="text" placeholder="供应商名称 (必填)" class="w-full bg-black border border-gray-700 rounded p-3 text-white focus:border-indigo-500 outline-none" aria-label="供应商名称">
-                <input id="supp-product" type="text" placeholder="主营产品" class="w-full bg-black border border-gray-700 rounded p-3 text-white focus:border-indigo-500 outline-none" aria-label="主营产品">
-                <input id="supp-contact" type="text" placeholder="联系人/电话" class="w-full bg-black border border-gray-700 rounded p-3 text-white focus:border-indigo-500 outline-none" aria-label="联系人电话">
-            </div>
-            <button onclick="app.suppliers.save()" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg" aria-label="保存供应商档案">保存档案</button>
-        </div>
-    </div>
-
-    <!-- 支出模态框 -->
-    <div id="expense-modal" class="fixed inset-0 z-50 bg-black/80 hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-gray-900 border border-gray-700 p-6 rounded-xl w-full max-w-md shadow-2xl">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-white">记录支出</h3>
-                <button onclick="app.expenses.closeModal()" class="text-gray-500 hover:text-white" aria-label="关闭记录支出模态框"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="space-y-4">
-                <input id="exp-date" type="date" class="w-full bg-black border border-gray-700 rounded p-3 text-white" value="" aria-label="支出日期">
-                <select id="exp-category" class="w-full bg-black border border-gray-700 rounded p-3 text-white" aria-label="支出类别">
-                    <option value="差旅">✈️ 差旅/交通</option>
-                    <option value="招待">🍷 客户招待</option>
-                    <option value="房租">🏢 房租/水电</option>
-                    <option value="营销">📢 广告/样品</option>
-                    <option value="其他">📦 其他杂项</option>
-                </select>
-                <input id="exp-amount" type="number" step="0.01" placeholder="金额 (CNY)" class="w-full bg-black border border-gray-700 rounded p-3 text-white font-mono" aria-label="支出金额">
-                <input id="exp-note" type="text" placeholder="备注 (必填)" class="w-full bg-black border border-gray-700 rounded p-3 text-white" aria-label="支出备注">
-            </div>
-            <button onclick="app.expenses.save()" class="w-full mt-6 bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 rounded-lg" aria-label="确认支出记录">确认支出</button>
-        </div>
-    </div>
-
-    <!-- 客户模态框 -->
-    <div id="customer-modal" class="fixed inset-0 z-50 bg-black/80 hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-gray-900 border border-gray-700 p-6 rounded-xl w-full max-w-md shadow-2xl">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-white">录入客户</h3>
-                <button onclick="app.crm.closeModal()" class="text-gray-500 hover:text-white" aria-label="关闭录入客户模态框"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="space-y-4">
-                <input id="crm-name" type="text" placeholder="客户公司名 (必填)" class="w-full bg-black border border-gray-700 rounded p-3 text-white focus:border-green-500 outline-none" aria-label="客户公司名">
-                <input id="crm-contact" type="text" placeholder="联系人" class="w-full bg-black border border-gray-700 rounded p-3 text-white focus:border-green-500 outline-none" aria-label="联系人">
-                <select id="crm-country" class="w-full bg-black border border-gray-700 rounded p-3 text-white" aria-label="客户国家">
-                    <option value="Philippines">🇵🇭 菲律宾</option>
-                    <option value="Turkey">🇹🇷 土耳其</option>
-                    <option value="UK">🇬🇧 英国</option>
-                    <option value="Netherlands">🇳🇱 荷兰</option>
-                    <option value="USA">🇺🇸 美国</option>
-                    <option value="Other">🌍 其他</option>
-                </select>
-                <input id="crm-whatsapp" type="text" placeholder="WhatsApp" class="w-full bg-black border border-gray-700 rounded p-3 text-white focus:border-green-500 outline-none" aria-label="WhatsApp号码">
-                <textarea id="crm-address" rows="2" placeholder="发货地址..." class="w-full bg-black border border-gray-700 rounded p-3 text-white focus:border-green-500 outline-none" aria-label="发货地址"></textarea>
-            </div>
-            <button onclick="app.crm.save()" class="w-full mt-6 bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg" aria-label="保存客户档案">保存档案</button>
-        </div>
-    </div>
-
-    <!-- 看板快速添加模态框 -->
-    <div id="kanban-quick-modal" class="fixed inset-0 z-50 bg-black/80 hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-gray-900 border border-gray-700 p-6 rounded-xl w-full max-w-md shadow-2xl">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-white">新增订单立项</h3>
-                <button onclick="app.kanban.closeQuickModal()" class="text-gray-500 hover:text-white" aria-label="关闭新增订单模态框"><i class="fas fa-times"></i></button>
-            </div>
+    <!-- 看板快速添加订单模态框 -->
+    <div id="kanban-quick-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
+        <div class="w-4/5 max-w-md bg-gray-900 border border-gray-800 rounded-xl p-8">
+            <h3 class="text-xl font-bold mb-6">快速创建订单</h3>
             <div class="space-y-4">
                 <input id="kanban-title" type="text" placeholder="订单标题 (必填)" class="w-full bg-black border border-gray-700 rounded p-3 text-white focus:border-blue-500 outline-none" aria-label="订单标题">
                 <input id="kanban-customer" type="text" placeholder="客户名称" class="w-full bg-black border border-gray-700 rounded p-3 text-white focus:border-blue-500 outline-none" aria-label="客户名称">
                 <input id="kanban-amount" type="number" step="0.01" placeholder="订单金额 (必填)" class="w-full bg-black border border-gray-700 rounded p-3 text-white font-mono focus:border-blue-500 outline-none" aria-label="订单金额">
                 <textarea id="kanban-note" rows="2" placeholder="订单备注..." class="w-full bg-black border border-gray-700 rounded p-3 text-white focus:border-blue-500 outline-none" aria-label="订单备注"></textarea>
             </div>
-            <button onclick="app.kanban.saveQuickOrder()" class="w-full mt-6 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg" aria-label="创建订单">创建订单</button>
+            <div class="flex gap-3 mt-6">
+                <button onclick="app.kanban.closeQuickModal()" class="w-1/2 bg-gray-800 text-white py-3 rounded-lg">取消</button>
+                <button onclick="app.kanban.saveQuickOrder()" class="w-1/2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg" aria-label="创建订单">创建订单</button>
+            </div>
         </div>
     </div>
 
-    <!-- Toast 提示组件（优化初始状态，避免显示异常） -->
+    <!-- 供应商添加模态框 -->
+    <div id="supplier-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
+        <div class="w-4/5 max-w-md bg-gray-900 border border-gray-800 rounded-xl p-8">
+            <h3 class="text-xl font-bold mb-6">添加供应商</h3>
+            <div class="space-y-4">
+                <input id="supp-name" type="text" placeholder="供应商名称 (必填)" class="w-full bg-black border border-gray-700 rounded p-3 text-white outline-none">
+                <input id="supp-product" type="text" placeholder="主营产品" class="w-full bg-black border border-gray-700 rounded p-3 text-white outline-none">
+                <input id="supp-contact" type="text" placeholder="联系方式" class="w-full bg-black border border-gray-700 rounded p-3 text-white outline-none">
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="app.suppliers.closeModal()" class="w-1/2 bg-gray-800 text-white py-3 rounded-lg">取消</button>
+                <button onclick="app.suppliers.save()" class="w-1/2 bg-blue-600 text-white py-3 rounded-lg">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 支出添加模态框 -->
+    <div id="expense-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
+        <div class="w-4/5 max-w-md bg-gray-900 border border-gray-800 rounded-xl p-8">
+            <h3 class="text-xl font-bold mb-6">添加支出</h3>
+            <div class="space-y-4">
+                <input id="exp-date" type="date" class="w-full bg-black border border-gray-700 rounded p-3 text-white outline-none">
+                <select id="exp-category" class="w-full bg-black border border-gray-700 rounded p-3 text-white outline-none">
+                    <option value="采购成本">采购成本</option>
+                    <option value="物流费用">物流费用</option>
+                    <option value="办公开销">办公开销</option>
+                    <option value="其他支出">其他支出</option>
+                </select>
+                <input id="exp-amount" type="number" step="0.01" placeholder="支出金额 (必填)" class="w-full bg-black border border-gray-700 rounded p-3 text-white outline-none">
+                <textarea id="exp-note" rows="2" placeholder="支出备注 (必填)" class="w-full bg-black border border-gray-700 rounded p-3 text-white outline-none"></textarea>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="app.expenses.closeModal()" class="w-1/2 bg-gray-800 text-white py-3 rounded-lg">取消</button>
+                <button onclick="app.expenses.save()" class="w-1/2 bg-blue-600 text-white py-3 rounded-lg">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 客户添加模态框 -->
+    <div id="customer-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
+        <div class="w-4/5 max-w-md bg-gray-900 border border-gray-800 rounded-xl p-8">
+            <h3 class="text-xl font-bold mb-6">添加客户</h3>
+            <div class="space-y-4">
+                <input id="crm-name" type="text" placeholder="客户公司名 (必填)" class="w-full bg-black border border-gray-700 rounded p-3 text-white outline-none">
+                <input id="crm-contact" type="text" placeholder="联系人" class="w-full bg-black border border-gray-700 rounded p-3 text-white outline-none">
+                <select id="crm-country" class="w-full bg-black border border-gray-700 rounded p-3 text-white outline-none">
+                    <option value="阿联酋">阿联酋</option>
+                    <option value="沙特阿拉伯">沙特阿拉伯</option>
+                    <option value="卡塔尔">卡塔尔</option>
+                    <option value="其他">其他</option>
+                </select>
+                <input id="crm-whatsapp" type="text" placeholder="WhatsApp号码" class="w-full bg-black border border-gray-700 rounded p-3 text-white outline-none">
+                <textarea id="crm-address" rows="2" placeholder="地址" class="w-full bg-black border border-gray-700 rounded p-3 text-white outline-none"></textarea>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="app.crm.closeModal()" class="w-1/2 bg-gray-800 text-white py-3 rounded-lg">取消</button>
+                <button onclick="app.crm.save()" class="w-1/2 bg-blue-600 text-white py-3 rounded-lg">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 提示组件 -->
     <div id="toast" class="fixed top-4 right-4 bg-gray-800 border border-gray-700 text-white px-6 py-4 rounded-lg shadow-2xl transform translate-x-full transition-transform duration-300 z-[100] flex items-center gap-4">
         <i id="toast-icon" class="fas fa-info-circle text-blue-500 text-xl"></i>
         <span id="toast-message" class="font-medium">Notification</span>
     </div>
 
-    <!-- 核心脚本加载（优化加载逻辑，提升容错性） -->
+    <!-- 核心脚本 -->
     <script>
-        (function loadCoreModules() {
-            const moduleManifest = [
-                // 1. Firebase SDK (Remote)
-                { src: 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js', type: 'remote' },
-                { src: 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js', type: 'remote' },
-                { src: 'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js', type: 'remote' },
+        // 全局基础配置
+        window.WORKBENCH_BASE = ''; // 本地部署时可修改为基础路径
+        window.log = (msg, err) => err ? console.error(`[V5] ${msg}`, err) : console.log(`[V5] ${msg}`);
+
+        // 工具函数（抽离公共方法）
+        window.WorkbenchUtils = {
+            // 验证必填项
+            isRequired: (val) => {
+                if (!val || val.trim() === '') {
+                    return false;
+                }
+                return true;
+            },
+            // 验证正数
+            isPositiveNumber: (val) => {
+                const num = parseFloat(val);
+                if (isNaN(num) || num <= 0) {
+                    return false;
+                }
+                return true;
+            },
+            // 格式化金额
+            formatAmount: (amount) => {
+                const num = parseFloat(amount);
+                return `¥${num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+            },
+            // 格式化日期
+            formatDate: (isoStr) => {
+                const date = new Date(isoStr);
+                return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            },
+            // Toast提示
+            toast: (message, type = 'info') => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                const msg = document.getElementById('toast-message');
                 
-                // 2. 本地核心 (Local) - 必须按顺序
-                { src: '/js/workbench-config.js', type: 'local' },
-                { src: '/js/workbench-utils.js', type: 'local' },
-                { src: '/js/workbench-firebase.js', type: 'local' },
-                { src: '/js/workbench-storage.js', type: 'local' },
-                { src: '/js/workbench-auth.js', type: 'local' },
+                // 设置图标和颜色
+                const iconMap = {
+                    success: { icon: 'fa-check-circle', color: 'text-green-500' },
+                    error: { icon: 'fa-exclamation-circle', color: 'text-red-500' },
+                    warning: { icon: 'fa-exclamation-triangle', color: 'text-yellow-500' },
+                    info: { icon: 'fa-info-circle', color: 'text-blue-500' }
+                };
+                const config = iconMap[type] || iconMap.info;
                 
-                // 3. 业务模块 (Local)
-                { src: '/js/workbench-dashboard.js', type: 'local' },
-                { src: '/js/workbench-orders.js', type: 'local' },
-                { src: '/js/workbench-suppliers.js', type: 'local' },
-                { src: '/js/workbench-finance.js', type: 'local' }
-            ];
-
-            let loadedCount = 0;
-            const totalModules = moduleManifest.length;
-            const loadingBar = document.getElementById('loading-bar');
-            const loadingProgress = document.getElementById('loading-progress');
-            const loadingError = document.getElementById('loading-error');
-            const retryLoading = document.getElementById('retry-loading');
-
-            // 加载单个模块（优化错误处理）
-            function loadModule(module) {
-                const fullSrc = module.type === 'local' ? `${window.WORKBENCH_BASE}${module.src}` : module.src;
-                const script = document.createElement('script');
-                script.src = fullSrc;
-                script.async = false; // 保证顺序执行
-                script.crossOrigin = "anonymous";
-
-                script.onload = () => {
-                    loadedCount++;
-                    updateLoadingProgress();
-                    if (loadedCount === totalModules) initApp();
-                };
-
-                script.onerror = () => {
-                    console.error('Failed to load:', fullSrc);
-                    loadingError.classList.remove('hidden');
-                    loadingError.innerText = `加载失败: ${module.src.split('/').pop()}，请检查文件路径或网络连接`;
-                    retryLoading.classList.remove('hidden');
-                };
-
-                document.body.appendChild(script);
+                icon.className = `fas ${config.icon} ${config.color} text-xl`;
+                msg.textContent = message;
+                
+                // 显示Toast
+                toast.style.transform = 'translateX(0)';
+                
+                // 3秒后隐藏
+                setTimeout(() => {
+                    toast.style.transform = 'translateX(full)';
+                }, 3000);
             }
+        };
 
-            // 更新加载进度（提取公共方法，减少冗余）
-            function updateLoadingProgress() {
-                const percent = Math.round((loadedCount / totalModules) * 100);
-                if (loadingBar) loadingBar.style.width = `${percent}%`;
-                if (loadingProgress) loadingProgress.innerText = `${percent}%`;
+        // 本地存储工具
+        window.WorkbenchStorage = {
+            // 加载数据
+            async load(key, defaultValue = []) {
+                try {
+                    const data = localStorage.getItem(`v5_erp_${key}`);
+                    return data ? JSON.parse(data) : defaultValue;
+                } catch (err) {
+                    log(`加载${key}失败`, err);
+                    return defaultValue;
+                }
+            },
+            // 保存数据
+            async save(key, data) {
+                try {
+                    localStorage.setItem(`v5_erp_${key}`, JSON.stringify(data));
+                    return true;
+                } catch (err) {
+                    log(`保存${key}失败`, err);
+                    return false;
+                }
             }
+        };
 
-            // 初始化应用（优化流程，提升流畅度）
-            function initApp() {
-                setTimeout(async () => {
-                    log('[System] All modules loaded.');
+        // 核心应用逻辑
+        (function initApp() {
+            // Tab切换绑定
+            document.querySelectorAll('[data-tab], [data-mobile-tab]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabId = btn.dataset.tab || btn.dataset.mobileTab;
+                    app.switchTab(tabId);
+                });
+            });
+
+            // 重试加载按钮绑定
+            document.getElementById('retry-loading')?.addEventListener('click', () => {
+                location.reload();
+            });
+
+            // 初始化日期输入框默认值
+            const expDate = document.getElementById('exp-date');
+            if (expDate) expDate.value = new Date().toISOString().split('T')[0];
+
+            // 全局APP对象
+            window.app = {
+                // Tab切换逻辑
+                switchTab: (tabId) => {
+                    // 隐藏所有Tab
+                    document.querySelectorAll('.tab-content').forEach(el => {
+                        el.classList.remove('active');
+                        el.style.display = 'none';
+                    });
                     
-                    // 初始化各模块
-                    if(window.WorkbenchConfig?.init) window.WorkbenchConfig.init();
-                    if(window.WorkbenchDashboard?.init) await window.WorkbenchDashboard.init();
-                    if(window.WorkbenchOrders?.init) window.WorkbenchOrders.init();
-                    if(window.WorkbenchSuppliers?.init) window.WorkbenchSuppliers.init();
-                    if(window.WorkbenchFinance?.init) window.WorkbenchFinance.init();
+                    // 移除所有导航高亮
+                    document.querySelectorAll('.nav-tab, [data-mobile-tab]').forEach(btn => {
+                        btn.classList.remove('text-white', 'border-b-2', 'border-red-600', 'text-red-500');
+                        btn.classList.add('text-gray-400');
+                    });
 
-                    // 初始化日期输入框默认值（兼容性处理）
-                    const expDate = document.getElementById('exp-date');
-                    if (expDate) expDate.value = new Date().toISOString().split('T')[0];
+                    // 激活目标Tab
+                    const target = document.getElementById(`tab-${tabId}`);
+                    if (target) {
+                        target.style.display = tabId === 'kanban' ? 'flex' : 'block';
+                        setTimeout(() => target.classList.add('active'), 10);
+                    }
 
-                    // 构建 App 代理（优化逻辑，减少冗余）
-                    window.app = {
-                        // 生存模式核心逻辑
-                        survival: {
-                            checkInputs: () => {
-                                const a1 = document.getElementById('action-1').value;
-                                const a2 = document.getElementById('action-2').value;
-                                const a3 = document.getElementById('action-3').value;
-                                const btn = document.getElementById('battle-start-btn');
-                                if(btn) {
-                                    const isComplete = a1 && a2 && a3;
-                                    btn.disabled = !isComplete;
-                                    btn.style.opacity = isComplete ? '1' : '0.3';
-                                    btn.style.cursor = isComplete ? 'pointer' : 'not-allowed';
-                                }
-                            },
-                            startBattle: () => {
-                                const actions = [
-                                    document.getElementById('action-1').value.trim(),
-                                    document.getElementById('action-2').value.trim(),
-                                    document.getElementById('action-3').value.trim()
-                                ];
-                                localStorage.setItem('v5_erp_today_actions', JSON.stringify(actions));
-                                localStorage.setItem('v5_erp_unlock_time', Date.now());
-                                localStorage.removeItem('v5_erp_emergency_time');
-                                
-                                document.getElementById('iron-curtain').classList.add('hidden');
-                                app.renderTodayActions(actions);
-                                window.WorkbenchUtils.toast('系统启动成功，今日聚焦核心目标！', 'success');
-                            },
-                            emergencyOverride: () => {
-                                if(confirm("启用10分钟紧急模式？超时后将自动退出！")) {
-                                    const emergencyTime = Date.now();
-                                    localStorage.setItem('v5_erp_emergency_time', emergencyTime);
-                                    localStorage.setItem('v5_erp_unlock_time', emergencyTime);
-                                    
-                                    document.getElementById('iron-curtain').classList.add('hidden');
-                                    document.getElementById('emergency-mode-warning').classList.remove('hidden');
-                                    
-                                    app.startEmergencyTimer();
-                                    window.WorkbenchUtils.toast('紧急模式已激活，剩余10分钟', 'warning');
-                                }
-                            },
-                            initCheck: () => {
-                                const lastUnlock = localStorage.getItem('v5_erp_unlock_time');
-                                const emergencyTime = localStorage.getItem('v5_erp_emergency_time');
-                                const isExpired = !lastUnlock || (Date.now() - lastUnlock > 30 * 60 * 1000);
-                                
-                                if (isExpired && !emergencyTime) {
-                                    document.getElementById('iron-curtain').classList.remove('hidden');
-                                } else {
-                                    document.getElementById('iron-curtain').classList.add('hidden');
-                                    const actions = JSON.parse(localStorage.getItem('v5_erp_today_actions') || '[]');
-                                    if (actions.length === 3) app.renderTodayActions(actions);
-                                    if (emergencyTime) {
-                                        document.getElementById('emergency-mode-warning').classList.remove('hidden');
-                                        app.startEmergencyTimer();
-                                    }
-                                }
-                            }
-                        },
+                    // 激活导航高亮
+                    const desktopBtn = document.querySelector(`button[data-tab="${tabId}"]`);
+                    const mobileBtn = document.querySelector(`[data-mobile-tab="${tabId}"]`);
+                    
+                    if (desktopBtn) {
+                        desktopBtn.classList.remove('text-gray-400');
+                        desktopBtn.classList.add('text-white', 'border-b-2', 'border-red-600');
+                    }
+                    if (mobileBtn) {
+                        mobileBtn.classList.remove('text-gray-400');
+                        mobileBtn.classList.add('text-white', 'text-red-500');
+                    }
+
+                    // 触发模块渲染
+                    if (tabId === 'kanban' && app.kanban.render) app.kanban.render();
+                    if (tabId === 'suppliers' && app.suppliers.render) app.suppliers.render();
+                    if (tabId === 'expenses' && app.expenses.render) app.expenses.render();
+                    if (tabId === 'crm' && app.crm.render) app.crm.render();
+                    if (tabId === 'dashboard' && app.calculateKPI) app.calculateKPI();
+                },
+
+                // 计算KPI数据
+                calculateKPI: async () => {
+                    try {
+                        const orders = await WorkbenchStorage.load('orders', []);
+                        const expenses = await WorkbenchStorage.load('expenses', []);
+                        const currentMonth = new Date().getMonth();
+                        const currentYear = new Date().getFullYear();
                         
-                        // 紧急模式倒计时（优化精度，避免负数）
-                        startEmergencyTimer: () => {
-                            const updateTimer = () => {
-                                const emergencyTime = parseInt(localStorage.getItem('v5_erp_emergency_time') || '0');
-                                const remainingMs = 10 * 60 * 1000 - (Date.now() - emergencyTime);
-                                
-                                if (remainingMs <= 0) {
-                                    localStorage.removeItem('v5_erp_emergency_time');
-                                    localStorage.removeItem('v5_erp_unlock_time');
-                                    location.reload();
-                                    return;
-                                }
-                                
-                                const remainingMin = Math.floor(remainingMs / 60000);
-                                const remainingSec = Math.floor((remainingMs % 60000) / 1000);
-                                document.getElementById('emergency-timer').textContent = `${remainingMin}:${String(remainingSec).padStart(2, '0')}`;
-                            };
-                            
-                            updateTimer();
-                            setInterval(updateTimer, 1000);
-                        },
+                        // 本月营收（已收款订单）
+                        const monthlyPaidOrders = orders.filter(order => {
+                            if (order.status !== 'paid') return false;
+                            const orderDate = new Date(order.createdAt);
+                            return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
+                        });
                         
-                        // 渲染今日行动（优化模板，提升可维护性）
-                        renderTodayActions: (actions) => {
-                            const container = document.getElementById('actions-display');
-                            if (!container || actions.length !== 3) return;
-                            
-                            const actionTemplates = [
-                                { icon: 'fa-bullseye', color: 'text-red-500' },
-                                { icon: 'fa-rocket', color: 'text-blue-500' },
-                                { icon: 'fa-shield-alt', color: 'text-green-500' }
-                            ];
-                            
-                            container.innerHTML = actions.map((action, index) => {
-                                const template = actionTemplates[index];
-                                return `
-                                    <div class="bg-gray-900/70 backdrop-blur border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition">
-                                        <div class="flex items-center gap-3 mb-3">
-                                            <i class="fas ${template.icon} ${template.color} text-xl"></i>
-                                            <h4 class="font-bold text-white">第${index+1}优先级</h4>
-                                        </div>
-                                        <p class="text-gray-300 text-sm">${action}</p>
-                                    </div>
-                                `;
-                            }).join('');
-                        },
+                        const totalRevenue = monthlyPaidOrders.reduce((sum, order) => sum + parseFloat(order.amount || 0), 0);
+                        const totalExpenses = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+                        const netProfit = totalRevenue - totalExpenses;
                         
-                        // Tab 切换逻辑（优化选择器，减少DOM操作）
-                        switchTab: (tabId) => {
-                            // 隐藏所有 Tab
-                            document.querySelectorAll('.tab-content').forEach(el => {
-                                el.classList.remove('active');
-                                el.style.display = 'none';
-                            });
+                        // 更新仪表盘数据
+                        document.getElementById('dashboard-month-income').textContent = WorkbenchUtils.formatAmount(totalRevenue);
+                        document.getElementById('dashboard-net-profit').textContent = WorkbenchUtils.formatAmount(netProfit);
+                        document.getElementById('dashboard-total-orders').textContent = orders.length;
+                        document.getElementById('dashboard-pending-orders').textContent = orders.filter(o => o.status !== 'paid').length;
+                        document.getElementById('dashboard-completed-orders').textContent = orders.filter(o => o.status === 'paid').length;
+                        
+                        // 供应商统计
+                        const suppliers = await WorkbenchStorage.load('suppliers', []);
+                        document.getElementById('dashboard-total-suppliers').textContent = suppliers.length;
+                        
+                        // 距上次进账时间
+                        const paidOrders = orders.filter(o => o.status === 'paid').sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                        if (paidOrders.length > 0) {
+                            const lastPaidDate = new Date(paidOrders[0].createdAt);
+                            const hoursSince = Math.floor((Date.now() - lastPaidDate.getTime()) / (1000 * 60 * 60));
+                            document.getElementById('hours-since-income').textContent = hoursSince;
+                        } else {
+                            document.getElementById('hours-since-income').textContent = '∞';
+                        }
+                    } catch (err) {
+                        log('计算KPI失败', err);
+                        WorkbenchUtils.toast('数据统计失败', 'error');
+                    }
+                },
+
+                // 数据导出备份
+                exportData: async () => {
+                    try {
+                        const exportData = {
+                            timestamp: new Date().toISOString(),
+                            customers: await WorkbenchStorage.load('customers', []),
+                            suppliers: await WorkbenchStorage.load('suppliers', []),
+                            orders: await WorkbenchStorage.load('orders', []),
+                            expenses: await WorkbenchStorage.load('expenses', []),
+                            todayActions: JSON.parse(localStorage.getItem('v5_erp_today_actions') || '[]')
+                        };
+                        
+                        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `V5_COMMANDER_BACKUP_${new Date().toISOString().split('T')[0]}.json`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        
+                        WorkbenchUtils.toast('数据备份成功', 'success');
+                    } catch (error) {
+                        log('数据导出失败', error);
+                        WorkbenchUtils.toast('数据备份失败', 'error');
+                    }
+                },
+
+                // 退出系统
+                logout: () => {
+                    if (confirm('确定退出战时指挥台吗？')) {
+                        localStorage.removeItem('v5_erp_unlock_time');
+                        localStorage.removeItem('v5_erp_emergency_time');
+                        location.reload();
+                    }
+                },
+
+                // 生存模式
+                survival: {
+                    // 检查输入是否完整
+                    checkInputs: () => {
+                        const a1 = document.getElementById('action-1').value.trim();
+                        const a2 = document.getElementById('action-2').value.trim();
+                        const a3 = document.getElementById('action-3').value.trim();
+                        const btn = document.getElementById('battle-start-btn');
+                        
+                        if (btn) {
+                            const isComplete = a1 && a2 && a3;
+                            btn.disabled = !isComplete;
+                            btn.style.opacity = isComplete ? '1' : '0.3';
+                            btn.style.cursor = isComplete ? 'pointer' : 'not-allowed';
+                        }
+                    },
+                    // 启动系统
+                    startBattle: () => {
+                        const actions = [
+                            document.getElementById('action-1').value.trim(),
+                            document.getElementById('action-2').value.trim(),
+                            document.getElementById('action-3').value.trim()
+                        ];
+                        localStorage.setItem('v5_erp_today_actions', JSON.stringify(actions));
+                        localStorage.setItem('v5_erp_unlock_time', Date.now());
+                        localStorage.removeItem('v5_erp_emergency_time');
+                        
+                        document.getElementById('iron-curtain').classList.add('hidden');
+                        app.renderTodayActions(actions);
+                        WorkbenchUtils.toast('系统启动成功，今日聚焦核心目标！', 'success');
+                    },
+                    // 紧急模式
+                    emergencyOverride: () => {
+                        if (confirm("启用10分钟紧急模式？超时后将自动退出！")) {
+                            const emergencyTime = Date.now();
+                            localStorage.setItem('v5_erp_emergency_time', emergencyTime);
+                            localStorage.setItem('v5_erp_unlock_time', emergencyTime);
                             
-                            // 移除所有导航高亮
-                            document.querySelectorAll('.nav-tab, [data-mobile-tab]').forEach(btn => {
-                                btn.classList.remove('text-white', 'border-b-2', 'border-red-600', 'text-red-500');
-                                btn.classList.add('text-gray-400');
-                            });
-
-                            // 激活目标 Tab
-                            const target = document.getElementById('tab-' + tabId);
-                            if (target) {
-                                target.style.display = tabId === 'kanban' ? 'flex' : 'block';
-                                setTimeout(() => target.classList.add('active'), 10);
-                            }
-
-                            // 激活导航高亮
-                            const desktopBtn = document.querySelector(`button[data-tab="${tabId}"]`);
-                            const mobileBtn = document.querySelector(`[data-mobile-tab="${tabId}"]`);
+                            document.getElementById('iron-curtain').classList.add('hidden');
+                            document.getElementById('emergency-mode-warning').classList.remove('hidden');
                             
-                            if(desktopBtn) {
-                                desktopBtn.classList.remove('text-gray-400');
-                                desktopBtn.classList.add('text-white', 'border-b-2', 'border-red-600');
-                            }
-                            if(mobileBtn) {
-                                mobileBtn.classList.remove('text-gray-400');
-                                mobileBtn.classList.add('text-white', 'text-red-500');
-                            }
-
-                            // 触发模块渲染
-                            if(tabId === 'kanban' && window.WorkbenchOrders) app.kanban.render();
-                            if(tabId === 'suppliers' && window.WorkbenchSuppliers) app.suppliers.render();
-                            if(tabId === 'expenses' && window.WorkbenchFinance) app.expenses.render();
-                            if(tabId === 'crm') app.crm.render();
-                            if(tabId === 'dashboard') app.calculateKPI();
-                        },
-
-                        // 计算KPI数据（优化逻辑，统一数据格式）
-                        calculateKPI: async () => {
-                            const orders = await window.WorkbenchStorage.load('orders', []);
-                            const expenses = await window.WorkbenchStorage.load('expenses', []);
-                            const currentMonth = new Date().getMonth();
-                            const currentYear = new Date().getFullYear();
-                            
-                            // 计算本月营收
-                            const monthlyOrders = orders.filter(order => {
-                                if (order.status !== 'paid') return false;
-                                const orderDate = new Date(order.createdAt);
-                                return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
-                            });
-                            
-                            const totalRevenue = monthlyOrders.reduce((sum, order) => sum + parseFloat(order.amount || 0), 0);
-                            const totalExpenses = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
-                            const grossProfit = totalRevenue;
-                            const netProfit = grossProfit - totalExpenses;
-                            
-                            // 更新DOM（同步仪表盘新卡片数据）
-                            document.getElementById('kpiRevenue').textContent = window.WorkbenchUtils.formatAmount(totalRevenue);
-                            document.getElementById('kpiGross').textContent = window.WorkbenchUtils.formatAmount(grossProfit);
-                            document.getElementById('kpiNet').textContent = window.WorkbenchUtils.formatAmount(netProfit);
-                            document.getElementById('dashboard-total-income').textContent = window.WorkbenchUtils.formatAmount(totalRevenue);
-                            document.getElementById('dashboard-month-income').textContent = window.WorkbenchUtils.formatAmount(totalRevenue);
-                            document.getElementById('dashboard-net-profit').textContent = window.WorkbenchUtils.formatAmount(netProfit);
-                            
-                            // 计算订单统计
-                            document.getElementById('dashboard-total-orders').textContent = orders.length;
-                            document.getElementById('dashboard-pending-orders').textContent = orders.filter(o => o.status !== 'paid').length;
-                            document.getElementById('dashboard-completed-orders').textContent = orders.filter(o => o.status === 'paid').length;
-                            
-                            // 计算供应商统计
-                            const suppliers = await window.WorkbenchStorage.load('suppliers', []);
-                            document.getElementById('dashboard-total-suppliers').textContent = suppliers.length;
-                            
-                            // 计算距上次进账时间
-                            const paidOrders = orders.filter(o => o.status === 'paid').sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-                            if (paidOrders.length > 0) {
-                                const lastPaidDate = new Date(paidOrders[0].createdAt);
-                                const hoursSince = Math.floor((Date.now() - lastPaidDate.getTime()) / (1000 * 60 * 60));
-                                document.getElementById('hours-since-income').textContent = hoursSince;
-                            }
-                        },
-
-                        // 数据导出备份（优化格式，提升可用性）
-                        exportData: async () => {
-                            try {
-                                const exportData = {
-                                    timestamp: new Date().toISOString(),
-                                    customers: await window.WorkbenchStorage.load('customers', []),
-                                    suppliers: await window.WorkbenchStorage.load('suppliers', []),
-                                    orders: await window.WorkbenchStorage.load('orders', []),
-                                    expenses: await window.WorkbenchStorage.load('expenses', []),
-                                    todayActions: JSON.parse(localStorage.getItem('v5_erp_today_actions') || '[]')
-                                };
-                                
-                                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-                                const url = URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = `V5_COMMANDER_BACKUP_${new Date().toISOString().split('T')[0]}.json`;
-                                a.click();
-                                URL.revokeObjectURL(url);
-                                
-                                window.WorkbenchUtils.toast('数据备份成功', 'success');
-                            } catch (error) {
-                                log('[Export] Data export failed', error);
-                                window.WorkbenchUtils.toast('数据备份失败', 'error');
-                            }
-                        },
-
-                        // 供应商模块（统一逻辑，提升可维护性）
-                        suppliers: {
-                            openAddModal: () => {
-                                document.getElementById('supp-name').value = '';
-                                document.getElementById('supp-product').value = '';
-                                document.getElementById('supp-contact').value = '';
-                                document.getElementById('supplier-modal').classList.remove('hidden');
-                            },
-                            closeModal: () => {
-                                document.getElementById('supplier-modal').classList.add('hidden');
-                            },
-                            save: async () => {
-                                const name = document.getElementById('supp-name').value.trim();
-                                if (!window.WorkbenchUtils.isRequired(name)) {
-                                    window.WorkbenchUtils.toast('供应商名称不能为空', 'error');
-                                    return;
-                                }
-                                
-                                const newSupp = {
-                                    id: 'SUPP-' + Date.now(),
-                                    name: name,
-                                    product: document.getElementById('supp-product').value.trim(),
-                                    contact: document.getElementById('supp-contact').value.trim(),
-                                    createdAt: new Date().toISOString()
-                                };
-                                
-                                const list = await window.WorkbenchStorage.load('suppliers', []);
-                                list.push(newSupp);
-                                const saveResult = await window.WorkbenchStorage.save('suppliers', list);
-                                
-                                if (saveResult) {
-                                    app.suppliers.closeModal();
-                                    app.suppliers.render();
-                                    app.calculateKPI();
-                                    window.WorkbenchUtils.toast('供应商已保存', 'success');
-                                }
-                            },
-                            render: async () => {
-                                const container = document.getElementById('supplierList');
-                                if(!container) return;
-                                const list = await window.WorkbenchStorage.load('suppliers', []);
-                                
-                                if(list.length === 0) {
-                                    container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500"><i class="fas fa-industry text-4xl mb-4 opacity-50"></i><p>暂无供应商档案</p></div>';
-                                    return;
-                                }
-                                
-                                container.innerHTML = list.map(s => `
-                                    <div class="bg-gray-900 border border-gray-800 p-5 rounded-xl hover:border-indigo-500 transition group">
-                                        <div class="flex justify-between items-start mb-3">
-                                            <h3 class="font-bold text-lg text-white">${s.name}</h3>
-                                            <span class="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300 border border-gray-700">档案编号: ${s.id}</span>
-                                        </div>
-                                        <div class="text-sm text-gray-400 space-y-1">
-                                            <p><i class="fas fa-box w-4 opacity-50"></i> 主营产品: ${s.product || '-'}</p>
-                                            <p><i class="fas fa-phone w-4 opacity-50"></i> 联系方式: ${s.contact || '-'}</p>
-                                            <p><i class="fas fa-calendar w-4 opacity-50"></i> 创建时间: ${window.WorkbenchUtils.formatDate(s.createdAt)}</p>
-                                        </div>
-                                    </div>
-                                `).join('');
-                            }
-                        },
-
-                        // 支出模块（统一逻辑，提升可维护性）
-                        expenses: {
-                            openAddModal: () => {
-                                document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
-                                document.getElementById('exp-category').selectedIndex = 0;
-                                document.getElementById('exp-amount').value = '';
-                                document.getElementById('exp-note').value = '';
-                                document.getElementById('expense-modal').classList.remove('hidden');
-                            },
-                            closeModal: () => {
-                                document.getElementById('expense-modal').classList.add('hidden');
-                            },
-                            save: async () => {
-                                const date = document.getElementById('exp-date').value;
-                                const category = document.getElementById('exp-category').value;
-                                const amount = document.getElementById('exp-amount').value;
-                                const note = document.getElementById('exp-note').value.trim();
-                                
-                                // 表单验证
-                                if (!window.WorkbenchUtils.isRequired(date)) return window.WorkbenchUtils.toast('请选择支出日期', 'error');
-                                if (!window.WorkbenchUtils.isPositiveNumber(amount)) return window.WorkbenchUtils.toast('请输入大于0的金额', 'error');
-                                if (!window.WorkbenchUtils.isRequired(note)) return window.WorkbenchUtils.toast('请填写支出备注', 'error');
-                                
-                                const newExp = {
-                                    id: 'EXP-' + Date.now(),
-                                    date: date,
-                                    category: category,
-                                    amount: parseFloat(amount).toFixed(2),
-                                    note: note,
-                                    createdAt: new Date().toISOString()
-                                };
-                                
-                                const list = await window.WorkbenchStorage.load('expenses', []);
-                                list.push(newExp);
-                                const saveResult = await window.WorkbenchStorage.save('expenses', list);
-                                
-                                if (saveResult) {
-                                    app.expenses.closeModal();
-                                    app.expenses.render();
-                                    app.calculateKPI();
-                                    window.WorkbenchUtils.toast('支出记录已保存', 'success');
-                                }
-                            },
-                            render: async () => {
-                                const container = document.getElementById('expense-list');
-                                if(!container) return;
-                                const list = await window.WorkbenchStorage.load('expenses', []);
-                                
-                                if(list.length === 0) {
-                                    container.innerHTML = '<tr><td colspan="5" class="px-6 py-12 text-center text-gray-500"><i class="fas fa-receipt text-4xl mb-4 opacity-50"></i><p>暂无支出记录</p></td></tr>';
-                                    return;
-                                }
-                                
-                                // 按日期倒序排序
-                                list.sort((a, b) => new Date(b.date) - new Date(a.date));
-                                
-                                container.innerHTML = list.map(exp => `
-                                    <tr class="bg-gray-800 border-b border-gray-900 hover:bg-gray-700/50 transition">
-                                        <td class="px-6 py-4">${exp.date}</td>
-                                        <td class="px-6 py-4">${exp.category}</td>
-                                        <td class="px-6 py-4">${exp.note}</td>
-                                        <td class="px-6 py-4 text-right font-mono text-red-400">${window.WorkbenchUtils.formatAmount(exp.amount)}</td>
-                                        <td class="px-6 py-4 text-center">
-                                            <button onclick="app.expenses.delete('${exp.id}')" class="text-red-500 hover:text-red-400" aria-label="删除支出记录">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `).join('');
-                            },
-                            delete: async (id) => {
-                                if (!confirm('确定删除该支出记录吗？删除后不可恢复！')) return;
-                                
-                                const list = await window.WorkbenchStorage.load('expenses', []);
-                                const newList = list.filter(exp => exp.id !== id);
-                                const saveResult = await window.WorkbenchStorage.save('expenses', newList);
-                                
-                                if (saveResult) {
-                                    app.expenses.render();
-                                    app.calculateKPI();
-                                    window.WorkbenchUtils.toast('支出记录已删除', 'success');
-                                }
-                            }
-                        },
-
-                        // 客户模块（统一逻辑，提升可维护性）
-                        crm: {
-                            openAddModal: () => {
-                                document.getElementById('crm-name').value = '';
-                                document.getElementById('crm-contact').value = '';
-                                document.getElementById('crm-country').selectedIndex = 0;
-                                document.getElementById('crm-whatsapp').value = '';
-                                document.getElementById('crm-address').value = '';
-                                document.getElementById('customer-modal').classList.remove('hidden');
-                            },
-                            closeModal: () => {
-                                document.getElementById('customer-modal').classList.add('hidden');
-                            },
-                            save: async () => {
-                                const name = document.getElementById('crm-name').value.trim();
-                                if(!window.WorkbenchUtils.isRequired(name)) return window.WorkbenchUtils.toast('客户公司名不能为空', 'error');
-                                
-                                const newCust = {
-                                    id: 'CUST-' + Date.now(),
-                                    company: name,
-                                    contact: document.getElementById('crm-contact').value.trim(),
-                                    country: document.getElementById('crm-country').value,
-                                    whatsapp: document.getElementById('crm-whatsapp').value.trim(),
-                                    address: document.getElementById('crm-address').value.trim(),
-                                    createdAt: new Date().toISOString()
-                                };
-                                
-                                const list = await window.WorkbenchStorage.load('customers', []);
-                                list.push(newCust);
-                                const saveResult = await window.WorkbenchStorage.save('customers', list);
-                                
-                                if (saveResult) {
-                                    app.crm.closeModal();
-                                    app.crm.render();
-                                    window.WorkbenchUtils.toast('客户档案已保存', 'success');
-                                }
-                            },
-                            render: async () => {
-                                const container = document.getElementById('customer-grid');
-                                if(!container) return;
-                                const list = await window.WorkbenchStorage.load('customers', []);
-                                
-                                if(list.length === 0) {
-                                    container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500"><i class="fas fa-users text-4xl mb-4 opacity-50"></i><p>暂无客户档案</p></div>';
-                                    return;
-                                }
-                                
-                                container.innerHTML = list.map(c => `
-                                    <div class="bg-gray-900 border border-gray-800 p-5 rounded-xl hover:border-green-500 transition group">
-                                        <div class="flex justify-between items-start mb-3">
-                                            <h3 class="font-bold text-lg text-white">${c.company}</h3>
-                                            <span class="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300 border border-gray-700">${c.country}</span>
-                                        </div>
-                                        <div class="text-sm text-gray-400 space-y-1">
-                                            <p><i class="fas fa-user w-4 opacity-50"></i> ${c.contact || '-'}</p>
-                                            <p><i class="fab fa-whatsapp w-4 opacity-50"></i> ${c.whatsapp || '-'}</p>
-                                            <p class="truncate"><i class="fas fa-map-marker-alt w-4 opacity-50"></i> ${c.address || '-'}</p>
-                                            <p><i class="fas fa-calendar w-4 opacity-50"></i> ${window.WorkbenchUtils.formatDate(c.createdAt)}</p>
-                                        </div>
-                                    </div>
-                                `).join('');
-                            }
-                        },
-
-                        // 看板/订单模块（统一逻辑，提升可维护性）
-                        kanban: {
-                            openQuickAdd: () => {
-                                document.getElementById('kanban-title').value = '';
-                                document.getElementById('kanban-customer').value = '';
-                                document.getElementById('kanban-amount').value = '';
-                                document.getElementById('kanban-note').value = '';
-                                document.getElementById('kanban-quick-modal').classList.remove('hidden');
-                            },
-                            closeQuickModal: () => {
-                                document.getElementById('kanban-quick-modal').classList.add('hidden');
-                            },
-                            saveQuickOrder: async () => {
-                                const title = document.getElementById('kanban-title').value.trim();
-                                const customer = document.getElementById('kanban-customer').value.trim();
-                                const amount = document.getElementById('kanban-amount').value;
-                                const note = document.getElementById('kanban-note').value.trim();
-                                
-                                if (!window.WorkbenchUtils.isRequired(title)) return window.WorkbenchUtils.toast('订单标题不能为空', 'error');
-                                if (!window.WorkbenchUtils.isPositiveNumber(amount)) return window.WorkbenchUtils.toast('请输入大于0的订单金额', 'error');
-                                
-                                const newOrder = {
-                                    id: 'ORDER-' + Date.now(),
-                                    title: title,
-                                    customer: customer,
-                                    amount: parseFloat(amount).toFixed(2),
-                                    note: note,
-                                    status: 'inquiry',
-                                    createdAt: new Date().toISOString(),
-                                    updatedAt: new Date().toISOString()
-                                };
-                                
-                                const list = await window.WorkbenchStorage.load('orders', []);
-                                list.push(newOrder);
-                                const saveResult = await window.WorkbenchStorage.save('orders', list);
-                                
-                                if (saveResult) {
-                                    app.kanban.closeQuickModal();
-                                    app.kanban.render();
-                                    app.calculateKPI();
-                                    window.WorkbenchUtils.toast('订单立项成功', 'success');
-                                }
-                            },
-                            render: async () => {
-                                const orders = await window.WorkbenchStorage.load('orders', []);
-                                const statusMap = {
-                                    inquiry: document.getElementById('kanban-inquiry'),
-                                    pi: document.getElementById('kanban-pi'),
-                                    production: document.getElementById('kanban-production'),
-                                    shipped: document.getElementById('kanban-shipped'),
-                                    paid: document.getElementById('kanban-paid')
-                                };
-                                
-                                // 清空所有列
-                                Object.values(statusMap).forEach(el => el && (el.innerHTML = ''));
-                                
-                                // 渲染订单卡片
-                                orders.forEach(order => {
-                                    const column = statusMap[order.status];
-                                    if (!column) return;
-                                    
-                                    const card = document.createElement('div');
-                                    card.className = 'kanban-card kanbanCardHover';
-                                    card.dataset.id = order.id;
-                                    card.dataset.status = order.status;
-                                    
-                                    card.innerHTML = `
-                                        <div class="kanban-card__title">${order.title}</div>
-                                        <div class="kanban-card__meta">
-                                            <span>${order.customer || '未知客户'}</span>
-                                            <span>${window.WorkbenchUtils.formatAmount(order.amount)}</span>
-                                        </div>
-                                        <div class="text-xs text-gray-500 mt-1 truncate">${order.note || '无备注'}</div>
-                                        <div class="kanban-card__actions">
-                                            <button onclick="app.kanban.updateStatus('${order.id}', 'next')" class="kanban-card__btn bg-blue-900/50 text-blue-400 hover:bg-blue-900" aria-label="推进订单状态">
-                                                <i class="fas fa-arrow-right"></i>
-                                            </button>
-                                            <button onclick="app.kanban.deleteOrder('${order.id}')" class="kanban-card__btn bg-red-900/50 text-red-400 hover:bg-red-900" aria-label="删除订单">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    `;
-                                    
-                                    column.appendChild(card);
-                                });
-                                
-                                // 更新列计数
-                                ['inquiry', 'pi', 'production', 'shipped', 'paid'].forEach(status => {
-                                    const count = orders.filter(order => order.status === status).length;
-                                    const countEl = document.querySelector(`[data-count="${status}"]`);
-                                    if (countEl) countEl.textContent = count;
-                                });
-                            },
-                            updateStatus: async (id, direction) => {
-                                const orders = await window.WorkbenchStorage.load('orders', []);
-                                const orderIndex = orders.findIndex(o => o.id === id);
-                                if (orderIndex === -1) return;
-                                
-                                const statusFlow = ['inquiry', 'pi', 'production', 'shipped', 'paid'];
-                                const currentIndex = statusFlow.indexOf(orders[orderIndex].status);
-                                const newIndex = direction === 'next' 
-                                    ? Math.min(currentIndex + 1, statusFlow.length - 1) 
-                                    : Math.max(currentIndex - 1, 0);
-                                
-                                orders[orderIndex].status = statusFlow[newIndex];
-                                orders[orderIndex].updatedAt = new Date().toISOString();
-                                
-                                const saveResult = await window.WorkbenchStorage.save('orders', orders);
-                                if (saveResult) {
-                                    app.kanban.render();
-                                    app.calculateKPI();
-                                    window.WorkbenchUtils.toast(`订单状态已更新为：${statusFlow[newIndex]}`, 'info');
-                                }
-                            },
-                            deleteOrder: async (id) => {
-                                if (!confirm('确定删除该订单吗？删除后不可恢复！')) return;
-                                
-                                const orders = await window.WorkbenchStorage.load('orders', []);
-                                const newOrders = orders.filter(o => o.id !== id);
-                                const saveResult = await window.WorkbenchStorage.save('orders', newOrders);
-                                
-                                if (saveResult) {
-                                    app.kanban.render();
-                                    app.calculateKPI();
-                                    window.WorkbenchUtils.toast('订单已删除', 'success');
-                                }
-                            }
-                        },
-
-                        // 退出系统（优化逻辑，提升安全性）
-                        logout: () => {
-                            if(confirm('确定退出战时指挥台吗？')) {
-                                localStorage.removeItem('v5_erp_unlock_time');
-                                localStorage.removeItem('v5_erp_emergency_time');
-                                location.reload();
+                            app.startEmergencyTimer();
+                            WorkbenchUtils.toast('紧急模式已激活，剩余10分钟', 'warning');
+                        }
+                    },
+                    // 初始化检查
+                    initCheck: () => {
+                        const lastUnlock = localStorage.getItem('v5_erp_unlock_time');
+                        const emergencyTime = localStorage.getItem('v5_erp_emergency_time');
+                        const isExpired = !lastUnlock || (Date.now() - lastUnlock > 30 * 60 * 1000);
+                        
+                        if (isExpired && !emergencyTime) {
+                            document.getElementById('iron-curtain').classList.remove('hidden');
+                        } else {
+                            document.getElementById('iron-curtain').classList.add('hidden');
+                            const actions = JSON.parse(localStorage.getItem('v5_erp_today_actions') || '[]');
+                            if (actions.length === 3) app.renderTodayActions(actions);
+                            if (emergencyTime) {
+                                document.getElementById('emergency-mode-warning').classList.remove('hidden');
+                                app.startEmergencyTimer();
                             }
                         }
-                    };
+                    }
+                },
 
-                    // 启动应用初始化流程
-                    app.survival.initCheck();
-                    app.calculateKPI();
-                    app.suppliers.render();
-                    app.expenses.render();
-                    app.crm.render();
-                    app.kanban.render();
+                // 渲染今日行动
+                renderTodayActions: (actions) => {
+                    const container = document.getElementById('actions-display');
+                    if (!container || actions.length !== 3) return;
                     
-                    // 隐藏加载界面
-                    setTimeout(() => {
-                        document.getElementById('system-loading').classList.add('hidden');
-                        log('[System] Ready for battle.');
-                    }, 300);
+                    const actionTemplates = [
+                        { icon: 'fa-bullseye', color: 'text-red-500' },
+                        { icon: 'fa-rocket', color: 'text-blue-500' },
+                        { icon: 'fa-shield-alt', color: 'text-green-500' }
+                    ];
+                    
+                    container.innerHTML = actions.map((action, index) => {
+                        const template = actionTemplates[index];
+                        return `
+                            <div class="bg-gray-900/70 backdrop-blur border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <i class="fas ${template.icon} ${template.color} text-xl"></i>
+                                    <h4 class="font-bold text-white">第${index+1}优先级</h4>
+                                </div>
+                                <p class="text-gray-300 text-sm">${action}</p>
+                            </div>
+                        `;
+                    }).join('');
+                    container.classList.remove('hidden');
+                },
 
-                }, 500);
-            }
+                // 紧急模式倒计时
+                startEmergencyTimer: () => {
+                    const updateTimer = () => {
+                        const emergencyTime = parseInt(localStorage.getItem('v5_erp_emergency_time') || '0');
+                        const remainingMs = 10 * 60 * 1000 - (Date.now() - emergencyTime);
+                        
+                        if (remainingMs <= 0) {
+                            localStorage.removeItem('v5_erp_emergency_time');
+                            localStorage.removeItem('v5_erp_unlock_time');
+                            location.reload();
+                            return;
+                        }
+                        
+                        const remainingMin = Math.floor(remainingMs / 60000);
+                        const remainingSec = Math.floor((remainingMs % 60000) / 1000);
+                        document.getElementById('emergency-timer').textContent = `${remainingMin}:${String(remainingSec).padStart(2, '0')}`;
+                    };
+                    
+                    updateTimer();
+                    setInterval(updateTimer, 1000);
+                },
 
-            // 开始加载模块
-            moduleManifest.forEach(loadModule);
+                // 供应商模块
+                suppliers: {
+                    openAddModal: () => {
+                        document.getElementById('supp-name').value = '';
+                        document.getElementById('supp-product').value = '';
+                        document.getElementById('supp-contact').value = '';
+                        document.getElementById('supplier-modal').classList.remove('hidden');
+                    },
+                    closeModal: () => {
+                        document.getElementById('supplier-modal').classList.add('hidden');
+                    },
+                    save: async () => {
+                        const name = document.getElementById('supp-name').value.trim();
+                        if (!WorkbenchUtils.isRequired(name)) {
+                            WorkbenchUtils.toast('供应商名称不能为空', 'error');
+                            return;
+                        }
+                        
+                        const newSupp = {
+                            id: 'SUPP-' + Date.now(),
+                            name: name,
+                            product: document.getElementById('supp-product').value.trim(),
+                            contact: document.getElementById('supp-contact').value.trim(),
+                            createdAt: new Date().toISOString()
+                        };
+                        
+                        const list = await WorkbenchStorage.load('suppliers', []);
+                        list.push(newSupp);
+                        const saveResult = await WorkbenchStorage.save('suppliers', list);
+                        
+                        if (saveResult) {
+                            app.suppliers.closeModal();
+                            app.suppliers.render();
+                            app.calculateKPI();
+                            WorkbenchUtils.toast('供应商已保存', 'success');
+                        } else {
+                            WorkbenchUtils.toast('保存失败，请重试', 'error');
+                        }
+                    },
+                    render: async () => {
+                        const container = document.getElementById('supplierList');
+                        if (!container) return;
+                        const list = await WorkbenchStorage.load('suppliers', []);
+                        
+                        if (list.length === 0) {
+                            container.innerHTML = `
+                                <div class="col-span-full text-center py-12 text-gray-500">
+                                    <i class="fas fa-industry text-4xl mb-4 opacity-50"></i>
+                                    <p>暂无供应商档案</p>
+                                </div>
+                            `;
+                            return;
+                        }
+                        
+                        container.innerHTML = list.map(s => `
+                            <div class="bg-gray-900 border border-gray-800 p-5 rounded-xl hover:border-indigo-500 transition group">
+                                <div class="flex justify-between items-start mb-3">
+                                    <h3 class="font-bold text-lg text-white">${s.name}</h3>
+                                    <span class="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300 border border-gray-700">档案编号: ${s.id}</span>
+                                </div>
+                                <div class="text-sm text-gray-400 space-y-1">
+                                    <p><i class="fas fa-box w-4 opacity-50"></i> 主营产品: ${s.product || '-'}</p>
+                                    <p><i class="fas fa-phone w-4 opacity-50"></i> 联系方式: ${s.contact || '-'}</p>
+                                    <p><i class="fas fa-calendar w-4 opacity-50"></i> 创建时间: ${WorkbenchUtils.formatDate(s.createdAt)}</p>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                },
+
+                // 支出模块
+                expenses: {
+                    openAddModal: () => {
+                        document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
+                        document.getElementById('exp-category').selectedIndex = 0;
+                        document.getElementById('exp-amount').value = '';
+                        document.getElementById('exp-note').value = '';
+                        document.getElementById('expense-modal').classList.remove('hidden');
+                    },
+                    closeModal: () => {
+                        document.getElementById('expense-modal').classList.add('hidden');
+                    },
+                    save: async () => {
+                        const date = document.getElementById('exp-date').value;
+                        const category = document.getElementById('exp-category').value;
+                        const amount = document.getElementById('exp-amount').value;
+                        const note = document.getElementById('exp-note').value.trim();
+                        
+                        // 表单验证
+                        if (!WorkbenchUtils.isRequired(date)) return WorkbenchUtils.toast('请选择支出日期', 'error');
+                        if (!WorkbenchUtils.isPositiveNumber(amount)) return WorkbenchUtils.toast('请输入大于0的金额', 'error');
+                        if (!WorkbenchUtils.isRequired(note)) return WorkbenchUtils.toast('请填写支出备注', 'error');
+                        
+                        const newExp = {
+                            id: 'EXP-' + Date.now(),
+                            date: date,
+                            category: category,
+                            amount: parseFloat(amount).toFixed(2),
+                            note: note,
+                            createdAt: new Date().toISOString()
+                        };
+                        
+                        const list = await WorkbenchStorage.load('expenses', []);
+                        list.push(newExp);
+                        const saveResult = await WorkbenchStorage.save('expenses', list);
+                        
+                        if (saveResult) {
+                            app.expenses.closeModal();
+                            app.expenses.render();
+                            app.calculateKPI();
+                            WorkbenchUtils.toast('支出记录已保存', 'success');
+                        } else {
+                            WorkbenchUtils.toast('保存失败，请重试', 'error');
+                        }
+                    },
+                    render: async () => {
+                        const container = document.getElementById('expense-list');
+                        if (!container) return;
+                        const list = await WorkbenchStorage.load('expenses', []);
+                        
+                        if (list.length === 0) {
+                            container.innerHTML = `
+                                <tr>
+                                    <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                                        <i class="fas fa-receipt text-4xl mb-4 opacity-50"></i>
+                                        <p>暂无支出记录</p>
+                                    </td>
+                                </tr>
+                            `;
+                            return;
+                        }
+                        
+                        // 按日期倒序排序
+                        list.sort((a, b) => new Date(b.date) - new Date(a.date));
+                        
+                        container.innerHTML = list.map(exp => `
+                            <tr class="bg-gray-800 border-b border-gray-900 hover:bg-gray-700/50 transition">
+                                <td class="px-6 py-4">${exp.date}</td>
+                                <td class="px-6 py-4">${exp.category}</td>
+                                <td class="px-6 py-4">${exp.note}</td>
+                                <td class="px-6 py-4 text-right font-mono text-red-400">${WorkbenchUtils.formatAmount(exp.amount)}</td>
+                                <td class="px-6 py-4 text-center">
+                                    <button onclick="app.expenses.delete('${exp.id}')" class="text-red-500 hover:text-red-400" aria-label="删除支出记录">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    },
+                    delete: async (id) => {
+                        if (!confirm('确定删除该支出记录吗？删除后不可恢复！')) return;
+                        
+                        const list = await WorkbenchStorage.load('expenses', []);
+                        const newList = list.filter(exp => exp.id !== id);
+                        const saveResult = await WorkbenchStorage.save('expenses', newList);
+                        
+                        if (saveResult) {
+                            app.expenses.render();
+                            app.calculateKPI();
+                            WorkbenchUtils.toast('支出记录已删除', 'success');
+                        } else {
+                            WorkbenchUtils.toast('删除失败，请重试', 'error');
+                        }
+                    }
+                },
+
+                // 客户模块
+                crm: {
+                    openAddModal: () => {
+                        document.getElementById('crm-name').value = '';
+                        document.getElementById('crm-contact').value = '';
+                        document.getElementById('crm-country').selectedIndex = 0;
+                        document.getElementById('crm-whatsapp').value = '';
+                        document.getElementById('crm-address').value = '';
+                        document.getElementById('customer-modal').classList.remove('hidden');
+                    },
+                    closeModal: () => {
+                        document.getElementById('customer-modal').classList.add('hidden');
+                    },
+                    save: async () => {
+                        const name = document.getElementById('crm-name').value.trim();
+                        if (!WorkbenchUtils.isRequired(name)) return WorkbenchUtils.toast('客户公司名不能为空', 'error');
+                        
+                        const newCust = {
+                            id: 'CUST-' + Date.now(),
+                            company: name,
+                            contact: document.getElementById('crm-contact').value.trim(),
+                            country: document.getElementById('crm-country').value,
+                            whatsapp: document.getElementById('crm-whatsapp').value.trim(),
+                            address: document.getElementById('crm-address').value.trim(),
+                            createdAt: new Date().toISOString()
+                        };
+                        
+                        const list = await WorkbenchStorage.load('customers', []);
+                        list.push(newCust);
+                        const saveResult = await WorkbenchStorage.save('customers', list);
+                        
+                        if (saveResult) {
+                            app.crm.closeModal();
+                            app.crm.render();
+                            WorkbenchUtils.toast('客户档案已保存', 'success');
+                        } else {
+                            WorkbenchUtils.toast('保存失败，请重试', 'error');
+                        }
+                    },
+                    render: async () => {
+                        const container = document.getElementById('customer-grid');
+                        if (!container) return;
+                        const list = await WorkbenchStorage.load('customers', []);
+                        
+                        if (list.length === 0) {
+                            container.innerHTML = `
+                                <div class="col-span-full text-center py-12 text-gray-500">
+                                    <i class="fas fa-users text-4xl mb-4 opacity-50"></i>
+                                    <p>暂无客户档案</p>
+                                </div>
+                            `;
+                            return;
+                        }
+                        
+                        container.innerHTML = list.map(c => `
+                            <div class="bg-gray-900 border border-gray-800 p-5 rounded-xl hover:border-green-500 transition group">
+                                <div class="flex justify-between items-start mb-3">
+                                    <h3 class="font-bold text-lg text-white">${c.company}</h3>
+                                    <span class="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300 border border-gray-700">${c.country}</span>
+                                </div>
+                                <div class="text-sm text-gray-400 space-y-1">
+                                    <p><i class="fas fa-user w-4 opacity-50"></i> ${c.contact || '-'}</p>
+                                    <p><i class="fab fa-whatsapp w-4 opacity-50"></i> ${c.whatsapp || '-'}</p>
+                                    <p class="truncate"><i class="fas fa-map-marker-alt w-4 opacity-50"></i> ${c.address || '-'}</p>
+                                    <p><i class="fas fa-calendar w-4 opacity-50"></i> ${WorkbenchUtils.formatDate(c.createdAt)}</p>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                },
+
+                // 看板/订单模块
+                kanban: {
+                    openQuickAdd: () => {
+                        document.getElementById('kanban-title').value = '';
+                        document.getElementById('kanban-customer').value = '';
+                        document.getElementById('kanban-amount').value = '';
+                        document.getElementById('kanban-note').value = '';
+                        document.getElementById('kanban-quick-modal').classList.remove('hidden');
+                    },
+                    closeQuickModal: () => {
+                        document.getElementById('kanban-quick-modal').classList.add('hidden');
+                    },
+                    saveQuickOrder: async () => {
+                        const title = document.getElementById('kanban-title').value.trim();
+                        const customer = document.getElementById('kanban-customer').value.trim();
+                        const amount = document.getElementById('kanban-amount').value;
+                        const note = document.getElementById('kanban-note').value.trim();
+                        
+                        if (!WorkbenchUtils.isRequired(title)) return WorkbenchUtils.toast('订单标题不能为空', 'error');
+                        if (!WorkbenchUtils.isPositiveNumber(amount)) return WorkbenchUtils.toast('请输入大于0的订单金额', 'error');
+                        
+                        const newOrder = {
+                            id: 'ORDER-' + Date.now(),
+                            title: title,
+                            customer: customer,
+                            amount: parseFloat(amount).toFixed(2),
+                            note: note,
+                            status: 'inquiry',
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString()
+                        };
+                        
+                        const list = await WorkbenchStorage.load('orders', []);
+                        list.push(newOrder);
+                        const saveResult = await WorkbenchStorage.save('orders', list);
+                        
+                        if (saveResult) {
+                            app.kanban.closeQuickModal();
+                            app.kanban.render();
+                            app.calculateKPI();
+                            WorkbenchUtils.toast('订单立项成功', 'success');
+                        } else {
+                            WorkbenchUtils.toast('保存失败，请重试', 'error');
+                        }
+                    },
+                    render: async () => {
+                        const orders = await WorkbenchStorage.load('orders', []);
+                        const statusMap = {
+                            inquiry: document.getElementById('kanban-inquiry'),
+                            pi: document.getElementById('kanban-pi'),
+                            production: document.getElementById('kanban-production'),
+                            shipped: document.getElementById('kanban-shipped'),
+                            paid: document.getElementById('kanban-paid')
+                        };
+                        
+                        // 清空所有列
+                        Object.values(statusMap).forEach(el => el && (el.innerHTML = ''));
+                        
+                        // 渲染订单卡片
+                        orders.forEach(order => {
+                            const column = statusMap[order.status];
+                            if (!column) return;
+                            
+                            const card = document.createElement('div');
+                            card.className = 'kanban-card kanbanCardHover';
+                            card.dataset.id = order.id;
+                            card.dataset.status = order.status;
+                            
+                            card.innerHTML = `
+                                <div class="kanban-card__title">${order.title}</div>
+                                <div class="kanban-card__meta">
+                                    <span>${order.customer || '未知客户'}</span>
+                                    <span>${WorkbenchUtils.formatAmount(order.amount)}</span>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1 truncate">${order.note || '无备注'}</div>
+                                <div class="kanban-card__actions">
+                                    <button onclick="app.kanban.updateStatus('${order.id}', 'next')" class="kanban-card__btn bg-blue-900/50 text-blue-400 hover:bg-blue-900" aria-label="推进订单状态">
+                                        <i class="fas fa-arrow-right"></i>
+                                    </button>
+                                    <button onclick="app.kanban.deleteOrder('${order.id}')" class="kanban-card__btn bg-red-900/50 text-red-400 hover:bg-red-900" aria-label="删除订单">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            `;
+                            
+                            column.appendChild(card);
+                        });
+                        
+                        // 更新列计数
+                        ['inquiry', 'pi', 'production', 'shipped', 'paid'].forEach(status => {
+                            const count = orders.filter(order => order.status === status).length;
+                            const countEl = document.querySelector(`[data-count="${status}"]`);
+                            if (countEl) countEl.textContent = count;
+                        });
+                    },
+                    updateStatus: async (id, direction) => {
+                        const orders = await WorkbenchStorage.load('orders', []);
+                        const orderIndex = orders.findIndex(o => o.id === id);
+                        if (orderIndex === -1) return WorkbenchUtils.toast('订单不存在', 'error');
+                        
+                        const statusFlow = ['inquiry', 'pi', 'production', 'shipped', 'paid'];
+                        const currentIndex = statusFlow.indexOf(orders[orderIndex].status);
+                        const newIndex = direction === 'next' 
+                            ? Math.min(currentIndex + 1, statusFlow.length - 1) 
+                            : Math.max(currentIndex - 1, 0);
+                        
+                        orders[orderIndex].status = statusFlow[newIndex];
+                        orders[orderIndex].updatedAt = new Date().toISOString();
+                        
+                        const saveResult = await WorkbenchStorage.save('orders', orders);
+                        if (saveResult) {
+                            app.kanban.render();
+                            app.calculateKPI();
+                            WorkbenchUtils.toast(`订单状态已更新为：${statusFlow[newIndex]}`, 'info');
+                        } else {
+                            WorkbenchUtils.toast('状态更新失败', 'error');
+                        }
+                    },
+                    deleteOrder: async (id) => {
+                        if (!confirm('确定删除该订单吗？删除后不可恢复！')) return;
+                        
+                        const orders = await WorkbenchStorage.load('orders', []);
+                        const newOrders = orders.filter(o => o.id !== id);
+                        const saveResult = await WorkbenchStorage.save('orders', newOrders);
+                        
+                        if (saveResult) {
+                            app.kanban.render();
+                            app.calculateKPI();
+                            WorkbenchUtils.toast('订单已删除', 'success');
+                        } else {
+                            WorkbenchUtils.toast('删除失败，请重试', 'error');
+                        }
+                    }
+                }
+            };
+
+            // 初始化应用
+            setTimeout(async () => {
+                // 隐藏加载界面
+                document.getElementById('system-loading').classList.add('hidden');
+                
+                // 初始化各模块
+                app.survival.initCheck();
+                await app.calculateKPI();
+                app.suppliers.render();
+                app.expenses.render();
+                app.crm.render();
+                app.kanban.render();
+                
+                log('应用初始化完成');
+            }, 500);
         })();
     </script>
 </body>
