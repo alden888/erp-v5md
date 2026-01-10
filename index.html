@@ -1,459 +1,660 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>战时指挥台 V14.2 PRO ERP EDITION · B2B 专用</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>战时指挥台 V14.2 PRO ERP EDITION · B2B 专用</title>
 
-    <!-- 预加载关键资源 -->
-    <link rel="preconnect" href="https://cdn.tailwindcss.com">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    <link rel="preconnect" href="https://www.gstatic.com">
-    <link rel="preload" href="/workbench/css/workbench-v14.css" as="style">
-    <link rel="preload" href="/workbench/js/workbench-firebase.js" as="script">
-    <link rel="preload" href="/workbench/js/workbench-state.js" as="script">
+<!-- 预加载关键资源 -->
+<link rel="preconnect" href="https://cdn.tailwindcss.com">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://www.gstatic.com">
+<!-- 补充预加载Inter字体 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 
-    <!-- 外部样式 -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
+<!-- 外部样式 -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
 
-    <!-- Tailwind 配置 -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#ef4444',
-                        secondary: '#3b82f6',
-                        accent: '#8b5cf6',
-                        success: '#10b981',
-                        warning: '#f59e0b',
-                        info: '#06b6d4',
-                        dark: '#1f2937',
-                        darker: '#111827',
-                        darkest: '#030712'
-                    },
-                    animation: {
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    }
-                }
-            }
-        }
-    </script>
+<!-- Tailwind 配置 -->
+<script>
+tailwind.config = {
+theme: {
+extend: {
+colors: {
+primary: '#ef4444',
+secondary: '#3b82f6',
+accent: '#8b5cf6',
+success: '#10b981',
+warning: '#f59e0b',
+info: '#06b6d4',
+dark: '#1f2937',
+darker: '#111827',
+darkest: '#030712'
+},
+animation: {
+// 补充缺失的慢脉冲动画
+'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+},
+fontFamily: {
+// 配置Inter字体
+'inter': ['Inter', 'system-ui', 'sans-serif'],
+}
+}
+}
+}
+</script>
 
-    <!-- 内联关键 CSS -->
-    <style>
-        html { scroll-behavior: smooth; }
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background-color: #030712;
-            background-image:
-                radial-gradient(circle at 10% 20%, rgba(31, 41, 55, 0.1) 0%, transparent 20%),
-                radial-gradient(circle at 90% 80%, rgba(31, 41, 55, 0.1) 0%, transparent 20%);
-            background-attachment: fixed;
-        }
+<!-- 内联关键 CSS -->
+<style>
+html { scroll-behavior: smooth; }
+body {
+font-family: 'Inter', system-ui, sans-serif;
+background-color: #030712;
+background-image:
+radial-gradient(circle at 10% 20%, rgba(31, 41, 55, 0.1) 0%, transparent 20%),
+radial-gradient(circle at 90% 80%, rgba(31, 41, 55, 0.1) 0%, transparent 20%);
+background-attachment: fixed;
+}
 
-        /* 加载动画 */
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .loading-spinner {
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            border-top: 3px solid #ef4444;
-            width: 50px;
-            height: 50px;
-            animation: spin 0.8s linear infinite;
-            display: inline-block;
-        }
+/* 加载动画 */
+@keyframes spin {
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
+}
+.loading-spinner {
+border: 3px solid rgba(255, 255, 255, 0.1);
+border-radius: 50%;
+border-top: 3px solid #ef4444;
+width: 50px;
+height: 50px;
+animation: spin 0.8s linear infinite;
+display: inline-block;
+}
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+@keyframes fadeIn {
+from { opacity: 0; transform: translateY(10px); }
+to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
 
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        
-        /* 导航标签激活态 */
-        .nav-tab.active { color: #ef4444; font-weight: 600; }
-        
-        /* 平滑过渡通用类 */
-        .transition-base { transition: all 0.2s ease-in-out; }
-    </style>
+.tab-content { display: none; }
+.tab-content.active { display: block; }
 
-    <!-- 基础路径配置 -->
-    <script>
-        // 严格模式初始化
-        'use strict';
-        
-        // 全局配置对象（统一管理）
-        window.ERP_CONFIG = {
-            BASE_PATH: '',
-            LOADING_STATE: {
-                current: 0,
-                total: 8,
-                modules: []
-            },
-            EMERGENCY_MODE: {
-                active: false,
-                timer: 10 * 60, // 10分钟秒数
-                interval: null
-            }
-        };
+/* 补充移动端导航样式 */
+.mobile-nav-toggle {
+display: block;
+z-index: 50;
+}
+.mobile-nav {
+position: fixed;
+top: 0;
+right: 0;
+bottom: 0;
+left: 0;
+background-color: rgba(17, 24, 39, 0.98);
+z-index: 45;
+transform: translateX(100%);
+transition: transform 0.3s ease-in-out;
+}
+.mobile-nav.active {
+transform: translateX(0);
+}
+.mobile-nav-content {
+height: 100%;
+display: flex;
+flex-direction: column;
+padding: 2rem 1.5rem;
+gap: 2rem;
+margin-top: 4rem;
+}
+.mobile-nav-item {
+font-size: 1.25rem;
+padding: 0.75rem 0;
+border-bottom: 1px solid rgba(75, 85, 99, 0.3);
+}
+</style>
 
-        // 自动检测基础路径
-        (function() {
-            const path = window.location.pathname;
-            // 增强路径检测逻辑，兼容多级子目录
-            window.ERP_CONFIG.BASE_PATH = path.includes('/workbench') ? '/workbench' : '';
-            
-            // 挂载到全局方便JS模块访问
-            window.WORKBENCH_BASE = window.ERP_CONFIG.BASE_PATH;
-            console.log('[Init] Base path initialized:', window.ERP_CONFIG.BASE_PATH);
-        })();
-
-        // 加载进度更新函数（供JS模块调用）
-        window.updateLoadingProgress = function(moduleName, success = true) {
-            const progressEl = document.getElementById('loading-progress');
-            const moduleEl = document.getElementById('loading-module');
-            const errorEl = document.getElementById('loading-error');
-            
-            if (!success) {
-                errorEl.classList.remove('hidden');
-                errorEl.innerHTML += `<div>❌ 加载失败: ${moduleName}</div>`;
-                console.error('[Loading] Failed to load:', moduleName);
-                return;
-            }
-
-            // 更新加载状态
-            window.ERP_CONFIG.LOADING_STATE.modules.push(moduleName);
-            window.ERP_CONFIG.LOADING_STATE.current++;
-            
-            // 计算进度百分比
-            const progress = Math.round((window.ERP_CONFIG.LOADING_STATE.current / window.ERP_CONFIG.LOADING_STATE.total) * 100);
-            progressEl.textContent = `加载进度: ${progress}% (${window.ERP_CONFIG.LOADING_STATE.current}/${window.ERP_CONFIG.LOADING_STATE.total})`;
-            moduleEl.textContent = `当前模块: ${moduleName}`;
-
-            // 加载完成判断
-            if (window.ERP_CONFIG.LOADING_STATE.current >= window.ERP_CONFIG.LOADING_STATE.total) {
-                setTimeout(() => {
-                    document.getElementById('system-loading').classList.add('hidden');
-                    document.getElementById('iron-curtain').classList.remove('hidden');
-                    // 通知状态模块加载完成
-                    if (window.state && typeof window.state.notifyListeners === 'function') {
-                        window.state.notifyListeners('system.loaded', true, false);
-                    }
-                }, 800);
-            }
-        };
-    </script>
-
-    <!-- 加载核心CSS（使用配置的基础路径） -->
-    <link rel="stylesheet" href="${window.ERP_CONFIG.BASE_PATH}/workbench/css/workbench-v14.css">
-</head>
-
-<body class="min-h-screen text-white bg-darkest">
-    <!-- 系统加载指示器 -->
-    <div id="system-loading" class="fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
-        <div class="text-center max-w-md px-6">
-            <div class="loading-spinner mx-auto mb-6"></div>
-            <h2 class="text-2xl font-bold text-red-500 mb-3">系统初始化中</h2>
-            <p class="text-gray-400 mb-4">正在加载核心模块...</p>
-            <div id="loading-progress" class="text-sm text-gray-500 mb-3">准备加载...</div>
-            <div id="loading-module" class="text-xs text-gray-600 mb-2"></div>
-            <div id="loading-error" class="hidden mt-6 p-4 bg-red-900/50 border border-red-500 rounded text-red-200 text-sm text-left max-h-60 overflow-y-auto"></div>
-        </div>
-    </div>
-
-    <!-- 铁幕登录界面 -->
-    <section id="iron-curtain" class="fixed inset-0 z-50 bg-black flex items-center justify-center p-4 hidden">
-        <div class="max-w-2xl w-full animate-fade-in">
-            <div class="bg-gradient-to-br from-darker to-darkest border border-red-900/50 rounded-2xl p-8 shadow-2xl">
-                <div class="text-center mb-8">
-                    <div class="text-6xl mb-4 animate-pulse-slow">⚔️</div>
-                    <h1 class="text-3xl font-black text-red-500 mb-2">SURVIVAL MODE</h1>
-                    <p class="text-gray-400 text-lg">铁幕登录系统 - 今日战斗宣言</p>
-                </div>
-
-                <form class="space-y-6" onsubmit="app.survival.startBattle(); return false;">
-                    <fieldset class="space-y-4">
-                        <legend class="text-sm font-bold text-red-400 uppercase tracking-wider mb-2">
-                            <i class="fas fa-fire mr-2"></i>今日三件事
-                        </legend>
-
-                        <div class="space-y-2">
-                            <label for="action-1" class="block text-sm font-medium text-gray-300">
-                                <span class="text-red-500">1.</span> 最重要的事
-                            </label>
-                            <input type="text" id="action-1" required
-                                class="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent transition-base"
-                                placeholder="今天必须完成的第一件事"
-                                oninput="app.survival.checkInputs()">
-                        </div>
-
-                        <div class="space-y-2">
-                            <label for="action-2" class="block text-sm font-medium text-gray-300">
-                                <span class="text-red-500">2.</span> 次要任务
-                            </label>
-                            <input type="text" id="action-2" required
-                                class="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent transition-base"
-                                placeholder="今天需要推进的第二件事"
-                                oninput="app.survival.checkInputs()">
-                        </div>
-
-                        <div class="space-y-2">
-                            <label for="action-3" class="block text-sm font-medium text-gray-300">
-                                <span class="text-red-500">3.</span> 日常维护
-                            </label>
-                            <input type="text" id="action-3" required
-                                class="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent transition-base"
-                                placeholder="今天需要维护的第三件事"
-                                oninput="app.survival.checkInputs()">
-                        </div>
-                    </fieldset>
-
-                    <button type="submit" id="battle-start-btn" disabled
-                        class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-base flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i class="fas fa-bolt"></i>
-                        <span>开始战斗</span>
-                    </button>
-                </form>
-
-                <div class="text-center mt-6">
-                    <button onclick="app.survival.emergencyOverride()"
-                        class="text-xs text-gray-500 hover:text-gray-300 transition-base">
-                        <i class="fas fa-exclamation-triangle mr-1 text-yellow-500"></i>
-                        10分钟紧急进入
-                    </button>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 紧急模式警告 -->
-    <div id="emergency-mode-warning" class="fixed top-0 left-0 right-0 bg-red-900/90 text-white py-2 text-center text-sm font-bold z-50 hidden">
-        ⚠️ 紧急模式已激活 (剩余 <span id="emergency-timer">10</span> 分钟)
-    </div>
-
-    <!-- 主应用界面 -->
-    <main class="min-h-screen">
-        <!-- 顶部导航栏 -->
-        <header class="sticky top-0 z-40 bg-dark/80 backdrop-blur-md border-b border-gray-800">
-            <div class="container mx-auto px-4">
-                <div class="flex items-center justify-between h-16">
-                    <div class="flex items-center gap-3">
-                        <div class="text-2xl">⚔️</div>
-                        <div>
-                            <h1 class="text-lg font-bold text-red-500">战时指挥台 V14.2 PRO</h1>
-                            <p class="text-xs text-gray-500">B2B 专用 · 现金为王 · 云端同步</p>
-                        </div>
-                    </div>
-
-                    <nav class="hidden md:flex items-center gap-6">
-                        <button onclick="app.switchTab('dashboard')" class="nav-tab active text-gray-300 hover:text-white transition-base flex items-center gap-2">
-                            <i class="fas fa-tachometer-alt"></i><span>仪表盘</span>
-                        </button>
-                        <button onclick="app.switchTab('kanban')" class="nav-tab text-gray-300 hover:text-white transition-base flex items-center gap-2">
-                            <i class="fas fa-tasks"></i><span>订单战场</span>
-                        </button>
-                        <button onclick="app.switchTab('crm')" class="nav-tab text-gray-300 hover:text-white transition-base flex items-center gap-2">
-                            <i class="fas fa-users"></i><span>客户档案</span>
-                        </button>
-                        <button onclick="app.switchTab('suppliers')" class="nav-tab text-gray-300 hover:text-white transition-base flex items-center gap-2">
-                            <i class="fas fa-industry"></i><span>供应商</span>
-                        </button>
-                        <button onclick="app.switchTab('expenses')" class="nav-tab text-gray-300 hover:text-white transition-base flex items-center gap-2">
-                            <i class="fas fa-money-bill-wave"></i><span>运营支出</span>
-                        </button>
-                    </nav>
-
-                    <div class="flex items-center gap-3">
-                        <div id="sync-status" class="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full text-xs">
-                            <i class="fas fa-cloud text-gray-400"></i>
-                            <span class="text-gray-400">离线</span>
-                        </div>
-                        <button onclick="app.openSettings()" class="p-2 rounded-full hover:bg-gray-800 transition-base">
-                            <i class="fas fa-cog text-gray-400 hover:text-white"></i>
-                        </button>
-                        <button onclick="app.logout()" class="p-2 rounded-full hover:bg-gray-800 transition-base">
-                            <i class="fas fa-sign-out-alt text-gray-400 hover:text-white"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <!-- 今日三件事 Banner -->
-        <div id="today-actions-banner" class="bg-gradient-to-r from-red-900 to-red-800 py-4 px-6 border-b border-red-700/50 hidden">
-            <div class="container mx-auto">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-white font-bold flex items-center gap-2">
-                        <i class="fas fa-fire text-yellow-400"></i>今日三件事
-                    </h3>
-                    <button onclick="app.clearTodayActions()" class="text-xs text-red-200 hover:text-white transition-base">
-                        <i class="fas fa-redo-alt mr-1"></i>重新设置
-                    </button>
-                </div>
-                <div id="today-actions-list" class="mt-2 space-y-1"></div>
-            </div>
-        </div>
-
-        <!-- 标签页内容区域 -->
-        <div class="container mx-auto px-4 py-6">
-            <!-- 仪表盘 -->
-            <div id="tab-dashboard" class="tab-content active">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-6 shadow-lg transition-base hover:shadow-xl">
-                        <div class="flex items-center justify-between mb-2">
-                            <h3 class="text-white/80 text-sm font-medium">总订单数</h3>
-                            <i class="fas fa-shopping-cart text-white/60 text-2xl"></i>
-                        </div>
-                        <p id="dashboard-total-orders" class="text-3xl font-bold text-white">0</p>
-                        <p class="text-white/70 text-xs mt-1">活跃订单</p>
-                    </div>
-
-                    <div class="bg-gradient-to-br from-green-600 to-green-700 rounded-xl p-6 shadow-lg transition-base hover:shadow-xl">
-                        <div class="flex items-center justify-between mb-2">
-                            <h3 class="text-white/80 text-sm font-medium">总收入</h3>
-                            <i class="fas fa-dollar-sign text-white/60 text-2xl"></i>
-                        </div>
-                        <p id="dashboard-total-income" class="text-3xl font-bold text-white">¥0</p>
-                        <p class="text-white/70 text-xs mt-1">累计收入</p>
-                    </div>
-
-                    <div class="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl p-6 shadow-lg transition-base hover:shadow-xl">
-                        <div class="flex items-center justify-between mb-2">
-                            <h3 class="text-white/80 text-sm font-medium">客户总数</h3>
-                            <i class="fas fa-users text-white/60 text-2xl"></i>
-                        </div>
-                        <p id="dashboard-total-customers" class="text-3xl font-bold text-white">0</p>
-                        <p class="text-white/70 text-xs mt-1">活跃客户</p>
-                    </div>
-
-                    <div class="bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-xl p-6 shadow-lg transition-base hover:shadow-xl">
-                        <div class="flex items-center justify-between mb-2">
-                            <h3 class="text-white/80 text-sm font-medium">今日支出</h3>
-                            <i class="fas fa-money-bill-wave text-white/60 text-2xl"></i>
-                        </div>
-                        <p id="dashboard-total-expenses" class="text-3xl font-bold text-white">¥0</p>
-                        <p class="text-white/70 text-xs mt-1">运营成本</p>
-                    </div>
-                </div>
-
-                <!-- 仪表盘其他内容区域（预留） -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-2 bg-darker rounded-xl p-6 border border-gray-800 shadow-lg">
-                        <h3 class="text-lg font-bold mb-4 text-gray-200">订单趋势</h3>
-                        <div id="order-chart" class="w-full h-64 bg-black/30 rounded-lg flex items-center justify-center">
-                            <p class="text-gray-500">图表加载中...</p>
-                        </div>
-                    </div>
-                    <div class="bg-darker rounded-xl p-6 border border-gray-800 shadow-lg">
-                        <h3 class="text-lg font-bold mb-4 text-gray-200">待处理任务</h3>
-                        <div id="pending-tasks" class="space-y-3">
-                            <div class="p-3 bg-dark rounded-lg border border-gray-700">
-                                <p class="text-sm text-gray-300">暂无待处理任务</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 订单战场（看板） -->
-            <div id="tab-kanban" class="tab-content">
-                <div class="bg-darker rounded-xl p-6 border border-gray-800 shadow-lg mb-6">
-                    <h3 class="text-lg font-bold mb-4 text-gray-200">订单战场</h3>
-                    <div id="kanban-board" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                        <!-- 看板列由JS动态生成 -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- 客户档案 -->
-            <div id="tab-crm" class="tab-content">
-                <div class="bg-darker rounded-xl p-6 border border-gray-800 shadow-lg mb-6">
-                    <h3 class="text-lg font-bold mb-4 text-gray-200">客户档案管理</h3>
-                    <div id="crm-list" class="space-y-4">
-                        <!-- 客户列表由JS动态生成 -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- 供应商 -->
-            <div id="tab-suppliers" class="tab-content">
-                <div class="bg-darker rounded-xl p-6 border border-gray-800 shadow-lg mb-6">
-                    <h3 class="text-lg font-bold mb-4 text-gray-200">供应商管理</h3>
-                    <div id="suppliers-list" class="space-y-4">
-                        <!-- 供应商列表由JS动态生成 -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- 运营支出 -->
-            <div id="tab-expenses" class="tab-content">
-                <div class="bg-darker rounded-xl p-6 border border-gray-800 shadow-lg mb-6">
-                    <h3 class="text-lg font-bold mb-4 text-gray-200">运营支出管理</h3>
-                    <div id="expenses-list" class="space-y-4">
-                        <!-- 支出列表由JS动态生成 -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- 核心JS模块加载（按依赖顺序） -->
-    <script src="${window.ERP_CONFIG.BASE_PATH}/workbench/js/workbench-state.js" onload="updateLoadingProgress('状态管理模块')" onerror="updateLoadingProgress('状态管理模块', false)"></script>
-    <script src="${window.ERP_CONFIG.BASE_PATH}/workbench/js/workbench-firebase.js" onload="updateLoadingProgress('云端同步模块')" onerror="updateLoadingProgress('云端同步模块', false)"></script>
-    <!-- 应用主逻辑 -->
-    <script src="${window.ERP_CONFIG.BASE_PATH}/workbench/js/workbench-app.js" onload="updateLoadingProgress('应用核心模块')" onerror="updateLoadingProgress('应用核心模块', false)"></script>
+<!-- 动态基础路径加载本地 CSS -->
+<script>
+// 自动检测基础路径（提前执行，确保CSS加载时可用）
+(function() {
+    var path = window.location.pathname;
+    // 检测是否在 /workbench/ 子目录
+    if (path.includes('/workbench')) {
+        window.WORKBENCH_BASE = '/workbench';
+    } else {
+        window.WORKBENCH_BASE = '';
+    }
+    console.log('[Init] Base path:', window.WORKBENCH_BASE);
     
-    <!-- 初始化脚本 -->
-    <script>
-        'use strict';
+    // 动态创建CSS链接
+    var cssLink = document.createElement('link');
+    cssLink.rel = 'stylesheet';
+    cssLink.href = window.WORKBENCH_BASE + '/css/workbench-v14.css';
+    document.head.appendChild(cssLink);
+})();
+</script>
+</head>
+<body class="min-h-screen text-white bg-darkest font-inter">
+
+<!-- 系统加载指示器 -->
+<div id="system-loading" class="fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
+<div class="text-center max-w-md px-6">
+<div class="loading-spinner mx-auto mb-6"></div>
+<h2 class="text-2xl font-bold text-red-500 mb-3">系统初始化中</h2>
+<p class="text-gray-400 mb-4">正在加载核心模块...</p>
+<div id="loading-progress" class="text-sm text-gray-500 mb-3">准备加载...</div>
+<div id="loading-module" class="text-xs text-gray-600 mb-2"></div>
+<!-- 进度条可视化 -->
+<div class="w-full bg-gray-800 rounded-full h-2 mb-4 overflow-hidden">
+    <div id="loading-bar" class="bg-red-500 h-full w-0 transition-all duration-300"></div>
+</div>
+<div id="loading-error" class="hidden mt-6 p-4 bg-red-900/50 border border-red-500 rounded text-red-200 text-sm text-left max-h-60 overflow-y-auto"></div>
+</div>
+</div>
+
+<!-- 铁幕登录界面 -->
+<section id="iron-curtain" class="fixed inset-0 z-50 bg-black flex items-center justify-center p-4 hidden">
+<div class="max-w-2xl w-full animate-fade-in">
+<div class="bg-gradient-to-br from-darker to-darkest border border-red-900/50 rounded-2xl p-8 shadow-2xl">
+<div class="text-center mb-8">
+<div class="text-6xl mb-4 animate-pulse-slow">⚔️</div>
+<h1 class="text-3xl font-black text-red-500 mb-2">SURVIVAL MODE</h1>
+<p class="text-gray-400 text-lg">铁幕登录系统 - 今日战斗宣言</p>
+</div>
+
+<form class="space-y-6" onsubmit="app.survival.startBattle(); return false;">
+<fieldset class="space-y-4">
+<legend class="text-sm font-bold text-red-400 uppercase tracking-wider mb-2">
+<i class="fas fa-fire mr-2"></i>今日三件事
+</legend>
+
+<div class="space-y-2">
+<label for="action-1" class="block text-sm font-medium text-gray-300">
+<span class="text-red-500">1.</span> 最重要的事
+</label>
+<input type="text" id="action-1" required
+class="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
+placeholder="今天必须完成的第一件事"
+oninput="app.survival?.checkInputs()">
+</div>
+
+<div class="space-y-2">
+<label for="action-2" class="block text-sm font-medium text-gray-300">
+<span class="text-red-500">2.</span> 次要任务
+</label>
+<input type="text" id="action-2" required
+class="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
+placeholder="今天需要推进的第二件事"
+oninput="app.survival?.checkInputs()">
+</div>
+
+<div class="space-y-2">
+<label for="action-3" class="block text-sm font-medium text-gray-300">
+<span class="text-red-500">3.</span> 日常维护
+</label>
+<input type="text" id="action-3" required
+class="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
+placeholder="今天需要维护的第三件事"
+oninput="app.survival?.checkInputs()">
+</div>
+</fieldset>
+
+<button type="submit" id="battle-start-btn" disabled
+class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+<i class="fas fa-bolt"></i>
+<span>开始战斗</span>
+</button>
+</form>
+
+<div class="text-center mt-6">
+<button onclick="app.survival?.emergencyOverride()"
+class="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+<i class="fas fa-exclamation-triangle mr-1 text-yellow-500"></i>
+10分钟紧急进入
+</button>
+</div>
+</div>
+</div>
+</section>
+
+<!-- 紧急模式警告 -->
+<div id="emergency-mode-warning" class="fixed top-0 left-0 right-0 bg-red-900/90 text-white py-2 text-center text-sm font-bold z-50 hidden">
+⚠️ 紧急模式已激活 (剩余 <span id="emergency-timer">10</span> 分钟)
+</div>
+
+<!-- 主应用界面 -->
+<main class="min-h-screen">
+<!-- 顶部导航栏 -->
+<header class="sticky top-0 z-40 bg-dark/80 backdrop-blur-md border-b border-gray-800">
+<div class="container mx-auto px-4">
+<div class="flex items-center justify-between h-16">
+<div class="flex items-center gap-3">
+<div class="text-2xl">⚔️</div>
+<div>
+<h1 class="text-lg font-bold text-red-500">战时指挥台 V14.2 PRO</h1>
+<p class="text-xs text-gray-500">B2B 专用 · 现金为王 · 云端同步</p>
+</div>
+</div>
+
+<!-- 桌面端导航 -->
+<nav class="hidden md:flex items-center gap-6">
+<button onclick="app.switchTab('dashboard')" class="nav-tab text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+<i class="fas fa-tachometer-alt"></i><span>仪表盘</span>
+</button>
+<button onclick="app.switchTab('kanban')" class="nav-tab text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+<i class="fas fa-tasks"></i><span>订单战场</span>
+</button>
+<button onclick="app.switchTab('crm')" class="nav-tab text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+<i class="fas fa-users"></i><span>客户档案</span>
+</button>
+<button onclick="app.switchTab('suppliers')" class="nav-tab text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+<i class="fas fa-industry"></i><span>供应商</span>
+</button>
+<button onclick="app.switchTab('expenses')" class="nav-tab text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+<i class="fas fa-money-bill-wave"></i><span>运营支出</span>
+</button>
+</nav>
+
+<!-- 移动端导航切换按钮 -->
+<button class="md:hidden mobile-nav-toggle p-2 rounded-full hover:bg-gray-800 transition-colors" onclick="document.querySelector('.mobile-nav').classList.toggle('active')">
+<i class="fas fa-bars text-gray-400 hover:text-white"></i>
+</button>
+
+<div class="flex items-center gap-3">
+<div id="sync-status" class="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full text-xs">
+<i class="fas fa-cloud text-gray-400"></i>
+<span class="text-gray-400">离线</span>
+</div>
+<button onclick="app.openSettings?.()" class="p-2 rounded-full hover:bg-gray-800 transition-colors">
+<i class="fas fa-cog text-gray-400 hover:text-white"></i>
+</button>
+<button onclick="app.logout?.()" class="p-2 rounded-full hover:bg-gray-800 transition-colors">
+<i class="fas fa-sign-out-alt text-gray-400 hover:text-white"></i>
+</button>
+</div>
+</div>
+</div>
+</header>
+
+<!-- 移动端导航菜单 -->
+<div class="mobile-nav">
+<div class="mobile-nav-content">
+<button onclick="app.switchTab('dashboard'); document.querySelector('.mobile-nav').classList.remove('active')" class="mobile-nav-item text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+<i class="fas fa-tachometer-alt"></i><span>仪表盘</span>
+</button>
+<button onclick="app.switchTab('kanban'); document.querySelector('.mobile-nav').classList.remove('active')" class="mobile-nav-item text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+<i class="fas fa-tasks"></i><span>订单战场</span>
+</button>
+<button onclick="app.switchTab('crm'); document.querySelector('.mobile-nav').classList.remove('active')" class="mobile-nav-item text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+<i class="fas fa-users"></i><span>客户档案</span>
+</button>
+<button onclick="app.switchTab('suppliers'); document.querySelector('.mobile-nav').classList.remove('active')" class="mobile-nav-item text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+<i class="fas fa-industry"></i><span>供应商</span>
+</button>
+<button onclick="app.switchTab('expenses'); document.querySelector('.mobile-nav').classList.remove('active')" class="mobile-nav-item text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+<i class="fas fa-money-bill-wave"></i><span>运营支出</span>
+</button>
+</div>
+</div>
+
+<!-- 今日三件事 Banner -->
+<div id="today-actions-banner" class="bg-gradient-to-r from-red-900 to-red-800 py-4 px-6 border-b border-red-700/50 hidden">
+<div class="container mx-auto">
+<div class="flex items-center justify-between">
+<h3 class="text-white font-bold flex items-center gap-2">
+<i class="fas fa-fire text-yellow-400"></i>今日三件事
+</h3>
+<button onclick="app.clearTodayActions?.()" class="text-xs text-red-200 hover:text-white transition-colors">
+<i class="fas fa-redo-alt mr-1"></i>重新设置
+</button>
+</div>
+<div id="today-actions-list" class="mt-2 space-y-1"></div>
+</div>
+</div>
+
+<!-- 标签页内容区域 -->
+<div class="container mx-auto px-4 py-6">
+<!-- 仪表盘 -->
+<div id="tab-dashboard" class="tab-content active">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<div class="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-6 shadow-lg">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-white/80 text-sm font-medium">总订单数</h3>
+<i class="fas fa-shopping-cart text-white/60 text-2xl"></i>
+</div>
+<p id="dashboard-total-orders" class="text-3xl font-bold text-white">0</p>
+<p class="text-white/70 text-xs mt-1">活跃订单</p>
+</div>
+
+<div class="bg-gradient-to-br from-green-600 to-green-700 rounded-xl p-6 shadow-lg">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-white/80 text-sm font-medium">总收入</h3>
+<i class="fas fa-dollar-sign text-white/60 text-2xl"></i>
+</div>
+<p id="dashboard-total-income" class="text-3xl font-bold text-white">¥0</p>
+<p class="text-white/70 text-xs mt-1">累计收入</p>
+</div>
+
+<div class="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl p-6 shadow-lg">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-white/80 text-sm font-medium">本月收入</h3>
+<i class="fas fa-chart-line text-white/60 text-2xl"></i>
+</div>
+<p id="dashboard-month-income" class="text-3xl font-bold text-white">¥0</p>
+<p class="text-white/70 text-xs mt-1">当月统计</p>
+</div>
+
+<div class="bg-gradient-to-br from-orange-600 to-orange-700 rounded-xl p-6 shadow-lg">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-white/80 text-sm font-medium">供应商数</h3>
+<i class="fas fa-truck text-white/60 text-2xl"></i>
+</div>
+<p id="dashboard-total-suppliers" class="text-3xl font-bold text-white">0</p>
+<p class="text-white/70 text-xs mt-1">合作伙伴</p>
+</div>
+</div>
+
+<!-- 实时时钟 -->
+<div class="bg-gray-900 rounded-xl p-6 mb-6">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="text-center">
+<p class="text-gray-400 text-sm mb-1">当前时间</p>
+<p id="current-time" class="text-2xl font-bold text-white">--:--:--</p>
+</div>
+<div class="text-center">
+<p class="text-gray-400 text-sm mb-1">系统状态</p>
+<p class="text-green-500 font-bold">● 运行中</p>
+</div>
+<div class="text-center">
+<p class="text-gray-400 text-sm mb-1">云端同步</p>
+<p id="last-sync" class="text-gray-300">未连接</p>
+</div>
+</div>
+</div>
+
+<!-- 快速操作 -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<button onclick="app.kanban?.openQuickAdd()"
+class="bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 p-6 rounded-xl transition-all text-left group">
+<div class="flex items-center justify-between mb-2">
+<i class="fas fa-plus-circle text-3xl text-white/80 group-hover:scale-110 transition-transform"></i>
+<i class="fas fa-arrow-right text-white/50 group-hover:translate-x-1 transition-transform"></i>
+</div>
+<h3 class="text-white font-bold text-lg">新增订单</h3>
+<p class="text-white/70 text-sm mt-1">快速创建新订单</p>
+</button>
+
+<button onclick="app.crm?.openCustomerModal()"
+class="bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 p-6 rounded-xl transition-all text-left group">
+<div class="flex items-center justify-between mb-2">
+<i class="fas fa-user-plus text-3xl text-white/80 group-hover:scale-110 transition-transform"></i>
+<i class="fas fa-arrow-right text-white/50 group-hover:translate-x-1 transition-transform"></i>
+</div>
+<h3 class="text-white font-bold text-lg">新增客户</h3>
+<p class="text-white/70 text-sm mt-1">添加客户信息</p>
+</button>
+
+<button onclick="app.expenses?.openAddModal()"
+class="bg-gradient-to-br from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 p-6 rounded-xl transition-all text-left group">
+<div class="flex items-center justify-between mb-2">
+<i class="fas fa-receipt text-3xl text-white/80 group-hover:scale-110 transition-transform"></i>
+<i class="fas fa-arrow-right text-white/50 group-hover:translate-x-1 transition-transform"></i>
+</div>
+<h3 class="text-white font-bold text-lg">记录支出</h3>
+<p class="text-white/70 text-sm mt-1">添加运营费用</p>
+</button>
+</div>
+</div>
+
+<!-- 订单战场 -->
+<div id="tab-kanban" class="tab-content">
+<div class="mb-6 flex items-center justify-between">
+<h2 class="text-2xl font-bold text-white">订单战场</h2>
+<button onclick="app.kanban?.openQuickAdd()"
+class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+<i class="fas fa-plus"></i><span>快速新增</span>
+</button>
+</div>
+<div id="kanban-board" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4"></div>
+</div>
+
+<!-- 客户档案 -->
+<div id="tab-crm" class="tab-content">
+<div class="mb-6 flex items-center justify-between">
+<h2 class="text-2xl font-bold text-white">客户档案</h2>
+<button onclick="app.crm?.openCustomerModal()"
+class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+<i class="fas fa-user-plus"></i><span>新增客户</span>
+</button>
+</div>
+<div id="crm-customers" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<div class="col-span-full text-center py-12 text-gray-500">
+<i class="fas fa-users text-4xl mb-4 opacity-50"></i>
+<p>暂无客户数据</p>
+</div>
+</div>
+</div>
+
+<!-- 供应商 -->
+<div id="tab-suppliers" class="tab-content">
+<div class="mb-6 flex items-center justify-between">
+<h2 class="text-2xl font-bold text-white">供应商管理</h2>
+<button onclick="app.suppliers?.openAddModal()"
+class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+<i class="fas fa-industry"></i><span>新增供应商</span>
+</button>
+</div>
+<div id="suppliers-list" class="space-y-4">
+<div class="text-center py-12 text-gray-500">
+<i class="fas fa-industry text-4xl mb-4 opacity-50"></i>
+<p>暂无供应商数据</p>
+</div>
+</div>
+</div>
+
+<!-- 运营支出 -->
+<div id="tab-expenses" class="tab-content">
+<div class="mb-6 flex items-center justify-between">
+<h2 class="text-2xl font-bold text-white">运营支出</h2>
+<button onclick="app.expenses?.openAddModal()"
+class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+<i class="fas fa-plus"></i><span>记录支出</span>
+</button>
+</div>
+<div id="expenses-list" class="space-y-4">
+<div class="text-center py-12 text-gray-500">
+<i class="fas fa-receipt text-4xl mb-4 opacity-50"></i>
+<p>暂无支出记录</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+
+<!-- 模块验证函数 -->
+<script>
+// 全局模块加载检查函数
+window.checkModulesLoaded = function() {
+    var requiredModules = [
+        'WorkbenchConfig',
+        'WorkbenchUtils', 
+        'WorkbenchModal',
+        'WorkbenchState',
+        'WorkbenchStorage'
+    ];
+    
+    var allLoaded = true;
+    requiredModules.forEach(function(mod) {
+        if (typeof window[mod] === 'undefined') {
+            console.error('[Loader] 缺失模块:', mod);
+            allLoaded = false;
+        }
+    });
+    
+    return allLoaded;
+};
+
+// 加载进度更新函数
+window.updateLoadingProgress = function(progress, moduleName) {
+    const progressEl = document.getElementById('loading-progress');
+    const moduleEl = document.getElementById('loading-module');
+    const barEl = document.getElementById('loading-bar');
+    
+    if (progressEl) progressEl.textContent = `加载进度: ${progress}%`;
+    if (moduleEl) moduleEl.textContent = moduleName ? `当前加载: ${moduleName}` : '';
+    if (barEl) barEl.style.width = `${progress}%`;
+};
+</script>
+
+<!-- 核心模块加载 - 使用动态基础路径 -->
+<script>
+// 动态加载JS模块
+(function loadCoreModules() {
+    const modules = [
+        '/js/workbench-config.js',
+        '/js/workbench-utils.js',
+        '/js/workbench-modal.js',
+        '/js/workbench-state.js',
+        '/js/workbench-storage.js',
+        '/js/workbench-auth.js',
+        // Firebase模块
+        'https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js',
+        'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js',
+        'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js',
+        'https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js',
+        '/js/workbench-firebase.js',
+        // 业务模块
+        '/js/workbench-dashboard.js',
+        '/js/workbench-orders.js',
+        '/js/workbench-suppliers.js',
+        '/js/workbench-finance.js',
+        '/js/workbench-expenses.js',
+        '/js/workbench-crm.js',
+        // 主应用脚本
+        '/js/workbench-app.js'
+    ];
+
+    let loadedCount = 0;
+    const totalModules = modules.length;
+
+    // 加载单个模块
+    function loadModule(src) {
+        // 更新加载进度
+        updateLoadingProgress(Math.round((loadedCount / totalModules) * 100), src.split('/').pop());
         
-        // 页面加载完成后初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            // 初始化状态监听器（监听云端同步状态）
-            if (window.state && typeof window.state.notifyListeners === 'function') {
-                // 监听同步状态变化
-                window.state.listeners.set('sync.status', function(newValue) {
-                    const syncEl = document.getElementById('sync-status');
-                    const iconEl = syncEl.querySelector('i');
-                    const textEl = syncEl.querySelector('span');
-                    
-                    if (newValue === 'online') {
-                        iconEl.className = 'fas fa-cloud-check text-green-400';
-                        textEl.textContent = '已同步';
-                        textEl.className = 'text-green-400';
-                    } else if (newValue === 'syncing') {
-                        iconEl.className = 'fas fa-cloud-upload-alt text-yellow-400';
-                        textEl.textContent = '同步中';
-                        textEl.className = 'text-yellow-400';
-                    } else {
-                        iconEl.className = 'fas fa-cloud text-gray-400';
-                        textEl.textContent = '离线';
-                        textEl.className = 'text-gray-400';
-                    }
-                });
+        // 区分远程和本地模块
+        const isRemote = src.startsWith('http');
+        const fullSrc = isRemote ? src : window.WORKBENCH_BASE + src;
 
-                // 初始化加载进度
-                updateLoadingProgress('DOM初始化');
-            } else {
-                updateLoadingProgress('状态模块初始化失败', false);
+        const script = document.createElement('script');
+        script.src = fullSrc;
+        script.async = false; // 按顺序加载
+        
+        script.onload = function() {
+            loadedCount++;
+            updateLoadingProgress(Math.round((loadedCount / totalModules) * 100), `${src.split('/').pop()} ✅`);
+            if (loadedCount === totalModules) {
+                // 所有模块加载完成
+                updateLoadingProgress(100, '所有模块加载完成');
             }
-        });
+        };
+        
+        script.onerror = function() {
+            const errorEl = document.getElementById('loading-error');
+            errorEl.classList.remove('hidden');
+            errorEl.innerHTML += `<p>加载失败: ${fullSrc}</p>`;
+        };
 
-        // 全局错误捕获
-        window.addEventListener('error', function(e) {
-            console.error('[Global Error]', e.message, e.filename, e.lineno);
-            // 通知状态模块记录错误
-            if (window.state && typeof window.state.notifyListeners === 'function') {
-                window.state.notifyListeners('system.error', e, null);
-            }
-        });
-    </script>
+        document.body.appendChild(script);
+    }
+
+    // 依次加载所有模块
+    modules.forEach(loadModule);
+})();
+</script>
+
+<!-- 模块加载完成处理 -->
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('[V14.2 PRO] DOM加载完成，等待模块初始化...');
+    updateLoadingProgress(10, 'DOM已加载，等待模块加载');
+
+    // 轮询检查模块是否加载完成（更健壮）
+    const checkInterval = setInterval(() => {
+        const requiredModules = [
+            'WorkbenchConfig',
+            'WorkbenchUtils', 
+            'WorkbenchModal',
+            'WorkbenchState',
+            'WorkbenchStorage',
+            'WorkbenchAuth',
+            'WorkbenchDashboard',
+            'WorkbenchOrders',
+            'WorkbenchSuppliers',
+            'WorkbenchFinance',
+            'WorkbenchExpenses',
+            'WorkbenchCRM',
+            'app'
+        ];
+
+        const missing = requiredModules.filter(m => typeof window[m] === 'undefined');
+
+        if (missing.length === 0) {
+            clearInterval(checkInterval);
+            console.log('[V14.2 PRO] ✅ 所有模块加载完成');
+            console.log('[V14.2 PRO] 已加载:', requiredModules.length, '个模块');
+
+            // 隐藏加载界面
+            setTimeout(function() {
+                const loadingEl = document.getElementById('system-loading');
+                if (loadingEl) {
+                    loadingEl.style.opacity = '0';
+                    loadingEl.style.transition = 'opacity 0.3s ease';
+                    setTimeout(() => {
+                        loadingEl.style.display = 'none';
+                    }, 300);
+                }
+
+                // 启动应用
+                if (typeof app !== 'undefined' && app.init) {
+                    console.log('[V14.2 PRO] 启动应用...');
+                    app.init();
+                }
+            }, 300);
+        } else if (loadedCount >= totalModules) {
+            // 所有模块已加载但仍有缺失
+            clearInterval(checkInterval);
+            console.error('[V14.2 PRO] ❌ 缺失模块:', missing);
+            const errorEl = document.getElementById('loading-error');
+            errorEl.classList.remove('hidden');
+            errorEl.innerHTML = 
+                '<strong>模块加载失败</strong><br>' +
+                '缺失模块: ' + missing.join(', ') + '<br><br>' +
+                '<strong>可能原因：</strong><br>' +
+                '1. JS 文件路径不正确<br>' +
+                '2. Cloudflare Pages 配置问题<br>' +
+                '3. 网络连接问题<br><br>' +
+                '<button onclick="location.reload()" class="mt-2 px-4 py-2 bg-red-600 rounded hover:bg-red-700">' +
+                '重新加载</button> ' +
+                `<a href="${window.WORKBENCH_BASE}/diagnostic.html" class="mt-2 ml-2 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 inline-block">` +
+                '系统诊断</a>';
+        }
+    }, 200); // 每200ms检查一次
+
+    // 实时时钟更新
+    function updateClock() {
+        const now = new Date();
+        const timeStr = now.toTimeString().split(' ')[0];
+        document.getElementById('current-time').textContent = timeStr;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+});
+</script>
+
 </body>
 </html>
