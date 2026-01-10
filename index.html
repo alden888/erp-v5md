@@ -1,384 +1,575 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>战时指挥台 V14.2 PRO | ERP EDITION</title>
-    <meta name="description" content="V5 Medical War Room - B2B Operations Center">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>战时指挥台 V14.2 PRO ERP EDITION · B2B 专用</title>
+
+<!-- 预加载关键资源 -->
+<link rel="preconnect" href="https://cdn.tailwindcss.com">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+
+<!-- 外部样式 -->
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="css/workbench-v14.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
 
+<!-- Tailwind 配置 -->
+<script>
+tailwind.config = {
+theme: {
+extend: {
+colors: {
+primary: '#ef4444',
+secondary: '#3b82f6',
+accent: '#8b5cf6',
+success: '#10b981',
+warning: '#f59e0b',
+info: '#06b6d4',
+dark: '#1f2937',
+darker: '#111827',
+darkest: '#030712'
+}
+}
+}
+}
+</script>
+
+<!-- 内联关键 CSS -->
 <style>
-    #loader-mask { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; transition: opacity 0.5s; }
-    .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top-color: #dc2626; border-radius: 50%; animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .hidden { display: none !important; }
-    .modal-overlay { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
-    .modal-overlay.active { opacity: 1; pointer-events: auto; }
-    .active-tab { background-color: rgba(220, 38, 38, 0.2); color: white !important; }
+html { scroll-behavior: smooth; }
+body {
+font-family: 'Inter', system-ui, sans-serif;
+background-color: #030712;
+background-image:
+radial-gradient(circle at 10% 20%, rgba(31, 41, 55, 0.1) 0%, transparent 20%),
+radial-gradient(circle at 90% 80%, rgba(31, 41, 55, 0.1) 0%, transparent 20%);
+background-attachment: fixed;
+}
+
+/* 加载动画 */
+@keyframes spin {
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
+}
+.loading-spinner {
+border: 2px solid rgba(255, 255, 255, 0.1);
+border-radius: 50%;
+border-top: 2px solid #ef4444;
+width: 20px;
+height: 20px;
+animation: spin 1s linear infinite;
+display: inline-block;
+}
+
+@keyframes fadeIn {
+from { opacity: 0; transform: translateY(10px); }
+to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
 </style>
+
+<!-- 本地样式文件 -->
+<link rel="stylesheet" href="css/workbench-v14.css">
 </head>
-<body class="bg-black text-gray-300 font-sans selection:bg-red-900 selection:text-white">
-<!-- 加载遮罩 -->
-<div id="loader-mask">
-    <div class="spinner mb-4"></div>
-    <h2 class="text-xl font-bold tracking-widest text-red-500">V5 ERP SYSTEM</h2>
-    <p class="text-xs text-gray-500 mt-2">Connecting to War Room...</p>
-    <div id="error-log" class="mt-4 text-xs text-red-400 font-mono hidden max-w-md text-center px-4"></div>
+<body class="min-h-screen text-white bg-darkest">
+
+<!-- 🔥 系统加载指示器 -->
+<div id="system-loading" class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center">
+<div class="text-center max-w-md">
+<div class="loading-spinner mx-auto mb-4" style="width: 40px; height: 40px;"></div>
+<h2 class="text-xl font-bold text-red-500 mb-2">系统初始化中...</h2>
+<p class="text-gray-400 mb-4">正在加载核心模块...</p>
+<div id="loading-progress" class="text-sm text-gray-500 mb-2">检测文件路径...</div>
+<div id="loading-details" class="text-xs text-gray-600 max-h-40 overflow-y-auto"></div>
+<div id="loading-error" class="hidden mt-4 p-4 bg-red-900/50 border border-red-500 rounded text-red-200 text-sm text-left"></div>
+</div>
 </div>
 
-<!-- 生存模式铁幕 -->
-<div id="iron-curtain" class="fixed inset-0 z-[60] bg-black flex justify-center items-center hidden">
-    <div class="w-full max-w-md p-8 text-center">
-        <div class="text-6xl mb-6 animate-bounce">⚔️</div>
-        <h1 class="text-3xl font-black text-red-600 mb-2 tracking-tighter">SURVIVAL MODE</h1>
-        <p class="text-gray-500 text-sm mb-8 font-mono">战时指挥台 · 现金为王</p>
-        
-        <div class="space-y-3 mb-8 text-left">
-            <input id="action-1" type="text" class="w-full bg-gray-900 border border-red-900/30 rounded px-4 py-3 text-white focus:border-red-600 outline-none transition" placeholder="1. 搞钱动作..." oninput="app.survival.checkInputs()">
-            <input id="action-2" type="text" class="w-full bg-gray-900 border border-red-900/30 rounded px-4 py-3 text-white focus:border-red-600 outline-none transition" placeholder="2. 核心推进..." oninput="app.survival.checkInputs()">
-            <input id="action-3" type="text" class="w-full bg-gray-900 border border-red-900/30 rounded px-4 py-3 text-white focus:border-red-600 outline-none transition" placeholder="3. 客户跟进..." oninput="app.survival.checkInputs()">
-        </div>
-        
-        <button id="battle-start-btn" disabled onclick="app.survival.startBattle()" class="w-full bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition shadow-[0_0_20px_rgba(220,38,38,0.3)]">
-            🔥 开始战斗
-        </button>
-        
-        <div class="mt-4 flex justify-between text-xs text-gray-600">
-            <button onclick="app.survival.emergencyOverride()" class="hover:text-red-400">⚡ 紧急模式 (10min)</button>
-            <span>V14.2 PRO</span>
-        </div>
-    </div>
+<!-- 🔥 铁幕登录界面 -->
+<section id="iron-curtain" class="fixed inset-0 z-50 bg-black flex items-center justify-center p-4 hidden">
+<div class="max-w-2xl w-full animate-fade-in">
+<div class="bg-gradient-to-br from-darker to-darkest border border-red-900/50 rounded-2xl p-8 shadow-2xl">
+<div class="text-center mb-8">
+<div class="text-6xl mb-4 animate-pulse-slow">⚔️</div>
+<h1 class="text-3xl font-black text-red-500 mb-2">SURVIVAL MODE</h1>
+<p class="text-gray-400 text-lg">铁幕登录系统 - 今日战斗宣言</p>
 </div>
 
+<form class="space-y-6" onsubmit="app.survival.startBattle(); return false;">
+<fieldset class="space-y-4">
+<legend class="text-sm font-bold text-red-400 uppercase tracking-wider mb-2">
+<i class="fas fa-fire mr-2"></i>今日三件事
+</legend>
+
+<div class="space-y-2">
+<label for="action-1" class="block text-sm font-medium text-gray-300">
+<span class="text-red-500">1.</span> 最重要的事
+</label>
+<input type="text" id="action-1" required
+class="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
+placeholder="今天必须完成的第一件事"
+oninput="app.survival.checkInputs()">
+</div>
+
+<div class="space-y-2">
+<label for="action-2" class="block text-sm font-medium text-gray-300">
+<span class="text-red-500">2.</span> 次要任务
+</label>
+<input type="text" id="action-2" required
+class="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
+placeholder="今天需要推进的第二件事"
+oninput="app.survival.checkInputs()">
+</div>
+
+<div class="space-y-2">
+<label for="action-3" class="block text-sm font-medium text-gray-300">
+<span class="text-red-500">3.</span> 日常维护
+</label>
+<input type="text" id="action-3" required
+class="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
+placeholder="今天需要维护的第三件事"
+oninput="app.survival.checkInputs()">
+</div>
+</fieldset>
+
+<button type="submit" id="battle-start-btn" disabled
+class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+<i class="fas fa-bolt"></i>
+<span>开始战斗</span>
+</button>
+</form>
+
+<div class="text-center mt-6">
+<button onclick="app.survival.emergencyOverride()"
+class="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+<i class="fas fa-exclamation-triangle mr-1 text-yellow-500"></i>
+10分钟紧急进入
+</button>
+</div>
+</div>
+</div>
+</section>
+
+<!-- 🔥 紧急模式警告 -->
+<div id="emergency-mode-warning" class="fixed top-0 left-0 right-0 bg-red-900/90 text-white py-2 text-center text-sm font-bold z-50 hidden">
+⚠️ 紧急模式已激活 (剩余 <span id="emergency-timer">10</span> 分钟)
+</div>
+
+<!-- 🔥 主应用界面 -->
+<main class="min-h-screen">
 <!-- 顶部导航栏 -->
-<header id="main-header" class="fixed top-0 left-0 right-0 h-[60px] bg-black/90 backdrop-blur border-b border-gray-800 z-40 flex items-center justify-between px-4 lg:px-6">
-    <div class="flex items-center gap-4">
-        <div class="font-black text-lg tracking-tighter text-white">
-            <span class="text-blue-600">V5</span> COMMANDER
-        </div>
-        <div id="emergency-mode-warning" class="hidden px-2 py-0.5 bg-red-900/30 border border-red-500/50 rounded text-red-400 text-[10px] font-bold flex items-center gap-2 animate-pulse">
-            ⚠️ 预警中
-        </div>
-    </div>
-    
-    <nav class="flex gap-1 overflow-x-auto no-scrollbar">
-        <button onclick="app.ui.switchTab('dashboard')" class="tab-btn active-tab px-3 py-2 hover:bg-gray-900 rounded text-sm font-medium transition whitespace-nowrap" data-tab="dashboard">
-            <i class="fas fa-chart-line mr-1"></i>现金流
-        </button>
-        <button onclick="app.ui.switchTab('kanban')" class="tab-btn px-3 py-2 hover:bg-gray-900 rounded text-sm font-medium transition whitespace-nowrap" data-tab="kanban">
-            <i class="fas fa-columns mr-1"></i>订单
-        </button>
-        <button onclick="app.ui.switchTab('crm')" class="tab-btn px-3 py-2 hover:bg-gray-900 rounded text-sm font-medium transition whitespace-nowrap" data-tab="crm">
-            <i class="fas fa-users mr-1"></i>客户
-        </button>
-        <button onclick="app.ui.switchTab('suppliers')" class="tab-btn px-3 py-2 hover:bg-gray-900 rounded text-sm font-medium transition whitespace-nowrap" data-tab="suppliers">
-            <i class="fas fa-industry mr-1"></i>供应商
-        </button>
-        <button onclick="app.ui.switchTab('expenses')" class="tab-btn px-3 py-2 hover:bg-gray-900 rounded text-sm font-medium transition whitespace-nowrap" data-tab="expenses">
-            <i class="fas fa-receipt mr-1"></i>支出
-        </button>
-    </nav>
+<header class="sticky top-0 z-40 bg-dark/80 backdrop-blur-md border-b border-gray-800">
+<div class="container mx-auto px-4">
+<div class="flex items-center justify-between h-16">
+<div class="flex items-center gap-3">
+<div class="text-2xl">⚔️</div>
+<div>
+<h1 class="text-lg font-bold text-red-500">战时指挥台 V14.2 PRO</h1>
+<p class="text-xs text-gray-500">B2B 专用 · 现金为王 · 云端同步</p>
+</div>
+</div>
+
+<nav class="hidden md:flex items-center gap-6">
+<button onclick="app.switchTab('dashboard')" class="nav-tab text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+<i class="fas fa-tachometer-alt"></i><span>仪表盘</span>
+</button>
+<button onclick="app.switchTab('kanban')" class="nav-tab text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+<i class="fas fa-tasks"></i><span>订单战场</span>
+</button>
+<button onclick="app.switchTab('crm')" class="nav-tab text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+<i class="fas fa-users"></i><span>客户档案</span>
+</button>
+<button onclick="app.switchTab('suppliers')" class="nav-tab text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+<i class="fas fa-industry"></i><span>供应商</span>
+</button>
+<button onclick="app.switchTab('expenses')" class="nav-tab text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+<i class="fas fa-money-bill-wave"></i><span>运营支出</span>
+</button>
+</nav>
+
+<div class="flex items-center gap-3">
+<div id="sync-status" class="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full text-xs">
+<i class="fas fa-cloud text-gray-400"></i>
+<span class="text-gray-400">离线</span>
+</div>
+<button onclick="app.openSettings()" class="p-2 rounded-full hover:bg-gray-800 transition-colors">
+<i class="fas fa-cog text-gray-400 hover:text-white"></i>
+</button>
+<button onclick="app.logout()" class="p-2 rounded-full hover:bg-gray-800 transition-colors">
+<i class="fas fa-sign-out-alt text-gray-400 hover:text-white"></i>
+</button>
+</div>
+</div>
+</div>
 </header>
 
-<!-- 主内容区 -->
-<main class="pt-[80px] px-4 lg:px-6 pb-12 max-w-[1600px] mx-auto min-h-screen">
+<!-- 今日三件事 Banner -->
+<div id="today-actions-banner" class="bg-gradient-to-r from-red-900 to-red-800 py-4 px-6 border-b border-red-700/50 hidden">
+<div class="container mx-auto">
+<div class="flex items-center justify-between">
+<h3 class="text-white font-bold flex items-center gap-2">
+<i class="fas fa-fire text-yellow-400"></i>今日三件事
+</h3>
+<button onclick="app.clearTodayActions()" class="text-xs text-red-200 hover:text-white transition-colors">
+<i class="fas fa-redo-alt mr-1"></i>重新设置
+</button>
+</div>
+<div id="today-actions-list" class="mt-2 space-y-1"></div>
+</div>
+</div>
 
-    <!-- Dashboard Tab -->
-    <div id="tab-dashboard" class="tab-content active">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl">
-                <div class="text-gray-500 text-xs mb-1">本月营收 (Revenue)</div>
-                <div class="text-2xl font-bold text-blue-500" id="kpiRevenue">¥0</div>
-            </div>
-            <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl">
-                <div class="text-gray-500 text-xs mb-1">真实毛利 (Gross)</div>
-                <div class="text-2xl font-bold text-green-500" id="kpiGross">¥0</div>
-            </div>
-            <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl">
-                <div class="text-gray-500 text-xs mb-1">净利润 (Net)</div>
-                <div class="text-2xl font-bold text-purple-500" id="kpiNet">¥0</div>
-            </div>
-            <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl border-l-4 border-l-red-600">
-                <div class="text-gray-500 text-xs mb-1">生存倒计时</div>
-                <div class="text-xl font-bold text-white">72h 安全</div>
-            </div>
-        </div>
-        <div class="mb-6">
-            <h3 class="text-xs font-bold text-gray-500 uppercase mb-2">Today's Focus</h3>
-            <div id="actions-display" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
-        </div>
-    </div>
+<!-- 标签页内容区域 -->
+<div class="container mx-auto px-4 py-6">
+<!-- 仪表盘 -->
+<div id="tab-dashboard" class="tab-content active">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<div class="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-6 shadow-lg">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-white/80 text-sm font-medium">总订单数</h3>
+<i class="fas fa-shopping-cart text-white/60 text-2xl"></i>
+</div>
+<p id="dashboard-total-orders" class="text-3xl font-bold text-white">0</p>
+<p class="text-white/70 text-xs mt-1">活跃订单</p>
+</div>
 
-    <!-- Kanban Tab -->
-    <div id="tab-kanban" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-bold text-white">订单战场</h2>
-            <button onclick="app.kanban.openQuickAdd()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded font-bold text-sm">
-                <i class="fas fa-plus mr-2"></i> 立项
-            </button>
-        </div>
-        <div class="flex gap-4 overflow-x-auto pb-4" style="min-height: 600px;">
-            <div class="min-w-[280px] w-[300px] bg-[#111] rounded-lg border border-gray-800 flex flex-col">
-                <div class="p-3 border-b border-gray-800 font-bold text-blue-400 flex justify-between">
-                    <span>New Inquiry</span>
-                    <span class="bg-gray-800 px-2 rounded text-xs py-0.5 text-gray-400" data-count="inquiry">0</span>
-                </div>
-                <div id="kanban-inquiry" class="p-2 flex-1 overflow-y-auto space-y-2"></div>
-            </div>
-            <div class="min-w-[280px] w-[300px] bg-[#111] rounded-lg border border-gray-800 flex flex-col">
-                <div class="p-3 border-b border-gray-800 font-bold text-yellow-400 flex justify-between">
-                    <span>PI Sent</span>
-                    <span class="bg-gray-800 px-2 rounded text-xs py-0.5 text-gray-400" data-count="pi">0</span>
-                </div>
-                <div id="kanban-pi" class="p-2 flex-1 overflow-y-auto space-y-2"></div>
-            </div>
-            <div class="min-w-[280px] w-[300px] bg-[#111] rounded-lg border border-gray-800 flex flex-col">
-                <div class="p-3 border-b border-gray-800 font-bold text-purple-400 flex justify-between">
-                    <span>Production</span>
-                    <span class="bg-gray-800 px-2 rounded text-xs py-0.5 text-gray-400" data-count="production">0</span>
-                </div>
-                <div id="kanban-production" class="p-2 flex-1 overflow-y-auto space-y-2"></div>
-            </div>
-            <div class="min-w-[280px] w-[300px] bg-[#111] rounded-lg border border-gray-800 flex flex-col">
-                <div class="p-3 border-b border-gray-800 font-bold text-blue-600 flex justify-between">
-                    <span>Shipped</span>
-                    <span class="bg-gray-800 px-2 rounded text-xs py-0.5 text-gray-400" data-count="shipped">0</span>
-                </div>
-                <div id="kanban-shipped" class="p-2 flex-1 overflow-y-auto space-y-2"></div>
-            </div>
-            <div class="min-w-[280px] w-[300px] bg-[#111] rounded-lg border border-gray-800 flex flex-col">
-                <div class="p-3 border-b border-gray-800 font-bold text-green-500 flex justify-between">
-                    <span>Paid</span>
-                    <span class="bg-gray-800 px-2 rounded text-xs py-0.5 text-gray-400" data-count="paid">0</span>
-                </div>
-                <div id="kanban-paid" class="p-2 flex-1 overflow-y-auto space-y-2"></div>
-            </div>
-        </div>
-    </div>
+<div class="bg-gradient-to-br from-green-600 to-green-700 rounded-xl p-6 shadow-lg">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-white/80 text-sm font-medium">总收入</h3>
+<i class="fas fa-dollar-sign text-white/60 text-2xl"></i>
+</div>
+<p id="dashboard-total-income" class="text-3xl font-bold text-white">¥0</p>
+<p class="text-white/70 text-xs mt-1">累计收入</p>
+</div>
 
-    <!-- CRM Tab -->
-    <div id="tab-crm" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-bold text-green-500">客户档案</h2>
-            <button onclick="app.crm.openAddModal()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded font-bold text-sm">
-                <i class="fas fa-user-plus mr-2"></i> 录入
-            </button>
-        </div>
-        <div id="customer-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-    </div>
+<div class="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl p-6 shadow-lg">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-white/80 text-sm font-medium">本月收入</h3>
+<i class="fas fa-chart-line text-white/60 text-2xl"></i>
+</div>
+<p id="dashboard-month-income" class="text-3xl font-bold text-white">¥0</p>
+<p class="text-white/70 text-xs mt-1">当月统计</p>
+</div>
 
-    <!-- Suppliers Tab -->
-    <div id="tab-suppliers" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-bold text-indigo-500">供应商库</h2>
-            <button onclick="app.suppliers.openAddModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded font-bold text-sm">
-                <i class="fas fa-plus mr-2"></i> 新增
-            </button>
-        </div>
-        <div id="supplierList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-    </div>
+<div class="bg-gradient-to-br from-orange-600 to-orange-700 rounded-xl p-6 shadow-lg">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-white/80 text-sm font-medium">供应商数</h3>
+<i class="fas fa-truck text-white/60 text-2xl"></i>
+</div>
+<p id="dashboard-total-suppliers" class="text-3xl font-bold text-white">0</p>
+<p class="text-white/70 text-xs mt-1">合作伙伴</p>
+</div>
+</div>
 
-    <!-- Expenses Tab -->
-    <div id="tab-expenses" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-bold text-yellow-500">运营支出</h2>
-            <button onclick="app.expenses.openAddModal()" class="bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-2 rounded font-bold text-sm">
-                <i class="fas fa-plus mr-2"></i> 记账
-            </button>
-        </div>
-        <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-            <table class="w-full text-sm text-left text-gray-400">
-                <thead class="bg-gray-800 text-gray-200">
-                    <tr>
-                        <th class="px-6 py-3">日期</th>
-                        <th class="px-6 py-3">类别</th>
-                        <th class="px-6 py-3">摘要</th>
-                        <th class="px-6 py-3 text-right">金额 (CNY)</th>
-                        <th class="px-6 py-3 text-center">操作</th>
-                    </tr>
-                </thead>
-                <tbody id="expense-list"></tbody>
-            </table>
-        </div>
-    </div>
+<!-- 实时时钟 -->
+<div class="bg-gray-900 rounded-xl p-6 mb-6">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="text-center">
+<p class="text-gray-400 text-sm mb-1">当前时间</p>
+<p id="current-time" class="text-2xl font-bold text-white">--:--:--</p>
+</div>
+<div class="text-center">
+<p class="text-gray-400 text-sm mb-1">系统状态</p>
+<p class="text-green-500 font-bold">● 运行中</p>
+</div>
+<div class="text-center">
+<p class="text-gray-400 text-sm mb-1">云端同步</p>
+<p id="last-sync" class="text-gray-300">未连接</p>
+</div>
+</div>
+</div>
 
+<!-- 快速操作 -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<button onclick="app.kanban.openQuickAdd()"
+class="bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 p-6 rounded-xl transition-all text-left group">
+<div class="flex items-center justify-between mb-2">
+<i class="fas fa-plus-circle text-3xl text-white/80 group-hover:scale-110 transition-transform"></i>
+<i class="fas fa-arrow-right text-white/50 group-hover:translate-x-1 transition-transform"></i>
+</div>
+<h3 class="text-white font-bold text-lg">新增订单</h3>
+<p class="text-white/70 text-sm mt-1">快速创建新订单</p>
+</button>
+
+<button onclick="app.crm.openCustomerModal()"
+class="bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 p-6 rounded-xl transition-all text-left group">
+<div class="flex items-center justify-between mb-2">
+<i class="fas fa-user-plus text-3xl text-white/80 group-hover:scale-110 transition-transform"></i>
+<i class="fas fa-arrow-right text-white/50 group-hover:translate-x-1 transition-transform"></i>
+</div>
+<h3 class="text-white font-bold text-lg">新增客户</h3>
+<p class="text-white/70 text-sm mt-1">添加客户信息</p>
+</button>
+
+<button onclick="app.expenses.openAddModal()"
+class="bg-gradient-to-br from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 p-6 rounded-xl transition-all text-left group">
+<div class="flex items-center justify-between mb-2">
+<i class="fas fa-receipt text-3xl text-white/80 group-hover:scale-110 transition-transform"></i>
+<i class="fas fa-arrow-right text-white/50 group-hover:translate-x-1 transition-transform"></i>
+</div>
+<h3 class="text-white font-bold text-lg">记录支出</h3>
+<p class="text-white/70 text-sm mt-1">添加运营费用</p>
+</button>
+</div>
+</div>
+
+<!-- 订单战场 -->
+<div id="tab-kanban" class="tab-content">
+<div class="mb-6 flex items-center justify-between">
+<h2 class="text-2xl font-bold text-white">订单战场</h2>
+<button onclick="app.kanban.openQuickAdd()"
+class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+<i class="fas fa-plus"></i><span>快速新增</span>
+</button>
+</div>
+<div id="kanban-board" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4"></div>
+</div>
+
+<!-- 客户档案 -->
+<div id="tab-crm" class="tab-content">
+<div class="mb-6 flex items-center justify-between">
+<h2 class="text-2xl font-bold text-white">客户档案</h2>
+<button onclick="app.crm.openCustomerModal()"
+class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+<i class="fas fa-user-plus"></i><span>新增客户</span>
+</button>
+</div>
+<div id="crm-customers" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<div class="col-span-full text-center py-12 text-gray-500">
+<i class="fas fa-users text-4xl mb-4 opacity-50"></i>
+<p>暂无客户数据</p>
+</div>
+</div>
+</div>
+
+<!-- 供应商 -->
+<div id="tab-suppliers" class="tab-content">
+<div class="mb-6 flex items-center justify-between">
+<h2 class="text-2xl font-bold text-white">供应商管理</h2>
+<button onclick="app.suppliers.openAddModal()"
+class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+<i class="fas fa-industry"></i><span>新增供应商</span>
+</button>
+</div>
+<div id="suppliers-list" class="space-y-4">
+<div class="text-center py-12 text-gray-500">
+<i class="fas fa-industry text-4xl mb-4 opacity-50"></i>
+<p>暂无供应商数据</p>
+</div>
+</div>
+</div>
+
+<!-- 运营支出 -->
+<div id="tab-expenses" class="tab-content">
+<div class="mb-6 flex items-center justify-between">
+<h2 class="text-2xl font-bold text-white">运营支出</h2>
+<button onclick="app.expenses.openAddModal()"
+class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+<i class="fas fa-plus"></i><span>记录支出</span>
+</button>
+</div>
+<div id="expenses-list" class="space-y-4">
+<div class="text-center py-12 text-gray-500">
+<i class="fas fa-receipt text-4xl mb-4 opacity-50"></i>
+<p>暂无支出记录</p>
+</div>
+</div>
+</div>
+</div>
 </main>
 
-<!-- 模态框 -->
-<div id="supplier-modal" class="modal-overlay">
-    <div class="bg-gray-900 border border-gray-700 p-6 rounded-xl w-full max-w-md shadow-2xl transform transition-all">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-white">新增供应商</h3>
-            <button onclick="app.suppliers.closeModal()" class="text-gray-500 hover:text-white"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="space-y-3">
-            <input id="supp-name" type="text" placeholder="供应商名称 (必填)" class="w-full bg-black border border-gray-700 rounded p-2 text-white">
-            <input id="supp-product" type="text" placeholder="主营产品" class="w-full bg-black border border-gray-700 rounded p-2 text-white">
-            <input id="supp-contact" type="text" placeholder="联系人/电话" class="w-full bg-black border border-gray-700 rounded p-2 text-white">
-        </div>
-        <button onclick="app.suppliers.save()" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded">保存档案</button>
-    </div>
-</div>
-
-<div id="expense-modal" class="modal-overlay">
-    <div class="bg-gray-900 border border-gray-700 p-6 rounded-xl w-full max-w-md shadow-2xl">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-white">记一笔支出</h3>
-            <button onclick="app.expenses.closeModal()" class="text-gray-500 hover:text-white"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="space-y-3">
-            <input id="exp-date" type="date" class="w-full bg-black border border-gray-700 rounded p-2 text-white">
-            <select id="exp-category" class="w-full bg-black border border-gray-700 rounded p-2 text-white">
-                <option value="差旅">✈️ 差旅/交通</option>
-                <option value="招待">🍷 客户招待</option>
-                <option value="房租">🏢 房租/水电</option>
-                <option value="营销">📢 广告/样品</option>
-                <option value="其他">📦 其他杂项</option>
-            </select>
-            <input id="exp-amount" type="number" placeholder="金额 (CNY)" class="w-full bg-black border border-gray-700 rounded p-2 text-white">
-            <input id="exp-note" type="text" placeholder="备注 (必填)" class="w-full bg-black border border-gray-700 rounded p-2 text-white">
-        </div>
-        <button onclick="app.expenses.save()" class="w-full mt-6 bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 rounded">确认支出</button>
-    </div>
-</div>
-
-<div id="customer-modal" class="modal-overlay">
-    <div class="bg-gray-900 border border-gray-700 p-6 rounded-xl w-full max-w-md shadow-2xl">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-white">录入客户</h3>
-            <button onclick="app.crm.closeModal()" class="text-gray-500 hover:text-white"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="space-y-3">
-            <input id="crm-name" type="text" placeholder="客户公司名 (必填)" class="w-full bg-black border border-gray-700 rounded p-2 text-white">
-            <input id="crm-contact" type="text" placeholder="联系人" class="w-full bg-black border border-gray-700 rounded p-2 text-white">
-            <select id="crm-country" class="w-full bg-black border border-gray-700 rounded p-2 text-white">
-                <option value="Philippines">🇵🇭 菲律宾</option>
-                <option value="Turkey">🇹🇷 土耳其</option>
-                <option value="UK">🇬🇧 英国</option>
-                <option value="Netherlands">🇳🇱 荷兰</option>
-                <option value="USA">🇺🇸 美国</option>
-                <option value="Other">🌍 其他</option>
-            </select>
-            <input id="crm-whatsapp" type="text" placeholder="WhatsApp" class="w-full bg-black border border-gray-700 rounded p-2 text-white">
-            <textarea id="crm-address" rows="2" placeholder="发货地址..." class="w-full bg-black border border-gray-700 rounded p-2 text-white"></textarea>
-        </div>
-        <button onclick="app.crm.save()" class="w-full mt-6 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded">保存档案</button>
-    </div>
-</div>
-
-<!-- Toast通知 -->
-<div id="toast" class="fixed top-4 right-4 bg-gray-800 border border-gray-700 text-white px-4 py-3 rounded shadow-lg transform translate-x-full transition-transform duration-300 z-[100] flex items-center gap-3">
-    <i id="toast-icon" class="fas fa-info-circle text-blue-500"></i>
-    <span id="toast-message">Notification</span>
-</div>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-
-<!-- 🔥 核心模块加载 - 按正确顺序 -->
-<script src="js/workbench-config.js"></script>
-<script src="js/workbench-utils.js"></script>
-<script src="js/workbench-storage.js"></script>
-<script src="js/workbench-state.js"></script>
-<script src="js/workbench-modal.js"></script>
-<script src="js/workbench-firebase.js"></script>
-<script src="js/workbench-auth.js"></script>
-
-<!-- 业务模块 -->
-<script src="js/workbench-dashboard.js"></script>
-<script src="js/workbench-orders.js"></script>
-<script src="js/workbench-suppliers.js"></script>
-<script src="js/workbench-finance.js"></script>
-<script src="js/workbench-expenses.js"></script>
-<script src="js/workbench-crm.js"></script>
-
-<!-- 主应用入口 (最后加载) -->
-<script src="js/workbench-app.js"></script>
-
+<!-- 🔥 智能模块加载器 -->
 <script>
-    // 全局错误捕获
-    window.onerror = function(msg, url, line) {
-        const log = document.getElementById('error-log');
-        if(log) {
-            log.classList.remove('hidden');
-            log.innerHTML += `<div>Error: ${msg} (Line ${line})</div>`;
-        }
-        console.error("Global Error:", msg);
-    };
+(function() {
+'use strict';
 
-    // 检查所有模块是否加载
-    function checkModulesLoaded() {
-        const requiredModules = [
-            'WorkbenchConfig',
-            'WorkbenchUtils', 
-            'WorkbenchStorage',
-            'WorkbenchState',
-            'WorkbenchModal',
-            'WorkbenchFirebase',
-            'WorkbenchAuth',
-            'WorkbenchDashboard',
-            'WorkbenchOrders',
-            'WorkbenchSuppliers',
-            'WorkbenchFinance',
-            'WorkbenchExpenses',
-            'WorkbenchCRM'
-        ];
+// 模块加载错误记录
+window.moduleLoadErrors = [];
+const loadedModules = new Set();
+const failedModules = new Set();
+
+// 更新加载进度
+function updateProgress(message, isError = false) {
+const detailsEl = document.getElementById('loading-details');
+if (detailsEl) {
+const timestamp = new Date().toLocaleTimeString();
+const color = isError ? 'text-red-400' : 'text-gray-500';
+detailsEl.innerHTML = `<div class="${color}">[${timestamp}] ${message}</div>` + detailsEl.innerHTML;
+}
+}
+
+// 显示错误
+function showError(title, messages) {
+const errorDiv = document.getElementById('loading-error');
+if (errorDiv) {
+errorDiv.classList.remove('hidden');
+errorDiv.innerHTML = `
+<strong>${title}</strong><br>
+${messages.map(m => `• ${m}`).join('<br>')}<br>
+<button onclick="location.reload()" class="mt-3 px-4 py-2 bg-red-600 rounded hover:bg-red-700">
+重新加载
+</button>
+<a href="file-check.html" class="mt-3 ml-2 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 inline-block">
+文件检测</a>
+`;
+}
+}
+
+// 检测最佳路径
+async function detectBestPath() {
+updateProgress('正在检测最佳JS文件路径...');
+const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+    
+const testPaths = [
+{ format: (file) => `js/${file}`, label: '相对路径 js/' },
+{ format: (file) => `./js/${file}`, label: '相对路径 ./js/' },
+{ format: (file) => `/workbench/js/${file}`, label: '绝对路径 /workbench/js/' },
+{ format: (file) => `${window.location.origin}${basePath}js/${file}`, label: '完整URL' }
+];
+
+const testFile = 'workbench-config.js';
+    
+for (const pathConfig of testPaths) {
+const testPath = pathConfig.format(testFile);
+updateProgress(`测试路径: ${testPath}`);
         
-        const missing = requiredModules.filter(m => !window[m]);
+try {
+const response = await fetch(testPath, { method: 'HEAD' });
+if (response.ok) {
+const contentType = response.headers.get('content-type');
+updateProgress(`✓ 找到可用路径: ${pathConfig.label} (${contentType})`);
+return pathConfig.format;
+}
+} catch (e) {
+updateProgress(`✗ 路径失败: ${pathConfig.label} - ${e.message}`, true);
+}
+}
+    
+return null;
+}
+
+// 动态加载脚本
+function loadScript(src, moduleName) {
+return new Promise((resolve, reject) => {
+const script = document.createElement('script');
+script.src = src;
+script.async = false; // 保持顺序
         
-        if(missing.length > 0) {
-            console.error('[System] ❌ 缺失模块:', missing.join(', '));
-            const log = document.getElementById('error-log');
-            if(log) {
-                log.classList.remove('hidden');
-                log.innerHTML = `<strong>模块加载失败</strong><br>缺失: ${missing.join(', ')}<br><br>请检查 /js/ 目录下的文件是否完整`;
-            }
-            return false;
+script.onload = () => {
+updateProgress(`✓ 已加载: ${moduleName}`);
+loadedModules.add(moduleName);
+resolve();
+};
+        
+script.onerror = (e) => {
+updateProgress(`✗ 加载失败: ${moduleName}`, true);
+failedModules.add(moduleName);
+window.moduleLoadErrors.push({ module: moduleName, src, error: e });
+reject(new Error(`Failed to load ${moduleName}`));
+};
+        
+document.head.appendChild(script);
+});
+}
+
+// 主加载流程
+async function loadModules() {
+try {
+document.getElementById('loading-progress').textContent = '正在检测文件路径...';
+        
+// 检测最佳路径
+const pathFormat = await detectBestPath();
+        
+if (!pathFormat) {
+throw new Error('无法找到可用的JS文件路径');
+}
+        
+document.getElementById('loading-progress').textContent = '正在加载核心模块...';
+        
+// 模块加载顺序（严格按依赖关系）
+const modules = [
+{ file: 'workbench-config.js', name: 'Config', check: 'WorkbenchConfig' },
+{ file: 'workbench-utils.js', name: 'Utils', check: 'WorkbenchUtils' },
+{ file: 'workbench-modal.js', name: 'Modal', check: 'WorkbenchModal' },
+{ file: 'workbench-state.js', name: 'State', check: 'WorkbenchState' },
+{ file: 'workbench-storage.js', name: 'Storage', check: 'WorkbenchStorage' },
+{ file: 'workbench-auth.js', name: 'Auth', check: 'WorkbenchAuth' },
+{ file: 'workbench-dashboard.js', name: 'Dashboard', check: 'WorkbenchDashboard' },
+{ file: 'workbench-orders.js', name: 'Orders', check: 'WorkbenchOrders' },
+{ file: 'workbench-suppliers.js', name: 'Suppliers', check: 'WorkbenchSuppliers' },
+{ file: 'workbench-finance.js', name: 'Finance', check: 'WorkbenchFinance' },
+{ file: 'workbench-expenses.js', name: 'Expenses', check: 'WorkbenchExpenses' },
+{ file: 'workbench-crm.js', name: 'CRM', check: 'WorkbenchCRM' },
+{ file: 'workbench-app.js', name: 'App', check: 'app' }
+];
+        
+// 顺序加载
+for (const module of modules) {
+const src = pathFormat(module.file);
+try {
+await loadScript(src, module.name);
+                
+// 验证模块是否正确挂载
+if (typeof window[module.check] === 'undefined') {
+throw new Error(`Module ${module.name} loaded but not mounted to window`);
+}
+} catch (error) {
+console.error(`Failed to load ${module.name}:`, error);
+// 继续加载其他模块，不要中断
+}
         }
         
-        console.log('[System] ✅ 所有模块已加载');
-        return true;
-    }
-
-    // 页面加载完成后初始化
-    document.addEventListener('DOMContentLoaded', async function() {
-        const loader = document.getElementById('loader-mask');
+// 检查关键模块
+const criticalModules = ['WorkbenchConfig', 'WorkbenchUtils', 'WorkbenchStorage'];
+const missingCritical = criticalModules.filter(m => typeof window[m] === 'undefined');
         
-        try {
-            console.log('[V14.2] System Booting...');
+if (missingCritical.length > 0) {
+throw new Error(`关键模块未加载: ${missingCritical.join(', ')}`);
+}
+        
+document.getElementById('loading-progress').textContent = '100% 完成';
+updateProgress(`✓ 成功加载 ${loadedModules.size}/${modules.length} 个模块`);
+        
+// 延迟隐藏加载界面
+setTimeout(() => {
+document.getElementById('system-loading').style.display = 'none';
             
-            // 等待500ms确保所有脚本加载完成
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // 检查模块
-            if(!checkModulesLoaded()) {
-                throw new Error('Module loading incomplete');
-            }
+// 初始化应用
+if (typeof app !== 'undefined' && app.init) {
+app.init();
+}
+}, 500);
+        
+    } catch (error) {
+console.error('[Loader] 模块加载失败:', error);
+document.getElementById('loading-progress').textContent = '加载失败';
+        
+const suggestions = [
+'检查 workbench/js/ 文件夹中的文件是否完整',
+'访问 file-check.html 进行详细诊断',
+'检查 Cloudflare Pages 的构建配置',
+'查看浏览器控制台的详细错误信息'
+];
+        
+if (failedModules.size > 0) {
+suggestions.unshift(`失败的模块: ${Array.from(failedModules).join(', ')}`);
+}
+        
+showError('模块加载失败', suggestions);
+}
+}
 
-            // workbench-app.js 会自动初始化
-            // 如果 app 对象不存在,说明 workbench-app.js 有问题
-            if(typeof app === 'undefined') {
-                throw new Error('App entry point not loaded');
-            }
+// 页面加载完成后开始加载模块
+if (document.readyState === 'loading') {
+document.addEventListener('DOMContentLoaded', loadModules);
+} else {
+loadModules();
+}
 
-            // 隐藏加载遮罩
-            setTimeout(() => {
-                loader.style.opacity = '0';
-                setTimeout(() => loader.classList.add('hidden'), 500);
-            }, 800);
-
-        } catch (e) {
-            console.error("Boot Error:", e);
-            const log = document.getElementById('error-log');
-            log.classList.remove('hidden');
-            log.innerHTML = `⚠️ System Boot Failed<br>${e.message}<br><br>请检查控制台了解详情`;
-        }
-    });
+})();
 </script>
+
 </body>
 </html>
