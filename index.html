@@ -26,7 +26,9 @@
                         column: '#161b22' // Trello 风格列背景色
                     },
                     animation: {
-                        'fade-in': 'fadeIn 0.3s ease-out forwards'
+                        'fade-in': 'fadeIn 0.3s ease-out forwards',
+                        'toast-in': 'toastIn 0.3s ease-out forwards',
+                        'toast-out': 'toastOut 0.3s ease-in forwards'
                     }
                 }
             }
@@ -60,6 +62,8 @@
         /* 动画定义 */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes toastOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(100%); } }
         
         .loading-spinner {
             border: 3px solid rgba(255, 255, 255, 0.1);
@@ -112,6 +116,48 @@
             padding: 0.5rem;
             min-height: 100px;
         }
+        /* 看板卡片样式 */
+        .kanban-card {
+            background-color: rgba(13, 17, 23, 0.9);
+            border: 1px solid rgba(75, 85, 99, 0.5);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #e5e7eb;
+        }
+        .kanban-card:hover {
+            border-color: rgba(239, 68, 68, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .kanban-card__title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: #fff;
+        }
+        .kanban-card__meta {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .kanban-card__actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            justify-content: flex-end;
+        }
+        .kanban-card__btn {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
 
         /* 移动端导航 */
         .mobile-nav {
@@ -121,6 +167,18 @@
         .mobile-nav.active { transform: translateX(0); }
         .nav-tab.active { color: #fff; border-bottom: 2px solid #ef4444; }
         
+        /* Toast 提示组件样式 */
+        #toast {
+            animation: toastIn 0.3s ease-out forwards;
+        }
+        #toast.hiding {
+            animation: toastOut 0.3s ease-in forwards;
+        }
+        #toast.success #toast-icon { color: #10b981; }
+        #toast.error #toast-icon { color: #ef4444; }
+        #toast.warning #toast-icon { color: #f59e0b; }
+        #toast.info #toast-icon { color: #3b82f6; }
+
         @media (max-width: 768px) {
             .mobile-hide { display: none !important; }
             .tab-content { height: calc(100vh - 60px); padding: 1rem; }
@@ -136,8 +194,95 @@
                 const link = document.createElement('link');
                 link.rel = 'stylesheet';
                 link.href = `${window.WORKBENCH_BASE}/css/workbench-v14.css`;
+                link.onload = () => log('[Style] Local CSS loaded successfully');
                 document.head.appendChild(link);
             }
+
+            // 初始化全局工具函数（提前挂载，方便各模块调用）
+            window.WorkbenchUtils = window.WorkbenchUtils || {
+                // 格式化金额
+                formatAmount: (amount) => {
+                    if (!amount || isNaN(amount)) return '¥0.00';
+                    return `¥${parseFloat(amount).toFixed(2)}`;
+                },
+                // 格式化日期
+                formatDate: (dateStr) => {
+                    if (!dateStr) return '未知日期';
+                    const date = new Date(dateStr);
+                    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                },
+                // Toast 提示
+                toast: (message, type = 'info', duration = 3000) => {
+                    const toastEl = document.getElementById('toast');
+                    const iconEl = document.getElementById('toast-icon');
+                    const msgEl = document.getElementById('toast-message');
+                    if (!toastEl || !iconEl || !msgEl) return;
+
+                    // 设置Toast类型
+                    toastEl.className = 'fixed top-4 right-4 bg-gray-800 border border-gray-700 text-white px-6 py-4 rounded-lg shadow-2xl transition-transform duration-300 z-[100] flex items-center gap-4';
+                    toastEl.classList.add(type);
+
+                    // 设置图标和内容
+                    const iconMap = {
+                        success: 'fa-check-circle',
+                        error: 'fa-exclamation-circle',
+                        warning: 'fa-exclamation-triangle',
+                        info: 'fa-info-circle'
+                    };
+                    iconEl.className = `fas ${iconMap[type] || iconMap.info} text-xl`;
+                    msgEl.textContent = message;
+
+                    // 显示并自动隐藏
+                    clearTimeout(window.toastTimer);
+                    window.toastTimer = setTimeout(() => {
+                        toastEl.classList.add('hiding');
+                        setTimeout(() => {
+                            toastEl.classList.remove('hiding');
+                        }, 300);
+                    }, duration);
+                },
+                // 验证非空
+                isRequired: (value) => {
+                    return value && value.trim() !== '';
+                },
+                // 验证数字大于0
+                isPositiveNumber: (value) => {
+                    const num = parseFloat(value);
+                    return !isNaN(num) && num > 0;
+                }
+            };
+
+            // 初始化本地存储工具（简化持久化操作）
+            window.WorkbenchStorage = window.WorkbenchStorage || {
+                load: async (key, defaultValue = []) => {
+                    try {
+                        const data = localStorage.getItem(key);
+                        return data ? JSON.parse(data) : defaultValue;
+                    } catch (error) {
+                        log(`[Storage] Load ${key} failed`, error);
+                        return defaultValue;
+                    }
+                },
+                save: async (key, data) => {
+                    try {
+                        localStorage.setItem(key, JSON.stringify(data));
+                        return true;
+                    } catch (error) {
+                        log(`[Storage] Save ${key} failed`, error);
+                        window.WorkbenchUtils.toast('数据存储失败', 'error');
+                        return false;
+                    }
+                },
+                remove: async (key) => {
+                    try {
+                        localStorage.removeItem(key);
+                        return true;
+                    } catch (error) {
+                        log(`[Storage] Remove ${key} failed`, error);
+                        return false;
+                    }
+                }
+            };
         })();
     </script>
 </head>
@@ -200,12 +345,12 @@
                 <span class="text-red-600">V5</span> COMMANDER
             </div>
             <div id="emergency-mode-warning" class="hidden px-2 py-0.5 bg-red-900/40 border border-red-500/30 rounded text-red-400 text-[10px] font-bold animate-pulse">
-                ⚠️ EMERGENCY
+                ⚠️ EMERGENCY <span id="emergency-timer">10</span> MIN
             </div>
         </div>
 
         <nav class="hidden md:flex items-center gap-1">
-            <button onclick="app.switchTab('dashboard')" class="nav-tab px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition rounded-md" data-tab="dashboard">
+            <button onclick="app.switchTab('dashboard')" class="nav-tab px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition rounded-md active" data-tab="dashboard">
                 <i class="fas fa-chart-pie mr-2"></i>仪表盘
             </button>
             <button onclick="app.switchTab('kanban')" class="nav-tab px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition rounded-md" data-tab="kanban">
@@ -240,11 +385,11 @@
             </button>
         </div>
         <div class="flex flex-col gap-4">
-            <button onclick="app.switchTab('dashboard')" class="text-left text-lg text-gray-300 py-2 border-b border-gray-800">仪表盘</button>
-            <button onclick="app.switchTab('kanban')" class="text-left text-lg text-gray-300 py-2 border-b border-gray-800">订单战场</button>
-            <button onclick="app.switchTab('crm')" class="text-left text-lg text-gray-300 py-2 border-b border-gray-800">客户档案</button>
-            <button onclick="app.switchTab('suppliers')" class="text-left text-lg text-gray-300 py-2 border-b border-gray-800">供应商</button>
-            <button onclick="app.switchTab('expenses')" class="text-left text-lg text-gray-300 py-2 border-b border-gray-800">运营支出</button>
+            <button onclick="app.switchTab('dashboard'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 py-2 border-b border-gray-800" data-mobile-tab="dashboard">仪表盘</button>
+            <button onclick="app.switchTab('kanban'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 py-2 border-b border-gray-800" data-mobile-tab="kanban">订单战场</button>
+            <button onclick="app.switchTab('crm'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 py-2 border-b border-gray-800" data-mobile-tab="crm">客户档案</button>
+            <button onclick="app.switchTab('suppliers'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 py-2 border-b border-gray-800" data-mobile-tab="suppliers">供应商</button>
+            <button onclick="app.switchTab('expenses'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 py-2 border-b border-gray-800" data-mobile-tab="expenses">运营支出</button>
         </div>
     </div>
 
@@ -254,17 +399,17 @@
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
                 <div class="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-5 hover:border-blue-500/30 transition">
                     <div class="text-xs text-gray-500 uppercase mb-1">Total Revenue</div>
-                    <div class="text-2xl font-bold text-blue-400 font-mono" id="kpiRevenue">¥0</div>
+                    <div class="text-2xl font-bold text-blue-400 font-mono" id="kpiRevenue">¥0.00</div>
                     <div class="text-xs text-gray-600 mt-2">本月累计营收</div>
                 </div>
                 <div class="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-5 hover:border-green-500/30 transition">
                     <div class="text-xs text-gray-500 uppercase mb-1">Gross Profit</div>
-                    <div class="text-2xl font-bold text-green-400 font-mono" id="kpiGross">¥0</div>
+                    <div class="text-2xl font-bold text-green-400 font-mono" id="kpiGross">¥0.00</div>
                     <div class="text-xs text-gray-600 mt-2">真实毛利 (扣除采购)</div>
                 </div>
                 <div class="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-5 hover:border-purple-500/30 transition">
                     <div class="text-xs text-gray-500 uppercase mb-1">Net Profit</div>
-                    <div class="text-2xl font-bold text-purple-400 font-mono" id="kpiNet">¥0</div>
+                    <div class="text-2xl font-bold text-purple-400 font-mono" id="kpiNet">¥0.00</div>
                     <div class="text-xs text-gray-600 mt-2">净利润 (扣除运营)</div>
                 </div>
                 <div class="bg-red-900/10 backdrop-blur border border-red-900/30 rounded-xl p-5 hover:border-red-500/50 transition relative overflow-hidden">
@@ -280,7 +425,8 @@
                     <i class="fas fa-bullseye text-red-500"></i> Today's Focus
                 </h3>
                 <div id="actions-display" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    </div>
+                    <!-- 今日行动将从LocalStorage渲染 -->
+                </div>
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -293,7 +439,7 @@
                 <button onclick="app.expenses.openAddModal()" class="p-4 bg-gray-800/50 rounded-lg hover:bg-yellow-900/20 hover:text-yellow-400 transition text-sm font-medium border border-transparent hover:border-yellow-500/30">
                     <i class="fas fa-receipt mb-2 block text-lg"></i> 记一笔账
                 </button>
-                <button onclick="alert('数据备份功能即将上线')" class="p-4 bg-gray-800/50 rounded-lg hover:bg-gray-700 transition text-sm font-medium border border-transparent hover:border-gray-600">
+                <button onclick="app.exportData()" class="p-4 bg-gray-800/50 rounded-lg hover:bg-gray-700 transition text-sm font-medium border border-transparent hover:border-gray-600">
                     <i class="fas fa-download mb-2 block text-lg"></i> 备份数据
                 </button>
             </div>
@@ -318,7 +464,8 @@
                         <span class="bg-gray-900 px-2 py-0.5 rounded text-xs text-gray-400 font-mono" data-count="inquiry">0</span>
                     </div>
                     <div id="kanban-inquiry" class="kanban-cards-area custom-scrollbar space-y-2.5">
-                        </div>
+                        <!-- 询盘卡片将从LocalStorage渲染 -->
+                    </div>
                 </div>
 
                 <div class="kanban-column">
@@ -399,6 +546,7 @@
         </div>
     </main>
 
+    <!-- 供应商模态框 -->
     <div id="supplier-modal" class="fixed inset-0 z-50 bg-black/80 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-gray-900 border border-gray-700 p-6 rounded-xl w-full max-w-md shadow-2xl">
             <div class="flex justify-between items-center mb-4">
@@ -414,6 +562,7 @@
         </div>
     </div>
 
+    <!-- 支出模态框 -->
     <div id="expense-modal" class="fixed inset-0 z-50 bg-black/80 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-gray-900 border border-gray-700 p-6 rounded-xl w-full max-w-md shadow-2xl">
             <div class="flex justify-between items-center mb-4">
@@ -421,7 +570,7 @@
                 <button onclick="app.expenses.closeModal()" class="text-gray-500 hover:text-white"><i class="fas fa-times"></i></button>
             </div>
             <div class="space-y-4">
-                <input id="exp-date" type="date" class="w-full bg-black border border-gray-700 rounded p-3 text-white">
+                <input id="exp-date" type="date" class="w-full bg-black border border-gray-700 rounded p-3 text-white" value="">
                 <select id="exp-category" class="w-full bg-black border border-gray-700 rounded p-3 text-white">
                     <option value="差旅">✈️ 差旅/交通</option>
                     <option value="招待">🍷 客户招待</option>
@@ -429,13 +578,14 @@
                     <option value="营销">📢 广告/样品</option>
                     <option value="其他">📦 其他杂项</option>
                 </select>
-                <input id="exp-amount" type="number" placeholder="金额 (CNY)" class="w-full bg-black border border-gray-700 rounded p-3 text-white font-mono">
+                <input id="exp-amount" type="number" step="0.01" placeholder="金额 (CNY)" class="w-full bg-black border border-gray-700 rounded p-3 text-white font-mono">
                 <input id="exp-note" type="text" placeholder="备注 (必填)" class="w-full bg-black border border-gray-700 rounded p-3 text-white">
             </div>
             <button onclick="app.expenses.save()" class="w-full mt-6 bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 rounded-lg">确认支出</button>
         </div>
     </div>
 
+    <!-- 客户模态框 -->
     <div id="customer-modal" class="fixed inset-0 z-50 bg-black/80 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-gray-900 border border-gray-700 p-6 rounded-xl w-full max-w-md shadow-2xl">
             <div class="flex justify-between items-center mb-4">
@@ -460,6 +610,24 @@
         </div>
     </div>
 
+    <!-- 看板快速添加模态框 -->
+    <div id="kanban-quick-modal" class="fixed inset-0 z-50 bg-black/80 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-gray-900 border border-gray-700 p-6 rounded-xl w-full max-w-md shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-white">新增订单立项</h3>
+                <button onclick="app.kanban.closeQuickModal()" class="text-gray-500 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="space-y-4">
+                <input id="kanban-title" type="text" placeholder="订单标题 (必填)" class="w-full bg-black border border-gray-700 rounded p-3 text-white focus:border-blue-500 outline-none">
+                <input id="kanban-customer" type="text" placeholder="客户名称" class="w-full bg-black border border-gray-700 rounded p-3 text-white focus:border-blue-500 outline-none">
+                <input id="kanban-amount" type="number" step="0.01" placeholder="订单金额 (必填)" class="w-full bg-black border border-gray-700 rounded p-3 text-white font-mono focus:border-blue-500 outline-none">
+                <textarea id="kanban-note" rows="2" placeholder="订单备注..." class="w-full bg-black border border-gray-700 rounded p-3 text-white focus:border-blue-500 outline-none"></textarea>
+            </div>
+            <button onclick="app.kanban.saveQuickOrder()" class="w-full mt-6 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg">创建订单</button>
+        </div>
+    </div>
+
+    <!-- Toast 提示组件 -->
     <div id="toast" class="fixed top-4 right-4 bg-gray-800 border border-gray-700 text-white px-6 py-4 rounded-lg shadow-2xl transform translate-x-full transition-transform duration-300 z-[100] flex items-center gap-4">
         <i id="toast-icon" class="fas fa-info-circle text-blue-500 text-xl"></i>
         <span id="toast-message" class="font-medium">Notification</span>
@@ -525,7 +693,7 @@
             function initApp() {
                 // 延时一点让 JS 执行完毕
                 setTimeout(async () => {
-                    console.log('[System] All modules loaded.');
+                    log('[System] All modules loaded.');
                     
                     // 初始化各模块
                     if(window.WorkbenchConfig?.init) window.WorkbenchConfig.init();
@@ -534,8 +702,12 @@
                     if(window.WorkbenchSuppliers?.init) window.WorkbenchSuppliers.init();
                     if(window.WorkbenchFinance?.init) window.WorkbenchFinance.init();
 
+                    // 初始化今日日期（支出模态框默认当前日期）
+                    document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
+
                     // 构建 App 代理
                     window.app = {
+                        // 生存模式核心逻辑
                         survival: {
                             checkInputs: () => {
                                 const a1 = document.getElementById('action-1').value;
@@ -543,39 +715,112 @@
                                 const a3 = document.getElementById('action-3').value;
                                 const btn = document.getElementById('battle-start-btn');
                                 if(btn) {
-                                    btn.disabled = !(a1 && a2 && a3);
-                                    btn.style.opacity = (a1 && a2 && a3) ? '1' : '0.3';
-                                    btn.style.cursor = (a1 && a2 && a3) ? 'pointer' : 'not-allowed';
+                                    const isComplete = a1 && a2 && a3;
+                                    btn.disabled = !isComplete;
+                                    btn.style.opacity = isComplete ? '1' : '0.3';
+                                    btn.style.cursor = isComplete ? 'pointer' : 'not-allowed';
                                 }
                             },
                             startBattle: () => {
                                 const actions = [
-                                    document.getElementById('action-1').value,
-                                    document.getElementById('action-2').value,
-                                    document.getElementById('action-3').value
+                                    document.getElementById('action-1').value.trim(),
+                                    document.getElementById('action-2').value.trim(),
+                                    document.getElementById('action-3').value.trim()
                                 ];
+                                // 保存今日行动和解锁时间
                                 localStorage.setItem('v5_erp_today_actions', JSON.stringify(actions));
                                 localStorage.setItem('v5_erp_unlock_time', Date.now());
+                                localStorage.removeItem('v5_erp_emergency_time'); // 清除紧急模式标记
                                 
+                                // 隐藏登录面板，渲染今日行动
                                 document.getElementById('iron-curtain').classList.add('hidden');
-                                if(window.WorkbenchDashboard) window.WorkbenchDashboard.renderTodayActions(actions);
+                                app.renderTodayActions(actions);
+                                window.WorkbenchUtils.toast('系统启动成功，今日聚焦核心目标！', 'success');
                             },
                             emergencyOverride: () => {
-                                if(confirm("启用10分钟紧急模式？")) {
+                                if(confirm("启用10分钟紧急模式？超时后将自动退出！")) {
+                                    const emergencyTime = Date.now();
+                                    localStorage.setItem('v5_erp_emergency_time', emergencyTime);
+                                    localStorage.setItem('v5_erp_unlock_time', emergencyTime);
+                                    
                                     document.getElementById('iron-curtain').classList.add('hidden');
                                     document.getElementById('emergency-mode-warning').classList.remove('hidden');
-                                    setTimeout(() => location.reload(), 600000);
+                                    
+                                    // 启动紧急模式倒计时
+                                    app.startEmergencyTimer();
+                                    window.WorkbenchUtils.toast('紧急模式已激活，剩余10分钟', 'warning');
                                 }
                             },
                             initCheck: () => {
                                 const lastUnlock = localStorage.getItem('v5_erp_unlock_time');
-                                // 30分钟超时
-                                if (!lastUnlock || (Date.now() - lastUnlock > 30 * 60 * 1000)) {
+                                const emergencyTime = localStorage.getItem('v5_erp_emergency_time');
+                                
+                                // 30分钟超时（非紧急模式）
+                                const isExpired = !lastUnlock || (Date.now() - lastUnlock > 30 * 60 * 1000);
+                                
+                                if (isExpired && !emergencyTime) {
                                     document.getElementById('iron-curtain').classList.remove('hidden');
                                 } else {
                                     document.getElementById('iron-curtain').classList.add('hidden');
+                                    
+                                    // 渲染今日行动
+                                    const actions = JSON.parse(localStorage.getItem('v5_erp_today_actions') || '[]');
+                                    if (actions.length === 3) app.renderTodayActions(actions);
+                                    
+                                    // 紧急模式续期倒计时
+                                    if (emergencyTime) {
+                                        document.getElementById('emergency-mode-warning').classList.remove('hidden');
+                                        app.startEmergencyTimer();
+                                    }
                                 }
                             }
+                        },
+                        
+                        // 紧急模式倒计时
+                        startEmergencyTimer: () => {
+                            const updateTimer = () => {
+                                const emergencyTime = parseInt(localStorage.getItem('v5_erp_emergency_time') || '0');
+                                const remainingMs = 10 * 60 * 1000 - (Date.now() - emergencyTime);
+                                const remainingMin = Math.floor(remainingMs / 60000);
+                                const remainingSec = Math.floor((remainingMs % 60000) / 1000);
+                                
+                                if (remainingMs <= 0) {
+                                    localStorage.removeItem('v5_erp_emergency_time');
+                                    localStorage.removeItem('v5_erp_unlock_time');
+                                    location.reload();
+                                    return;
+                                }
+                                
+                                document.getElementById('emergency-timer').textContent = `${remainingMin}:${String(remainingSec).padStart(2, '0')}`;
+                            };
+                            
+                            updateTimer();
+                            setInterval(updateTimer, 1000);
+                        },
+                        
+                        // 渲染今日行动
+                        renderTodayActions: (actions) => {
+                            const container = document.getElementById('actions-display');
+                            if (!container || actions.length !== 3) return;
+                            
+                            const actionTemplates = [
+                                { icon: 'fa-bullseye', color: 'text-red-500' },
+                                { icon: 'fa-rocket', color: 'text-blue-500' },
+                                { icon: 'fa-shield-alt', color: 'text-green-500' }
+                            ];
+                            
+                            container.innerHTML = actions.map((action, index) => {
+                                const template = actionTemplates[index];
+                                return `
+                                    <div class="bg-gray-900/70 backdrop-blur border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition">
+                                        <div class="flex items-center gap-3 mb-3">
+                                            <i class="fas ${template.icon} ${template.color} text-xl"></i>
+                                            <h4 class="font-bold text-white">第${index+1}优先级</h4>
+                                        </div>
+                                        <p class="text-gray-300 text-sm">${action}</p>
+                                    </div>
+                                `;
+                            }).join('');
                         },
                         
                         // Tab 切换逻辑
@@ -583,14 +828,12 @@
                             // 隐藏所有 Tab
                             document.querySelectorAll('.tab-content').forEach(el => {
                                 el.classList.remove('active');
-                                // 特殊处理：看板页在非激活时完全隐藏，避免布局错乱
-                                if (el.id === 'tab-kanban') el.style.display = 'none';
-                                else el.style.display = 'none';
+                                el.style.display = 'none';
                             });
                             
-                            // 移除导航高亮
-                            document.querySelectorAll('.nav-tab').forEach(btn => {
-                                btn.classList.remove('text-white', 'border-b-2', 'border-red-600');
+                            // 移除所有导航高亮（桌面端+移动端）
+                            document.querySelectorAll('.nav-tab, [data-mobile-tab]').forEach(btn => {
+                                btn.classList.remove('text-white', 'border-b-2', 'border-red-600', 'text-red-500');
                                 btn.classList.add('text-gray-400');
                             });
 
@@ -598,7 +841,7 @@
                             const target = document.getElementById('tab-' + tabId);
                             if (target) {
                                 if (tabId === 'kanban') {
-                                    target.style.display = 'flex'; // 看板需要 Flex 布局
+                                    target.style.display = 'flex';
                                     setTimeout(() => target.classList.add('active'), 10);
                                 } else {
                                     target.style.display = 'block';
@@ -606,64 +849,302 @@
                                 }
                             }
 
-                            // 激活导航高亮
-                            const btn = document.querySelector(`button[data-tab="${tabId}"]`);
-                            if(btn) {
-                                btn.classList.remove('text-gray-400');
-                                btn.classList.add('text-white');
+                            // 激活导航高亮（桌面端+移动端）
+                            const desktopBtn = document.querySelector(`button[data-tab="${tabId}"]`);
+                            const mobileBtn = document.querySelector(`[data-mobile-tab="${tabId}"]`);
+                            
+                            if(desktopBtn) {
+                                desktopBtn.classList.remove('text-gray-400');
+                                desktopBtn.classList.add('text-white', 'border-b-2', 'border-red-600');
+                            }
+                            if(mobileBtn) {
+                                mobileBtn.classList.remove('text-gray-400');
+                                mobileBtn.classList.add('text-white', 'text-red-500');
                             }
 
                             // 触发模块渲染
-                            if(tabId === 'kanban' && window.WorkbenchOrders) WorkbenchOrders.render();
-                            if(tabId === 'suppliers' && window.WorkbenchSuppliers) WorkbenchSuppliers.render();
-                            if(tabId === 'expenses' && window.WorkbenchFinance) WorkbenchFinance.render();
+                            if(tabId === 'kanban' && window.WorkbenchOrders) app.kanban.render();
+                            if(tabId === 'suppliers' && window.WorkbenchSuppliers) app.suppliers.render();
+                            if(tabId === 'expenses' && window.WorkbenchFinance) app.expenses.render();
                             if(tabId === 'crm') app.crm.render();
+                            if(tabId === 'dashboard') app.calculateKPI();
                         },
 
-                        // 模块代理
-                        kanban: { openQuickAdd: () => window.WorkbenchOrders?.openQuickAdd() },
+                        // 计算KPI数据
+                        calculateKPI: async () => {
+                            // 加载订单和支出数据
+                            const orders = await window.WorkbenchStorage.load('v5_erp_orders', []);
+                            const expenses = await window.WorkbenchStorage.load('v5_erp_expenses', []);
+                            
+                            // 计算本月营收（已付款订单）
+                            const currentMonth = new Date().getMonth();
+                            const currentYear = new Date().getFullYear();
+                            
+                            const monthlyOrders = orders.filter(order => {
+                                if (order.status !== 'paid') return false;
+                                const orderDate = new Date(order.createdAt);
+                                return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
+                            });
+                            
+                            const totalRevenue = monthlyOrders.reduce((sum, order) => sum + parseFloat(order.amount || 0), 0);
+                            const totalExpenses = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+                            const grossProfit = totalRevenue; // 简化：毛利暂等于营收（后续可添加采购成本）
+                            const netProfit = grossProfit - totalExpenses;
+                            
+                            // 更新DOM
+                            document.getElementById('kpiRevenue').textContent = window.WorkbenchUtils.formatAmount(totalRevenue);
+                            document.getElementById('kpiGross').textContent = window.WorkbenchUtils.formatAmount(grossProfit);
+                            document.getElementById('kpiNet').textContent = window.WorkbenchUtils.formatAmount(netProfit);
+                            
+                            // 计算距上次进账时间（简化：取最新付款订单）
+                            const paidOrders = orders.filter(o => o.status === 'paid').sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                            if (paidOrders.length > 0) {
+                                const lastPaidDate = new Date(paidOrders[0].createdAt);
+                                const hoursSince = Math.floor((Date.now() - lastPaidDate.getTime()) / (1000 * 60 * 60));
+                                document.getElementById('hours-since-income').textContent = hoursSince;
+                            }
+                        },
+
+                        // 数据导出备份
+                        exportData: async () => {
+                            try {
+                                const exportData = {
+                                    timestamp: new Date().toISOString(),
+                                    customers: await window.WorkbenchStorage.load('v5_erp_customers', []),
+                                    suppliers: await window.WorkbenchStorage.load('v5_erp_suppliers', []),
+                                    orders: await window.WorkbenchStorage.load('v5_erp_orders', []),
+                                    expenses: await window.WorkbenchStorage.load('v5_erp_expenses', []),
+                                    todayActions: JSON.parse(localStorage.getItem('v5_erp_today_actions') || '[]')
+                                };
+                                
+                                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `V5_COMMANDER_BACKUP_${new Date().toISOString().split('T')[0]}.json`;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                                
+                                window.WorkbenchUtils.toast('数据备份成功', 'success');
+                            } catch (error) {
+                                log('[Export] Data export failed', error);
+                                window.WorkbenchUtils.toast('数据备份失败', 'error');
+                            }
+                        },
+
+                        // 供应商模块
                         suppliers: {
-                            openAddModal: () => window.WorkbenchSuppliers?.openAddModal(),
-                            closeModal: () => window.WorkbenchSuppliers?.closeModal(),
-                            save: () => window.WorkbenchSuppliers?.save()
+                            openAddModal: () => {
+                                // 清空表单
+                                document.getElementById('supp-name').value = '';
+                                document.getElementById('supp-product').value = '';
+                                document.getElementById('supp-contact').value = '';
+                                document.getElementById('supplier-modal').classList.remove('hidden');
+                            },
+                            closeModal: () => {
+                                document.getElementById('supplier-modal').classList.add('hidden');
+                            },
+                            save: async () => {
+                                const name = document.getElementById('supp-name').value.trim();
+                                if (!window.WorkbenchUtils.isRequired(name)) {
+                                    window.WorkbenchUtils.toast('供应商名称不能为空', 'error');
+                                    return;
+                                }
+                                
+                                const newSupp = {
+                                    id: 'SUPP-' + Date.now(),
+                                    name: name,
+                                    product: document.getElementById('supp-product').value.trim(),
+                                    contact: document.getElementById('supp-contact').value.trim(),
+                                    createdAt: new Date().toISOString()
+                                };
+                                
+                                const key = 'v5_erp_suppliers';
+                                const list = await window.WorkbenchStorage.load(key, []);
+                                list.push(newSupp);
+                                const saveResult = await window.WorkbenchStorage.save(key, list);
+                                
+                                if (saveResult) {
+                                    app.suppliers.closeModal();
+                                    app.suppliers.render();
+                                    window.WorkbenchUtils.toast('供应商已保存', 'success');
+                                }
+                            },
+                            render: async () => {
+                                const container = document.getElementById('supplierList');
+                                if(!container) return;
+                                const list = await window.WorkbenchStorage.load('v5_erp_suppliers', []);
+                                
+                                if(list.length === 0) {
+                                    container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500"><i class="fas fa-industry text-4xl mb-4 opacity-50"></i><p>暂无供应商档案</p></div>';
+                                    return;
+                                }
+                                
+                                container.innerHTML = list.map(s => `
+                                    <div class="bg-gray-900 border border-gray-800 p-5 rounded-xl hover:border-indigo-500 transition group">
+                                        <div class="flex justify-between items-start mb-3">
+                                            <h3 class="font-bold text-lg text-white">${s.name}</h3>
+                                            <span class="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300 border border-gray-700">档案编号: ${s.id}</span>
+                                        </div>
+                                        <div class="text-sm text-gray-400 space-y-1">
+                                            <p><i class="fas fa-box w-4 opacity-50"></i> 主营产品: ${s.product || '-'}</p>
+                                            <p><i class="fas fa-phone w-4 opacity-50"></i> 联系方式: ${s.contact || '-'}</p>
+                                            <p><i class="fas fa-calendar w-4 opacity-50"></i> 创建时间: ${window.WorkbenchUtils.formatDate(s.createdAt)}</p>
+                                        </div>
+                                    </div>
+                                `).join('');
+                            }
                         },
+
+                        // 支出模块
                         expenses: {
-                            openAddModal: () => window.WorkbenchFinance?.openAddModal(),
-                            closeModal: () => window.WorkbenchFinance?.closeModal(),
-                            save: () => window.WorkbenchFinance?.save()
+                            openAddModal: () => {
+                                // 重置表单默认值
+                                document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
+                                document.getElementById('exp-category').selectedIndex = 0;
+                                document.getElementById('exp-amount').value = '';
+                                document.getElementById('exp-note').value = '';
+                                document.getElementById('expense-modal').classList.remove('hidden');
+                            },
+                            closeModal: () => {
+                                document.getElementById('expense-modal').classList.add('hidden');
+                            },
+                            save: async () => {
+                                const date = document.getElementById('exp-date').value;
+                                const category = document.getElementById('exp-category').value;
+                                const amount = document.getElementById('exp-amount').value;
+                                const note = document.getElementById('exp-note').value.trim();
+                                
+                                // 表单验证
+                                if (!window.WorkbenchUtils.isRequired(date)) {
+                                    window.WorkbenchUtils.toast('请选择支出日期', 'error');
+                                    return;
+                                }
+                                if (!window.WorkbenchUtils.isPositiveNumber(amount)) {
+                                    window.WorkbenchUtils.toast('请输入大于0的金额', 'error');
+                                    return;
+                                }
+                                if (!window.WorkbenchUtils.isRequired(note)) {
+                                    window.WorkbenchUtils.toast('请填写支出备注', 'error');
+                                    return;
+                                }
+                                
+                                const newExp = {
+                                    id: 'EXP-' + Date.now(),
+                                    date: date,
+                                    category: category,
+                                    amount: parseFloat(amount).toFixed(2),
+                                    note: note,
+                                    createdAt: new Date().toISOString()
+                                };
+                                
+                                const key = 'v5_erp_expenses';
+                                const list = await window.WorkbenchStorage.load(key, []);
+                                list.push(newExp);
+                                const saveResult = await window.WorkbenchStorage.save(key, list);
+                                
+                                if (saveResult) {
+                                    app.expenses.closeModal();
+                                    app.expenses.render();
+                                    app.calculateKPI(); // 更新KPI
+                                    window.WorkbenchUtils.toast('支出记录已保存', 'success');
+                                }
+                            },
+                            render: async () => {
+                                const container = document.getElementById('expense-list');
+                                if(!container) return;
+                                const list = await window.WorkbenchStorage.load('v5_erp_expenses', []);
+                                
+                                if(list.length === 0) {
+                                    container.innerHTML = '<tr><td colspan="5" class="px-6 py-12 text-center text-gray-500"><i class="fas fa-receipt text-4xl mb-4 opacity-50"></i><p>暂无支出记录</p></td></tr>';
+                                    return;
+                                }
+                                
+                                // 按日期倒序排序
+                                list.sort((a, b) => new Date(b.date) - new Date(a.date));
+                                
+                                container.innerHTML = list.map(exp => `
+                                    <tr class="bg-gray-800 border-b border-gray-900 hover:bg-gray-700/50 transition">
+                                        <td class="px-6 py-4">${exp.date}</td>
+                                        <td class="px-6 py-4">${exp.category}</td>
+                                        <td class="px-6 py-4">${exp.note}</td>
+                                        <td class="px-6 py-4 text-right font-mono text-red-400">${window.WorkbenchUtils.formatAmount(exp.amount)}</td>
+                                        <td class="px-6 py-4 text-center">
+                                            <button onclick="app.expenses.delete('${exp.id}')" class="text-red-500 hover:text-red-400">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join('');
+                            },
+                            delete: async (id) => {
+                                if (!confirm('确定删除该支出记录吗？删除后不可恢复！')) return;
+                                
+                                const key = 'v5_erp_expenses';
+                                const list = await window.WorkbenchStorage.load(key, []);
+                                const newList = list.filter(exp => exp.id !== id);
+                                const saveResult = await window.WorkbenchStorage.save(key, newList);
+                                
+                                if (saveResult) {
+                                    app.expenses.render();
+                                    app.calculateKPI(); // 更新KPI
+                                    window.WorkbenchUtils.toast('支出记录已删除', 'success');
+                                }
+                            }
                         },
+
+                        // 客户模块
                         crm: {
-                            openAddModal: () => document.getElementById('customer-modal').classList.remove('hidden'),
-                            closeModal: () => document.getElementById('customer-modal').classList.add('hidden'),
-                            save: () => {
-                                const name = document.getElementById('crm-name').value;
-                                if(!name) return alert('公司名必填');
+                            openAddModal: () => {
+                                // 清空表单
+                                document.getElementById('crm-name').value = '';
+                                document.getElementById('crm-contact').value = '';
+                                document.getElementById('crm-country').selectedIndex = 0;
+                                document.getElementById('crm-whatsapp').value = '';
+                                document.getElementById('crm-address').value = '';
+                                document.getElementById('customer-modal').classList.remove('hidden');
+                            },
+                            closeModal: () => {
+                                document.getElementById('customer-modal').classList.add('hidden');
+                            },
+                            save: async () => {
+                                const name = document.getElementById('crm-name').value.trim();
+                                if(!window.WorkbenchUtils.isRequired(name)) {
+                                    window.WorkbenchUtils.toast('客户公司名不能为空', 'error');
+                                    return;
+                                }
+                                
                                 const newCust = {
                                     id: 'CUST-' + Date.now(),
                                     company: name,
-                                    contact: document.getElementById('crm-contact').value,
+                                    contact: document.getElementById('crm-contact').value.trim(),
                                     country: document.getElementById('crm-country').value,
-                                    whatsapp: document.getElementById('crm-whatsapp').value,
-                                    address: document.getElementById('crm-address').value,
+                                    whatsapp: document.getElementById('crm-whatsapp').value.trim(),
+                                    address: document.getElementById('crm-address').value.trim(),
                                     createdAt: new Date().toISOString()
                                 };
+                                
                                 const key = 'v5_erp_customers';
-                                window.WorkbenchStorage.load(key, []).then(list => {
-                                    list.push(newCust);
-                                    window.WorkbenchStorage.save(key, list);
+                                const list = await window.WorkbenchStorage.load(key, []);
+                                list.push(newCust);
+                                const saveResult = await window.WorkbenchStorage.save(key, list);
+                                
+                                if (saveResult) {
                                     app.crm.closeModal();
                                     app.crm.render();
-                                    if(window.WorkbenchUtils) WorkbenchUtils.toast('客户已保存', 'success');
-                                });
+                                    window.WorkbenchUtils.toast('客户档案已保存', 'success');
+                                }
                             },
                             render: async () => {
                                 const container = document.getElementById('customer-grid');
                                 if(!container) return;
                                 const list = await window.WorkbenchStorage.load('v5_erp_customers', []);
+                                
                                 if(list.length === 0) {
                                     container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500"><i class="fas fa-users text-4xl mb-4 opacity-50"></i><p>暂无客户档案</p></div>';
                                     return;
                                 }
+                                
                                 container.innerHTML = list.map(c => `
                                     <div class="bg-gray-900 border border-gray-800 p-5 rounded-xl hover:border-green-500 transition group">
                                         <div class="flex justify-between items-start mb-3">
@@ -673,29 +1154,197 @@
                                         <div class="text-sm text-gray-400 space-y-1">
                                             <p><i class="fas fa-user w-4 opacity-50"></i> ${c.contact || '-'}</p>
                                             <p><i class="fab fa-whatsapp w-4 opacity-50"></i> ${c.whatsapp || '-'}</p>
-                                            <p class="truncate"><i class="fas fa-map-marker-alt w-4 opacity-50"></i> ${c.address || ''}</p>
+                                            <p class="truncate"><i class="fas fa-map-marker-alt w-4 opacity-50"></i> ${c.address || '-'}</p>
+                                            <p><i class="fas fa-calendar w-4 opacity-50"></i> ${window.WorkbenchUtils.formatDate(c.createdAt)}</p>
                                         </div>
                                     </div>
                                 `).join('');
                             }
                         },
+
+                        // 看板/订单模块
+                        kanban: {
+                            openQuickAdd: () => {
+                                // 清空表单
+                                document.getElementById('kanban-title').value = '';
+                                document.getElementById('kanban-customer').value = '';
+                                document.getElementById('kanban-amount').value = '';
+                                document.getElementById('kanban-note').value = '';
+                                document.getElementById('kanban-quick-modal').classList.remove('hidden');
+                            },
+                            closeQuickModal: () => {
+                                document.getElementById('kanban-quick-modal').classList.add('hidden');
+                            },
+                            saveQuickOrder: async () => {
+                                const title = document.getElementById('kanban-title').value.trim();
+                                const customer = document.getElementById('kanban-customer').value.trim();
+                                const amount = document.getElementById('kanban-amount').value;
+                                const note = document.getElementById('kanban-note').value.trim();
+                                
+                                // 表单验证
+                                if (!window.WorkbenchUtils.isRequired(title)) {
+                                    window.WorkbenchUtils.toast('订单标题不能为空', 'error');
+                                    return;
+                                }
+                                if (!window.WorkbenchUtils.isPositiveNumber(amount)) {
+                                    window.WorkbenchUtils.toast('请输入大于0的订单金额', 'error');
+                                    return;
+                                }
+                                
+                                const newOrder = {
+                                    id: 'ORDER-' + Date.now(),
+                                    title: title,
+                                    customer: customer,
+                                    amount: parseFloat(amount).toFixed(2),
+                                    note: note,
+                                    status: 'inquiry', // 初始状态：询盘
+                                    createdAt: new Date().toISOString(),
+                                    updatedAt: new Date().toISOString()
+                                };
+                                
+                                const key = 'v5_erp_orders';
+                                const list = await window.WorkbenchStorage.load(key, []);
+                                list.push(newOrder);
+                                const saveResult = await window.WorkbenchStorage.save(key, list);
+                                
+                                if (saveResult) {
+                                    app.kanban.closeQuickModal();
+                                    app.kanban.render();
+                                    app.calculateKPI(); // 更新KPI
+                                    window.WorkbenchUtils.toast('订单立项成功', 'success');
+                                }
+                            },
+                            render: async () => {
+                                const key = 'v5_erp_orders';
+                                const orders = await window.WorkbenchStorage.load(key, []);
+                                
+                                // 按状态分类订单
+                                const statusMap = {
+                                    inquiry: document.getElementById('kanban-inquiry'),
+                                    pi: document.getElementById('kanban-pi'),
+                                    production: document.getElementById('kanban-production'),
+                                    shipped: document.getElementById('kanban-shipped'),
+                                    paid: document.getElementById('kanban-paid')
+                                };
+                                
+                                // 清空所有列的内容
+                                Object.values(statusMap).forEach(el => {
+                                    if (el) el.innerHTML = '';
+                                });
+                                
+                                // 渲染订单卡片到对应列
+                                orders.forEach(order => {
+                                    const column = statusMap[order.status];
+                                    if (!column) return;
+                                    
+                                    const card = document.createElement('div');
+                                    card.className = 'kanban-card';
+                                    card.dataset.id = order.id;
+                                    card.dataset.status = order.status;
+                                    
+                                    card.innerHTML = `
+                                        <div class="kanban-card__title">${order.title}</div>
+                                        <div class="kanban-card__meta">
+                                            <span>${order.customer || '未知客户'}</span>
+                                            <span>${window.WorkbenchUtils.formatAmount(order.amount)}</span>
+                                        </div>
+                                        <div class="text-xs text-gray-500 mt-1 truncate">${order.note || '无备注'}</div>
+                                        <div class="kanban-card__actions">
+                                            <button onclick="app.kanban.updateStatus('${order.id}', 'next')" class="kanban-card__btn bg-blue-900/50 text-blue-400 hover:bg-blue-900">
+                                                <i class="fas fa-arrow-right"></i>
+                                            </button>
+                                            <button onclick="app.kanban.deleteOrder('${order.id}')" class="kanban-card__btn bg-red-900/50 text-red-400 hover:bg-red-900">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    `;
+                                    
+                                    column.appendChild(card);
+                                });
+                                
+                                // 更新各列计数
+                                const statusList = ['inquiry', 'pi', 'production', 'shipped', 'paid'];
+                                statusList.forEach(status => {
+                                    const count = orders.filter(order => order.status === status).length;
+                                    const countEl = document.querySelector(`[data-count="${status}"]`);
+                                    if (countEl) countEl.textContent = count;
+                                });
+                            },
+                            updateStatus: async (id, direction) => {
+                                const key = 'v5_erp_orders';
+                                const orders = await window.WorkbenchStorage.load(key, []);
+                                const orderIndex = orders.findIndex(o => o.id === id);
+                                
+                                if (orderIndex === -1) return;
+                                
+                                // 状态流转：inquiry → pi → production → shipped → paid
+                                const statusFlow = ['inquiry', 'pi', 'production', 'shipped', 'paid'];
+                                const currentStatus = orders[orderIndex].status;
+                                const currentIndex = statusFlow.indexOf(currentStatus);
+                                
+                                // 计算新状态
+                                let newIndex;
+                                if (direction === 'next') {
+                                    newIndex = Math.min(currentIndex + 1, statusFlow.length - 1);
+                                } else {
+                                    newIndex = Math.max(currentIndex - 1, 0);
+                                }
+                                
+                                const newStatus = statusFlow[newIndex];
+                                orders[orderIndex].status = newStatus;
+                                orders[orderIndex].updatedAt = new Date().toISOString();
+                                
+                                const saveResult = await window.WorkbenchStorage.save(key, orders);
+                                if (saveResult) {
+                                    app.kanban.render();
+                                    app.calculateKPI(); // 更新KPI
+                                    window.WorkbenchUtils.toast(`订单状态已更新为：${newStatus}`, 'info');
+                                }
+                            },
+                            deleteOrder: async (id) => {
+                                if (!confirm('确定删除该订单吗？删除后不可恢复！')) return;
+                                
+                                const key = 'v5_erp_orders';
+                                const orders = await window.WorkbenchStorage.load(key, []);
+                                const newOrders = orders.filter(o => o.id !== id);
+                                const saveResult = await window.WorkbenchStorage.save(key, newOrders);
+                                
+                                if (saveResult) {
+                                    app.kanban.render();
+                                    app.calculateKPI(); // 更新KPI
+                                    window.WorkbenchUtils.toast('订单已删除', 'success');
+                                }
+                            }
+                        },
+
+                        // 退出系统
                         logout: () => {
-                            if(confirm('退出系统？')) {
+                            if(confirm('确定退出战时指挥台吗？')) {
                                 localStorage.removeItem('v5_erp_unlock_time');
+                                localStorage.removeItem('v5_erp_emergency_time');
                                 location.reload();
                             }
                         }
                     };
 
-                    // 启动 App
+                    // 启动 App 初始化流程
                     app.survival.initCheck();
-                    document.getElementById('system-loading').classList.add('hidden');
-                    console.log('[System] Ready.');
+                    app.calculateKPI(); // 初始化KPI数据
+                    app.suppliers.render(); // 初始化供应商列表
+                    app.expenses.render(); // 初始化支出列表
+                    app.crm.render(); // 初始化客户列表
+                    app.kanban.render(); // 初始化看板
+                    
+                    // 隐藏加载界面
+                    setTimeout(() => {
+                        document.getElementById('system-loading').classList.add('hidden');
+                        log('[System] Ready for battle.');
+                    }, 300);
 
                 }, 500); // 稍微延时以确保 DOM 渲染
             }
 
-            // 开始加载
+            // 开始加载模块
             moduleManifest.forEach(loadModule);
         })();
     </script>
