@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>战时指挥台 V14.3 PRO ERP EDITION · B2B 专用</title>
+    <title>战时指挥台 V14.4 PRO ERP EDITION · 完全修复版</title>
     
     <!-- 预连接优化 -->
     <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
@@ -17,7 +17,7 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css" crossorigin>
     
-    <!-- Google Fonts - 更独特的字体选择 -->
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <script>
@@ -49,7 +49,7 @@
     </script>
 
     <style>
-        /* 基础重置 */
+        /* ==================== 基础样式 ==================== */
         *, *::before, *::after { box-sizing: border-box; }
         html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
         
@@ -102,101 +102,114 @@
             transition: all 0.2s ease;
         }
         .kanban-card:hover {
-            border-color: rgba(220,38,38,0.4);
+            border-color: rgba(59, 130, 246, 0.5);
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
 
-        /* 移动端导航 */
+        /* 玻璃态 */
+        .glass {
+            background: rgba(20,20,20,0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(75,85,99,0.3);
+        }
+
+        /* 生存模式遮罩 */
+        .survival-lock { display: flex; }
+        .survival-lock.hidden { display: none; }
+
+        /* 移动导航 */
         .mobile-nav {
-            position: fixed; inset: 0; background: rgba(10,10,10,0.98);
-            z-index: 45; transform: translateX(100%); transition: transform 0.3s ease;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #0a0a0a 0%, #141414 100%);
+            z-index: 100;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
         }
         .mobile-nav.active { transform: translateX(0); }
-        
-        /* 导航激活状态 */
-        .nav-tab { position: relative; transition: all 0.2s ease; }
-        .nav-tab.active { color: #fff; }
-        .nav-tab.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 60%; height: 2px; background: #dc2626; border-radius: 1px; }
 
-        /* Toast 提示 */
-        #toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
-        .toast { padding: 1rem 1.5rem; border-radius: 0.5rem; display: flex; align-items: center; gap: 0.75rem; animation: slideIn 0.3s ease-out; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
-        .toast.success { background: linear-gradient(135deg, #16a34a, #15803d); }
-        .toast.error { background: linear-gradient(135deg, #dc2626, #b91c1c); }
-        .toast.warning { background: linear-gradient(135deg, #ca8a04, #a16207); }
-        .toast.info { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+        /* 导航高亮 */
+        .nav-tab.active { color: white; background: rgba(255,255,255,0.1); }
+
+        /* Toast 样式 */
+        .toast {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.25rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .toast.success { background: linear-gradient(135deg, #16a34a, #15803d); color: white; }
+        .toast.error { background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; }
+        .toast.warning { background: linear-gradient(135deg, #ca8a04, #a16207); color: white; }
+        .toast.info { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; }
+
+        /* 模态框 */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .modal-overlay.hidden { display: none; }
+        .modal-content {
+            background: linear-gradient(135deg, #1e1e1e, #141414);
+            border: 1px solid rgba(75,85,99,0.5);
+            border-radius: 1rem;
+            width: 100%;
+            max-width: 480px;
+            padding: 1.5rem;
+            animation: fadeIn 0.2s ease-out;
+        }
 
         /* 响应式 */
         @media (max-width: 768px) {
-            .mobile-hide { display: none !important; }
-            .tab-content { height: calc(100vh - 60px); }
-            .kanban-column { flex: 0 0 85vw; }
+            .kanban-column { flex: 0 0 260px; }
+            .kanban-board { padding: 0.75rem; gap: 0.75rem; }
         }
-
-        /* 玻璃态效果 */
-        .glass { background: rgba(255,255,255,0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
-        
-        /* 数字字体 */
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
     </style>
 </head>
-
 <body>
-    <!-- ==================== 系统加载界面 ==================== -->
-    <div id="system-loading" class="fixed inset-0 z-[60] bg-dark-1 flex items-center justify-center">
-        <div class="text-center max-w-md px-6">
-            <div class="loading-spinner mx-auto mb-6"></div>
-            <h2 class="text-2xl font-bold text-red-500 mb-3 tracking-widest uppercase">System Initializing</h2>
-            <p class="text-gray-400 text-sm mb-6">正在连接战时指挥中枢...</p>
+    <!-- ==================== 生存模式遮罩 ==================== -->
+    <div id="survival-curtain" class="survival-lock fixed inset-0 z-[999] bg-black/95 backdrop-blur-md flex items-center justify-center">
+        <div class="w-full max-w-md mx-4 text-center">
+            <div class="text-6xl mb-6">⚔️</div>
+            <h1 class="text-3xl font-black text-white mb-2">
+                <span class="text-red-500">V5</span> COMMANDER
+            </h1>
+            <p class="text-gray-400 mb-8 text-sm">输入今日三件事，解锁战场</p>
             
-            <div class="w-full bg-dark-3 rounded-full h-1.5 mb-3 overflow-hidden">
-                <div id="loading-bar" class="bg-gradient-to-r from-red-600 to-orange-500 h-full w-0 transition-all duration-300 ease-out"></div>
-            </div>
-            <div id="loading-progress" class="text-xs text-gray-500 font-mono">0%</div>
-            
-            <div id="loading-error" class="hidden mt-6 p-4 bg-red-900/30 border border-red-800 rounded-lg text-red-300 text-sm text-left"></div>
-        </div>
-    </div>
-
-    <!-- ==================== 生存模式登录界面 ==================== -->
-    <div id="iron-curtain" class="fixed inset-0 z-50 bg-dark-1/98 hidden flex items-center justify-center">
-        <div class="w-full max-w-lg p-8 animate-fade-in">
-            <div class="text-center mb-10">
-                <div class="text-6xl mb-4">🛡️</div>
-                <h1 class="text-3xl font-black text-red-500 tracking-tight uppercase">Survival Mode</h1>
-                <p class="text-gray-500 text-sm mt-2">现金流保卫战 · 聚焦核心目标</p>
+            <div class="space-y-3 mb-6">
+                <input id="action-1" type="text" placeholder="🎯 最重要的事" oninput="app.survival.checkInputs()"
+                    class="w-full bg-dark-2 border border-dark-4 rounded-lg p-4 text-white placeholder-gray-600 focus:border-red-500 focus:outline-none transition text-center">
+                <input id="action-2" type="text" placeholder="📋 第二件事" oninput="app.survival.checkInputs()"
+                    class="w-full bg-dark-2 border border-dark-4 rounded-lg p-4 text-white placeholder-gray-600 focus:border-red-500 focus:outline-none transition text-center">
+                <input id="action-3" type="text" placeholder="✅ 第三件事" oninput="app.survival.checkInputs()"
+                    class="w-full bg-dark-2 border border-dark-4 rounded-lg p-4 text-white placeholder-gray-600 focus:border-red-500 focus:outline-none transition text-center">
             </div>
 
-            <div class="space-y-4 mb-8">
-                <div class="relative">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-red-500 font-bold text-sm">01</span>
-                    <input id="action-1" type="text" class="w-full bg-dark-2 border border-dark-4 rounded-lg py-3.5 pl-12 pr-4 text-white placeholder-gray-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition" placeholder="今日搞钱动作 (必填)" oninput="app.survival.checkInputs()">
-                </div>
-                <div class="relative">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-red-500 font-bold text-sm">02</span>
-                    <input id="action-2" type="text" class="w-full bg-dark-2 border border-dark-4 rounded-lg py-3.5 pl-12 pr-4 text-white placeholder-gray-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition" placeholder="核心推进事项 (必填)" oninput="app.survival.checkInputs()">
-                </div>
-                <div class="relative">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-red-500 font-bold text-sm">03</span>
-                    <input id="action-3" type="text" class="w-full bg-dark-2 border border-dark-4 rounded-lg py-3.5 pl-12 pr-4 text-white placeholder-gray-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition" placeholder="客户跟进/维护 (必填)" oninput="app.survival.checkInputs()">
-                </div>
-            </div>
-
-            <button id="battle-start-btn" disabled onclick="app.survival.startBattle()" class="w-full bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold py-4 rounded-lg transition-all shadow-lg shadow-red-900/30 flex items-center justify-center gap-3">
-                <i class="fas fa-power-off"></i> 启动系统
+            <button id="battle-start-btn" disabled onclick="app.survival.unlock()"
+                class="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 disabled:from-gray-700 disabled:to-gray-600 disabled:cursor-not-allowed text-white font-bold py-4 rounded-lg transition shadow-xl text-lg">
+                开启今日战斗
             </button>
-            
-            <div class="mt-6 text-center">
-                <button onclick="app.survival.emergencyOverride()" class="text-xs text-gray-600 hover:text-red-400 transition underline underline-offset-2">
-                    ⚡ 紧急模式入口 (10分钟)
-                </button>
-            </div>
+
+            <button onclick="app.survival.emergency()" class="mt-4 text-gray-600 hover:text-gray-400 text-sm transition">
+                紧急进入 (10分钟)
+            </button>
         </div>
     </div>
 
-    <!-- ==================== 顶部导航栏 ==================== -->
-    <header class="h-16 bg-dark-1/95 backdrop-blur-md border-b border-dark-4/50 flex items-center justify-between px-4 lg:px-6 fixed top-0 left-0 right-0 z-40">
+    <!-- ==================== 顶部导航 ==================== -->
+    <header class="fixed top-0 left-0 right-0 h-16 bg-dark-1/95 backdrop-blur-md border-b border-dark-4/50 z-50 px-4 md:px-6 flex items-center justify-between">
         <div class="flex items-center gap-4">
             <div class="font-black text-lg tracking-tight text-white">
                 <span class="text-red-500">V5</span> COMMANDER
@@ -230,7 +243,7 @@
             </button>
             <div class="hidden md:flex items-center gap-3">
                 <span id="sync-status" class="text-xs text-gray-500 flex items-center gap-1.5">
-                    <i class="fas fa-circle text-green-500 text-[8px]"></i>在线
+                    <i class="fas fa-circle text-green-500 text-[8px]"></i>本地
                 </span>
                 <button onclick="app.logout()" class="text-gray-500 hover:text-red-400 p-2 transition" title="退出系统">
                     <i class="fas fa-power-off"></i>
@@ -247,19 +260,19 @@
             </button>
         </div>
         <div class="flex flex-col gap-2">
-            <button onclick="app.switchTab('dashboard'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition" data-mobile-tab="dashboard">
+            <button onclick="app.switchTab('dashboard'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition">
                 <i class="fas fa-chart-pie mr-3 w-6"></i>仪表盘
             </button>
-            <button onclick="app.switchTab('kanban'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition" data-mobile-tab="kanban">
+            <button onclick="app.switchTab('kanban'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition">
                 <i class="fas fa-columns mr-3 w-6"></i>订单战场
             </button>
-            <button onclick="app.switchTab('crm'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition" data-mobile-tab="crm">
+            <button onclick="app.switchTab('crm'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition">
                 <i class="fas fa-address-book mr-3 w-6"></i>客户档案
             </button>
-            <button onclick="app.switchTab('suppliers'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition" data-mobile-tab="suppliers">
+            <button onclick="app.switchTab('suppliers'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition">
                 <i class="fas fa-industry mr-3 w-6"></i>供应商
             </button>
-            <button onclick="app.switchTab('expenses'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition" data-mobile-tab="expenses">
+            <button onclick="app.switchTab('expenses'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition">
                 <i class="fas fa-wallet mr-3 w-6"></i>运营支出
             </button>
         </div>
@@ -282,22 +295,23 @@
                         <div class="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-2">
                             <i class="fas fa-chart-line text-blue-500"></i> Total Revenue
                         </div>
+                        <!-- 兼容两种ID命名 -->
                         <div class="text-2xl font-bold text-blue-400 font-mono" id="kpi-revenue">¥0.00</div>
-                        <div class="text-xs text-gray-600 mt-2">本月累计营收</div>
+                        <div class="text-xs text-gray-600 mt-2" id="dashboard-total-orders">订单: 0</div>
                     </div>
                     <div class="glass rounded-xl p-5 hover:border-green-500/30 transition group">
                         <div class="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-2">
                             <i class="fas fa-coins text-green-500"></i> Gross Profit
                         </div>
                         <div class="text-2xl font-bold text-green-400 font-mono" id="kpi-gross">¥0.00</div>
-                        <div class="text-xs text-gray-600 mt-2">真实毛利 (扣除采购)</div>
+                        <div class="text-xs text-gray-600 mt-2" id="dashboard-pending-orders">待处理: 0</div>
                     </div>
                     <div class="glass rounded-xl p-5 hover:border-purple-500/30 transition group">
                         <div class="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-2">
                             <i class="fas fa-piggy-bank text-purple-500"></i> Net Profit
                         </div>
                         <div class="text-2xl font-bold text-purple-400 font-mono" id="kpi-net">¥0.00</div>
-                        <div class="text-xs text-gray-600 mt-2">净利润 (扣除运营)</div>
+                        <div class="text-xs text-gray-600 mt-2" id="dashboard-completed-orders">已完成: 0</div>
                     </div>
                     <div class="glass rounded-xl p-5 hover:border-red-500/30 transition relative overflow-hidden group">
                         <div class="absolute -right-4 -top-4 text-7xl text-red-500/10 group-hover:text-red-500/20 transition">
@@ -309,6 +323,14 @@
                         <div class="text-xl font-bold text-white">72h Safe</div>
                         <div class="text-xs text-red-400/70 mt-2">距上次进账: <span id="hours-since-income" class="font-mono">0</span>h</div>
                     </div>
+                </div>
+
+                <!-- 额外统计信息（兼容Dashboard模块） -->
+                <div class="hidden">
+                    <span id="dashboard-total-income">0</span>
+                    <span id="dashboard-month-income">0</span>
+                    <span id="dashboard-total-suppliers">0</span>
+                    <span id="dashboard-net-profit">0</span>
                 </div>
 
                 <!-- 今日行动 -->
@@ -421,6 +443,8 @@
                     </button>
                 </div>
                 <div id="customer-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <!-- 兼容CRM模块的容器ID -->
+                <div id="crm-customers" class="hidden"></div>
             </div>
         </div>
 
@@ -434,6 +458,8 @@
                     </button>
                 </div>
                 <div id="supplier-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <!-- 兼容Suppliers模块的容器ID -->
+                <div id="supplierList" class="hidden"></div>
             </div>
         </div>
 
@@ -448,94 +474,53 @@
                 </div>
                 <div class="glass rounded-xl overflow-hidden">
                     <table class="w-full text-sm text-left text-gray-400">
-                        <thead class="bg-dark-3/50 text-gray-300">
+                        <thead class="text-xs uppercase bg-dark-3/50 text-gray-500">
                             <tr>
-                                <th class="px-6 py-4 font-semibold">日期</th>
-                                <th class="px-6 py-4 font-semibold">类别</th>
-                                <th class="px-6 py-4 font-semibold">摘要</th>
-                                <th class="px-6 py-4 text-right font-semibold">金额 (CNY)</th>
-                                <th class="px-6 py-4 text-center font-semibold">操作</th>
+                                <th class="px-4 py-3">日期</th>
+                                <th class="px-4 py-3">项目</th>
+                                <th class="px-4 py-3">分类</th>
+                                <th class="px-4 py-3 text-right">金额</th>
+                                <th class="px-4 py-3 text-right">操作</th>
                             </tr>
                         </thead>
-                        <tbody id="expense-list"></tbody>
+                        <tbody id="expenses-tbody"></tbody>
                     </table>
                 </div>
+                <!-- 兼容Expenses模块的容器ID -->
+                <div id="expenses-list" class="hidden"></div>
             </div>
         </div>
+
     </main>
 
-    <!-- ==================== 模态框区域 ==================== -->
+    <!-- ==================== 模态框 ==================== -->
     
-    <!-- 供应商模态框 -->
-    <div id="supplier-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
-        <div class="bg-dark-2 border border-dark-4 p-6 rounded-xl w-full max-w-md shadow-2xl animate-fade-in">
-            <div class="flex justify-between items-center mb-5">
-                <h3 class="text-lg font-bold text-white">新增供应商</h3>
-                <button onclick="app.suppliers.closeModal()" class="text-gray-500 hover:text-white transition text-xl">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="space-y-4">
-                <input id="supp-name" type="text" placeholder="供应商名称 (必填)" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition">
-                <input id="supp-product" type="text" placeholder="主营产品" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-indigo-500 outline-none transition">
-                <input id="supp-contact" type="text" placeholder="联系人/电话" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-indigo-500 outline-none transition">
-            </div>
-            <button onclick="app.suppliers.save()" class="w-full mt-6 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold py-3 rounded-lg transition shadow-lg">
-                保存档案
-            </button>
-        </div>
-    </div>
-
-    <!-- 支出模态框 -->
-    <div id="expense-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
-        <div class="bg-dark-2 border border-dark-4 p-6 rounded-xl w-full max-w-md shadow-2xl animate-fade-in">
-            <div class="flex justify-between items-center mb-5">
-                <h3 class="text-lg font-bold text-white">记录支出</h3>
-                <button onclick="app.expenses.closeModal()" class="text-gray-500 hover:text-white transition text-xl">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="space-y-4">
-                <input id="exp-date" type="date" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white focus:border-yellow-500 outline-none transition">
-                <select id="exp-category" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white focus:border-yellow-500 outline-none transition">
-                    <option value="差旅">✈️ 差旅/交通</option>
-                    <option value="招待">🍷 客户招待</option>
-                    <option value="房租">🏢 房租/水电</option>
-                    <option value="营销">📢 广告/样品</option>
-                    <option value="其他">📦 其他杂项</option>
-                </select>
-                <input id="exp-amount" type="number" step="0.01" min="0" placeholder="金额 (CNY)" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono placeholder-gray-500 focus:border-yellow-500 outline-none transition">
-                <input id="exp-note" type="text" placeholder="备注 (必填)" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-yellow-500 outline-none transition">
-            </div>
-            <button onclick="app.expenses.save()" class="w-full mt-6 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-white font-bold py-3 rounded-lg transition shadow-lg">
-                确认支出
-            </button>
-        </div>
-    </div>
-
-    <!-- 客户模态框 -->
-    <div id="customer-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
-        <div class="bg-dark-2 border border-dark-4 p-6 rounded-xl w-full max-w-md shadow-2xl animate-fade-in">
-            <div class="flex justify-between items-center mb-5">
-                <h3 class="text-lg font-bold text-white">录入客户</h3>
+    <!-- 新增客户模态框 -->
+    <div id="customer-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-white">录入客户档案</h3>
                 <button onclick="app.crm.closeModal()" class="text-gray-500 hover:text-white transition text-xl">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="space-y-4">
-                <input id="crm-name" type="text" placeholder="客户公司名 (必填)" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-green-500 outline-none transition">
-                <input id="crm-contact" type="text" placeholder="联系人" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-green-500 outline-none transition">
-                <select id="crm-country" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white focus:border-green-500 outline-none transition">
-                    <option value="Philippines">🇵🇭 菲律宾</option>
-                    <option value="Turkey">🇹🇷 土耳其</option>
-                    <option value="UK">🇬🇧 英国</option>
-                    <option value="Netherlands">🇳🇱 荷兰</option>
-                    <option value="USA">🇺🇸 美国</option>
-                    <option value="Germany">🇩🇪 德国</option>
-                    <option value="Other">🌍 其他</option>
-                </select>
-                <input id="crm-whatsapp" type="text" placeholder="WhatsApp" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-green-500 outline-none transition">
-                <textarea id="crm-address" rows="2" placeholder="发货地址..." class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-green-500 outline-none transition resize-none"></textarea>
+                <input id="crm-name" type="text" placeholder="公司名称 (必填)" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-green-500 outline-none transition">
+                <input id="crm-contact" type="text" placeholder="联系人姓名" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-green-500 outline-none transition">
+                <div class="grid grid-cols-2 gap-3">
+                    <select id="crm-country" class="bg-dark-1 border border-dark-4 rounded-lg p-3 text-white focus:border-green-500 outline-none transition">
+                        <option value="China">🇨🇳 China</option>
+                        <option value="USA">🇺🇸 USA</option>
+                        <option value="UK">🇬🇧 UK</option>
+                        <option value="Germany">🇩🇪 Germany</option>
+                        <option value="Netherlands">🇳🇱 Netherlands</option>
+                        <option value="Turkey">🇹🇷 Turkey</option>
+                        <option value="Philippines">🇵🇭 Philippines</option>
+                        <option value="Other">🌍 Other</option>
+                    </select>
+                    <input id="crm-whatsapp" type="text" placeholder="WhatsApp" class="bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-green-500 outline-none transition">
+                </div>
+                <textarea id="crm-address" rows="2" placeholder="详细地址..." class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-green-500 outline-none transition resize-none"></textarea>
             </div>
             <button onclick="app.crm.save()" class="w-full mt-6 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-bold py-3 rounded-lg transition shadow-lg">
                 保存档案
@@ -543,10 +528,62 @@
         </div>
     </div>
 
-    <!-- 订单快速添加模态框 -->
-    <div id="kanban-quick-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
-        <div class="bg-dark-2 border border-dark-4 p-6 rounded-xl w-full max-w-md shadow-2xl animate-fade-in">
-            <div class="flex justify-between items-center mb-5">
+    <!-- 新增供应商模态框 -->
+    <div id="supplier-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-white">新增供应商</h3>
+                <button onclick="app.suppliers.closeModal()" class="text-gray-500 hover:text-white transition text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <input id="supp-name" type="text" placeholder="供应商名称 (必填)" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-indigo-500 outline-none transition">
+                <input id="supp-product" type="text" placeholder="主营产品" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-indigo-500 outline-none transition">
+                <input id="supp-contact" type="text" placeholder="联系方式" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-indigo-500 outline-none transition">
+                <textarea id="supp-note" rows="2" placeholder="备注信息..." class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-indigo-500 outline-none transition resize-none"></textarea>
+            </div>
+            <button onclick="app.suppliers.save()" class="w-full mt-6 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                添加供应商
+            </button>
+        </div>
+    </div>
+
+    <!-- 新增支出模态框 -->
+    <div id="expense-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-white">记录支出</h3>
+                <button onclick="app.expenses.closeModal()" class="text-gray-500 hover:text-white transition text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <input id="expense-name" type="text" placeholder="支出项目 (必填)" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-yellow-500 outline-none transition">
+                <div class="grid grid-cols-2 gap-3">
+                    <input id="expense-amount" type="number" step="0.01" min="0" placeholder="金额 (必填)" class="bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono placeholder-gray-500 focus:border-yellow-500 outline-none transition">
+                    <select id="expense-category" class="bg-dark-1 border border-dark-4 rounded-lg p-3 text-white focus:border-yellow-500 outline-none transition">
+                        <option value="采购">采购成本</option>
+                        <option value="物流">物流运费</option>
+                        <option value="工资">人员工资</option>
+                        <option value="租金">房租水电</option>
+                        <option value="营销">营销推广</option>
+                        <option value="办公">办公耗材</option>
+                        <option value="其他">其他支出</option>
+                    </select>
+                </div>
+                <textarea id="expense-note" rows="2" placeholder="备注说明..." class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-yellow-500 outline-none transition resize-none"></textarea>
+            </div>
+            <button onclick="app.expenses.save()" class="w-full mt-6 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                记录支出
+            </button>
+        </div>
+    </div>
+
+    <!-- 快速添加订单模态框 -->
+    <div id="kanban-quick-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
                 <h3 class="text-lg font-bold text-white">新增订单立项</h3>
                 <button onclick="app.kanban.closeQuickModal()" class="text-gray-500 hover:text-white transition text-xl">
                     <i class="fas fa-times"></i>
@@ -565,29 +602,40 @@
     </div>
 
     <!-- Toast 容器 -->
-    <div id="toast-container"></div>
+    <div id="toast-container" class="fixed bottom-4 right-4 z-[9999] space-y-2"></div>
 
     <!-- ==================== 核心 JavaScript ==================== -->
     <script>
     /**
-     * V14.3 PRO - 核心应用模块
+     * V14.4 PRO - 核心应用模块（完全修复版）
      * 统一的存储和应用逻辑，修复所有空值保护问题
+     * 版本: 14.4.0
+     * 修复内容:
+     * - 所有存储操作使用统一的v5_erp_前缀
+     * - 所有数据加载保证返回数组/对象（永不返回null）
+     * - 看板列ID与HTML完全匹配
+     * - Dashboard元素ID完整
+     * - Toast容器初始化
      */
     (function() {
         'use strict';
 
         // ==================== 配置常量 ====================
         const CONFIG = {
+            VERSION: '14.4.0',
             STORAGE_PREFIX: 'v5_erp_',
             KEYS: {
                 ORDERS: 'v5_erp_orders',
                 CUSTOMERS: 'v5_erp_customers',
                 SUPPLIERS: 'v5_erp_suppliers',
                 EXPENSES: 'v5_erp_expenses',
+                INCOMES: 'v5_erp_incomes',
                 TODAY_ACTIONS: 'v5_erp_today_actions',
                 UNLOCK_TIME: 'v5_erp_unlock_time',
-                EMERGENCY_TIME: 'v5_erp_emergency_time'
+                EMERGENCY_TIME: 'v5_erp_emergency_time',
+                SETTINGS: 'v5_erp_settings'
             },
+            // 看板状态与HTML ID完全匹配
             KANBAN_STATUS: ['inquiry', 'pi', 'production', 'shipped', 'paid'],
             UNLOCK_DURATION: 30 * 60 * 1000, // 30分钟
             EMERGENCY_DURATION: 10 * 60 * 1000 // 10分钟
@@ -600,19 +648,28 @@
                 return document.getElementById(id);
             },
 
-            // 安全读取 localStorage（永远返回数组或对象）
+            /**
+             * 安全读取 localStorage
+             * 核心修复：永远返回正确类型，绝不返回 null
+             */
             loadData(key, defaultValue = []) {
                 try {
                     const data = localStorage.getItem(key);
-                    if (!data) return defaultValue;
+                    if (data === null || data === undefined || data === '') {
+                        return defaultValue;
+                    }
                     const parsed = JSON.parse(data);
-                    // 确保返回正确类型
+                    
+                    // 类型校验：确保返回正确类型
                     if (Array.isArray(defaultValue)) {
                         return Array.isArray(parsed) ? parsed : defaultValue;
                     }
-                    return parsed || defaultValue;
+                    if (typeof defaultValue === 'object' && defaultValue !== null) {
+                        return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : defaultValue;
+                    }
+                    return parsed !== null && parsed !== undefined ? parsed : defaultValue;
                 } catch (e) {
-                    log('[Utils] 数据读取失败:', key, e);
+                    console.warn('[Utils] 数据读取失败:', key, e.message);
                     return defaultValue;
                 }
             },
@@ -623,7 +680,7 @@
                     localStorage.setItem(key, JSON.stringify(data));
                     return true;
                 } catch (e) {
-                    log('[Utils] 数据保存失败:', key, e);
+                    console.error('[Utils] 数据保存失败:', key, e.message);
                     return false;
                 }
             },
@@ -647,6 +704,7 @@
                 if (!dateStr) return '未知';
                 try {
                     const date = new Date(dateStr);
+                    if (isNaN(date.getTime())) return '未知';
                     return date.toLocaleDateString('zh-CN');
                 } catch {
                     return '未知';
@@ -661,7 +719,10 @@
             // 显示 Toast
             toast(message, type = 'info', duration = 3000) {
                 const container = Utils.$('toast-container');
-                if (!container) return;
+                if (!container) {
+                    console.warn('[Utils] Toast容器不存在');
+                    return;
+                }
 
                 const toast = document.createElement('div');
                 toast.className = `toast ${type}`;
@@ -679,13 +740,50 @@
                     toast.style.transform = 'translateX(100%)';
                     setTimeout(() => toast.remove(), 300);
                 }, duration);
+            },
+
+            // 安全数组操作
+            safeArray(data) {
+                return Array.isArray(data) ? data : [];
+            },
+
+            // 安全过滤
+            safeFilter(data, callback) {
+                const arr = Utils.safeArray(data);
+                return typeof callback === 'function' ? arr.filter(callback) : [];
+            },
+
+            // 安全遍历
+            safeForEach(data, callback) {
+                const arr = Utils.safeArray(data);
+                if (typeof callback === 'function') {
+                    arr.forEach(callback);
+                }
             }
         };
 
         // ==================== 主应用对象 ====================
         window.app = {
             state: {
-                emergencyTimer: null
+                emergencyTimer: null,
+                currentTab: 'dashboard'
+            },
+
+            // ========== 初始化 ==========
+            init() {
+                console.log(`[V14.4 PRO] 系统初始化中... 版本: ${CONFIG.VERSION}`);
+                
+                // 检查生存模式
+                app.survival.check();
+                
+                // 初始化各模块
+                app.calculateKPI();
+                app.kanban.render();
+                app.crm.render();
+                app.suppliers.render();
+                app.expenses.render();
+                
+                console.log('[V14.4 PRO] ✅ 系统初始化完成');
             },
 
             // ========== 生存模式 ==========
@@ -700,161 +798,129 @@
                     }
                 },
 
-                startBattle() {
-                    const actions = [
-                        Utils.$('action-1')?.value?.trim() || '',
-                        Utils.$('action-2')?.value?.trim() || '',
-                        Utils.$('action-3')?.value?.trim() || ''
-                    ].filter(Boolean);
+                check() {
+                    const unlockTime = parseInt(localStorage.getItem(CONFIG.KEYS.UNLOCK_TIME)) || 0;
+                    const emergencyTime = parseInt(localStorage.getItem(CONFIG.KEYS.EMERGENCY_TIME)) || 0;
+                    const now = Date.now();
 
-                    if (actions.length !== 3) {
+                    if (now < unlockTime) {
+                        // 正常解锁状态
+                        app.survival.hideCurtain();
+                        app.survival.showActions();
+                    } else if (now < emergencyTime) {
+                        // 紧急模式
+                        app.survival.hideCurtain();
+                        app.survival.startEmergencyTimer(emergencyTime);
+                    } else {
+                        // 需要解锁
+                        app.survival.showCurtain();
+                    }
+                },
+
+                showCurtain() {
+                    Utils.$('survival-curtain')?.classList.remove('hidden');
+                },
+
+                hideCurtain() {
+                    Utils.$('survival-curtain')?.classList.add('hidden');
+                },
+
+                unlock() {
+                    const a1 = Utils.$('action-1')?.value?.trim();
+                    const a2 = Utils.$('action-2')?.value?.trim();
+                    const a3 = Utils.$('action-3')?.value?.trim();
+
+                    if (!a1 || !a2 || !a3) {
                         Utils.toast('请填写完整的今日三件事', 'warning');
                         return;
                     }
 
-                    Utils.saveData(CONFIG.KEYS.TODAY_ACTIONS, actions);
-                    Utils.saveData(CONFIG.KEYS.UNLOCK_TIME, Date.now());
-                    localStorage.removeItem(CONFIG.KEYS.EMERGENCY_TIME);
+                    // 保存今日行动
+                    Utils.saveData(CONFIG.KEYS.TODAY_ACTIONS, [a1, a2, a3]);
+                    localStorage.setItem(CONFIG.KEYS.UNLOCK_TIME, String(Date.now() + CONFIG.UNLOCK_DURATION));
 
-                    const curtain = Utils.$('iron-curtain');
-                    if (curtain) curtain.classList.add('hidden');
-
-                    app.renderTodayActions(actions);
-                    Utils.toast('系统启动成功，聚焦今日目标！', 'success');
+                    app.survival.hideCurtain();
+                    app.survival.showActions();
+                    Utils.toast('战斗开始！今日必胜！', 'success');
                 },
 
-                emergencyOverride() {
-                    if (!confirm('启用10分钟紧急模式？超时后将自动退出！')) return;
+                emergency() {
+                    if (!confirm('确定使用紧急进入吗？（仅10分钟有效）')) return;
 
-                    const now = Date.now();
-                    Utils.saveData(CONFIG.KEYS.EMERGENCY_TIME, now);
-                    Utils.saveData(CONFIG.KEYS.UNLOCK_TIME, now);
+                    const emergencyEnd = Date.now() + CONFIG.EMERGENCY_DURATION;
+                    localStorage.setItem(CONFIG.KEYS.EMERGENCY_TIME, String(emergencyEnd));
+                    Utils.saveData(CONFIG.KEYS.TODAY_ACTIONS, ['紧急任务', '快速处理', '临时工作']);
 
-                    const curtain = Utils.$('iron-curtain');
-                    if (curtain) curtain.classList.add('hidden');
-
-                    const warning = Utils.$('emergency-warning');
-                    if (warning) warning.classList.remove('hidden');
-
-                    app.startEmergencyTimer();
-                    Utils.toast('紧急模式已激活，剩余10分钟', 'warning');
+                    app.survival.hideCurtain();
+                    app.survival.startEmergencyTimer(emergencyEnd);
+                    Utils.toast('紧急模式已激活（10分钟）', 'warning');
                 },
 
-                initCheck() {
-                    const lastUnlock = Utils.loadData(CONFIG.KEYS.UNLOCK_TIME, null);
-                    const emergencyTime = Utils.loadData(CONFIG.KEYS.EMERGENCY_TIME, null);
-                    const curtain = Utils.$('iron-curtain');
-
-                    if (!curtain) return;
-
-                    // 检查紧急模式
-                    if (emergencyTime) {
-                        const elapsed = Date.now() - emergencyTime;
-                        if (elapsed < CONFIG.EMERGENCY_DURATION) {
-                            curtain.classList.add('hidden');
-                            const warning = Utils.$('emergency-warning');
-                            if (warning) warning.classList.remove('hidden');
-                            app.startEmergencyTimer();
-                            return;
-                        } else {
-                            localStorage.removeItem(CONFIG.KEYS.EMERGENCY_TIME);
-                        }
-                    }
-
-                    // 检查正常解锁
-                    if (lastUnlock && (Date.now() - lastUnlock < CONFIG.UNLOCK_DURATION)) {
-                        curtain.classList.add('hidden');
-                        const actions = Utils.loadData(CONFIG.KEYS.TODAY_ACTIONS, []);
-                        if (actions.length === 3) {
-                            app.renderTodayActions(actions);
-                        }
-                    } else {
-                        curtain.classList.remove('hidden');
-                        localStorage.removeItem(CONFIG.KEYS.TODAY_ACTIONS);
-                        localStorage.removeItem(CONFIG.KEYS.UNLOCK_TIME);
-                    }
-                }
-            },
-
-            // 紧急模式倒计时
-            startEmergencyTimer() {
-                if (app.state.emergencyTimer) {
-                    clearInterval(app.state.emergencyTimer);
-                }
-
-                const timerEl = Utils.$('emergency-timer');
-                const emergencyTime = Utils.loadData(CONFIG.KEYS.EMERGENCY_TIME, 0);
-
-                app.state.emergencyTimer = setInterval(() => {
-                    const remaining = CONFIG.EMERGENCY_DURATION - (Date.now() - emergencyTime);
+                startEmergencyTimer(endTime) {
+                    Utils.$('emergency-warning')?.classList.remove('hidden');
                     
-                    if (remaining <= 0) {
+                    if (app.state.emergencyTimer) {
                         clearInterval(app.state.emergencyTimer);
-                        localStorage.removeItem(CONFIG.KEYS.EMERGENCY_TIME);
-                        localStorage.removeItem(CONFIG.KEYS.UNLOCK_TIME);
-                        location.reload();
-                        return;
                     }
 
-                    const mins = Math.floor(remaining / 60000);
-                    const secs = Math.floor((remaining % 60000) / 1000);
-                    if (timerEl) {
-                        timerEl.textContent = `${mins}:${String(secs).padStart(2, '0')}`;
-                    }
-                }, 1000);
-            },
+                    const updateTimer = () => {
+                        const remaining = Math.max(0, endTime - Date.now());
+                        const minutes = Math.floor(remaining / 60000);
+                        const seconds = Math.floor((remaining % 60000) / 1000);
+                        
+                        const timerEl = Utils.$('emergency-timer');
+                        if (timerEl) {
+                            timerEl.textContent = `${minutes}:${String(seconds).padStart(2, '0')}`;
+                        }
 
-            // 渲染今日行动
-            renderTodayActions(actions) {
-                const container = Utils.$('actions-display');
-                if (!container || !Array.isArray(actions) || actions.length === 0) return;
+                        if (remaining <= 0) {
+                            clearInterval(app.state.emergencyTimer);
+                            app.state.emergencyTimer = null;
+                            app.survival.showCurtain();
+                            Utils.$('emergency-warning')?.classList.add('hidden');
+                        }
+                    };
 
-                const templates = [
-                    { icon: 'fa-bullseye', color: 'text-red-500', bg: 'hover:border-red-500/30' },
-                    { icon: 'fa-rocket', color: 'text-blue-500', bg: 'hover:border-blue-500/30' },
-                    { icon: 'fa-shield-alt', color: 'text-green-500', bg: 'hover:border-green-500/30' }
-                ];
+                    updateTimer();
+                    app.state.emergencyTimer = setInterval(updateTimer, 1000);
+                },
 
-                container.innerHTML = actions.map((action, i) => {
-                    const t = templates[i] || templates[0];
-                    return `
-                        <div class="glass rounded-xl p-5 ${t.bg} transition">
-                            <div class="flex items-center gap-3 mb-3">
-                                <i class="fas ${t.icon} ${t.color} text-xl"></i>
-                                <span class="text-xs text-gray-500 uppercase tracking-wider">优先级 ${i + 1}</span>
+                showActions() {
+                    const actions = Utils.loadData(CONFIG.KEYS.TODAY_ACTIONS, []);
+                    const container = Utils.$('actions-display');
+                    if (!container || actions.length === 0) return;
+
+                    container.innerHTML = actions.map((action, i) => `
+                        <div class="glass rounded-xl p-5 hover:border-red-500/30 transition">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl font-bold text-red-500">#${i + 1}</span>
+                                <span class="text-white font-medium">${Utils.escapeHtml(action)}</span>
                             </div>
-                            <p class="text-gray-200 font-medium">${Utils.escapeHtml(action)}</p>
                         </div>
-                    `;
-                }).join('');
+                    `).join('');
+                }
             },
 
             // ========== Tab 切换 ==========
             switchTab(tabId) {
-                // 隐藏所有 Tab
-                document.querySelectorAll('.tab-content').forEach(el => {
-                    el.classList.remove('active');
+                app.state.currentTab = tabId;
+
+                // 隐藏所有 tab 内容
+                document.querySelectorAll('.tab-content').forEach(tab => {
+                    tab.classList.remove('active');
                 });
 
-                // 移除所有导航高亮
+                // 显示目标 tab
+                Utils.$(`tab-${tabId}`)?.classList.add('active');
+
+                // 更新导航高亮
                 document.querySelectorAll('.nav-tab').forEach(btn => {
-                    btn.classList.remove('active');
+                    const isActive = btn.dataset.tab === tabId;
+                    btn.classList.toggle('active', isActive);
                 });
 
-                // 激活目标 Tab
-                const target = Utils.$('tab-' + tabId);
-                if (target) {
-                    target.classList.add('active');
-                }
-
-                // 激活导航
-                const navBtn = document.querySelector(`.nav-tab[data-tab="${tabId}"]`);
-                if (navBtn) {
-                    navBtn.classList.add('active');
-                }
-
-                // 触发模块渲染
-                switch(tabId) {
+                // 按需渲染
+                switch (tabId) {
                     case 'dashboard': app.calculateKPI(); break;
                     case 'kanban': app.kanban.render(); break;
                     case 'crm': app.crm.render(); break;
@@ -865,38 +931,50 @@
 
             // ========== KPI 计算 ==========
             calculateKPI() {
+                // 使用安全的数据加载
                 const orders = Utils.loadData(CONFIG.KEYS.ORDERS, []);
                 const expenses = Utils.loadData(CONFIG.KEYS.EXPENSES, []);
+                const suppliers = Utils.loadData(CONFIG.KEYS.SUPPLIERS, []);
+                const customers = Utils.loadData(CONFIG.KEYS.CUSTOMERS, []);
 
                 const now = new Date();
                 const currentMonth = now.getMonth();
                 const currentYear = now.getFullYear();
 
-                // 本月已付款订单
-                const paidOrders = orders.filter(o => {
+                // 安全过滤本月已付款订单
+                const paidOrders = Utils.safeFilter(orders, o => {
                     if (o.status !== 'paid') return false;
                     const d = new Date(o.createdAt);
                     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
                 });
 
                 const totalRevenue = paidOrders.reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
-                const totalExpenses = expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+                const totalExpenses = Utils.safeArray(expenses).reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
                 const grossProfit = totalRevenue;
                 const netProfit = grossProfit - totalExpenses;
 
-                // 更新 DOM
-                const revenueEl = Utils.$('kpi-revenue');
-                const grossEl = Utils.$('kpi-gross');
-                const netEl = Utils.$('kpi-net');
-                
-                if (revenueEl) revenueEl.textContent = Utils.formatAmount(totalRevenue);
-                if (grossEl) grossEl.textContent = Utils.formatAmount(grossProfit);
-                if (netEl) netEl.textContent = Utils.formatAmount(netProfit);
+                // 更新 DOM（带空值保护）
+                const updateEl = (id, value) => {
+                    const el = Utils.$(id);
+                    if (el) el.textContent = value;
+                };
+
+                updateEl('kpi-revenue', Utils.formatAmount(totalRevenue));
+                updateEl('kpi-gross', Utils.formatAmount(grossProfit));
+                updateEl('kpi-net', Utils.formatAmount(netProfit));
+
+                // 更新Dashboard兼容元素
+                updateEl('dashboard-total-orders', `订单: ${orders.length}`);
+                updateEl('dashboard-pending-orders', `待处理: ${Utils.safeFilter(orders, o => o.status !== 'paid').length}`);
+                updateEl('dashboard-completed-orders', `已完成: ${paidOrders.length}`);
+                updateEl('dashboard-total-income', Utils.formatAmount(totalRevenue));
+                updateEl('dashboard-month-income', Utils.formatAmount(totalRevenue));
+                updateEl('dashboard-total-suppliers', suppliers.length);
+                updateEl('dashboard-net-profit', Utils.formatAmount(netProfit));
 
                 // 计算距上次进账时间
-                const lastPaid = orders
-                    .filter(o => o.status === 'paid')
-                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+                const allPaidOrders = Utils.safeFilter(orders, o => o.status === 'paid');
+                const lastPaid = allPaidOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
 
                 const hoursEl = Utils.$('hours-since-income');
                 if (hoursEl && lastPaid) {
@@ -908,10 +986,14 @@
             // ========== 看板模块 ==========
             kanban: {
                 openQuickAdd() {
-                    Utils.$('kanban-title').value = '';
-                    Utils.$('kanban-customer').value = '';
-                    Utils.$('kanban-amount').value = '';
-                    Utils.$('kanban-note').value = '';
+                    const clearInput = (id) => {
+                        const el = Utils.$(id);
+                        if (el) el.value = '';
+                    };
+                    clearInput('kanban-title');
+                    clearInput('kanban-customer');
+                    clearInput('kanban-amount');
+                    clearInput('kanban-note');
                     Utils.$('kanban-quick-modal')?.classList.remove('hidden');
                     Utils.$('kanban-title')?.focus();
                 },
@@ -957,7 +1039,7 @@
                 render() {
                     const orders = Utils.loadData(CONFIG.KEYS.ORDERS, []);
 
-                    // 按状态分组
+                    // 按状态分组（使用安全数组）
                     const grouped = {
                         inquiry: [],
                         pi: [],
@@ -966,7 +1048,7 @@
                         paid: []
                     };
 
-                    orders.forEach(order => {
+                    Utils.safeForEach(orders, order => {
                         const status = order.status || 'inquiry';
                         if (grouped[status]) {
                             grouped[status].push(order);
@@ -1028,7 +1110,7 @@
                     Utils.saveData(CONFIG.KEYS.ORDERS, orders);
                     app.kanban.render();
                     app.calculateKPI();
-                    Utils.toast(`订单状态已更新`, 'info');
+                    Utils.toast('订单状态已更新', 'info');
                 },
 
                 deleteOrder(id) {
@@ -1046,10 +1128,14 @@
             // ========== 客户模块 ==========
             crm: {
                 openAddModal() {
-                    Utils.$('crm-name').value = '';
-                    Utils.$('crm-contact').value = '';
-                    Utils.$('crm-whatsapp').value = '';
-                    Utils.$('crm-address').value = '';
+                    const clearInput = (id) => {
+                        const el = Utils.$(id);
+                        if (el) el.value = '';
+                    };
+                    clearInput('crm-name');
+                    clearInput('crm-contact');
+                    clearInput('crm-whatsapp');
+                    clearInput('crm-address');
                     Utils.$('customer-modal')?.classList.remove('hidden');
                     Utils.$('crm-name')?.focus();
                 },
@@ -1100,21 +1186,18 @@
 
                     container.innerHTML = customers.map(c => `
                         <div class="glass rounded-xl p-5 hover:border-green-500/30 transition group">
-                            <div class="flex justify-between items-start mb-3">
-                                <h3 class="font-bold text-white text-lg">${Utils.escapeHtml(c.company)}</h3>
-                                <span class="text-xs bg-dark-3 px-2 py-1 rounded text-gray-300">${Utils.escapeHtml(c.country)}</span>
-                            </div>
-                            <div class="text-sm text-gray-400 space-y-1.5">
-                                <p><i class="fas fa-user w-4 opacity-50"></i> ${Utils.escapeHtml(c.contact) || '-'}</p>
-                                <p><i class="fab fa-whatsapp w-4 opacity-50"></i> ${Utils.escapeHtml(c.whatsapp) || '-'}</p>
-                                <p class="truncate"><i class="fas fa-map-marker-alt w-4 opacity-50"></i> ${Utils.escapeHtml(c.address) || '-'}</p>
-                            </div>
-                            <div class="flex justify-between items-center mt-4 pt-3 border-t border-dark-4/50 text-xs text-gray-500">
-                                <span>${Utils.formatDate(c.createdAt)}</span>
-                                <button onclick="app.crm.delete('${c.id}')" class="text-gray-600 hover:text-red-400 transition opacity-0 group-hover:opacity-100">
+                            <div class="flex items-start justify-between mb-3">
+                                <div>
+                                    <h3 class="font-bold text-white">${Utils.escapeHtml(c.company)}</h3>
+                                    <span class="text-xs text-gray-500">${Utils.escapeHtml(c.country)}</span>
+                                </div>
+                                <button onclick="app.crm.delete('${c.id}')" class="text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
+                            ${c.contact ? `<div class="text-sm text-gray-400 mb-1"><i class="fas fa-user mr-2 w-4 text-center"></i>${Utils.escapeHtml(c.contact)}</div>` : ''}
+                            ${c.whatsapp ? `<div class="text-sm text-gray-400 mb-1"><i class="fab fa-whatsapp mr-2 w-4 text-center text-green-500"></i>${Utils.escapeHtml(c.whatsapp)}</div>` : ''}
+                            ${c.address ? `<div class="text-xs text-gray-500 mt-2 truncate"><i class="fas fa-map-marker-alt mr-2"></i>${Utils.escapeHtml(c.address)}</div>` : ''}
                         </div>
                     `).join('');
                 },
@@ -1132,9 +1215,14 @@
             // ========== 供应商模块 ==========
             suppliers: {
                 openAddModal() {
-                    Utils.$('supp-name').value = '';
-                    Utils.$('supp-product').value = '';
-                    Utils.$('supp-contact').value = '';
+                    const clearInput = (id) => {
+                        const el = Utils.$(id);
+                        if (el) el.value = '';
+                    };
+                    clearInput('supp-name');
+                    clearInput('supp-product');
+                    clearInput('supp-contact');
+                    clearInput('supp-note');
                     Utils.$('supplier-modal')?.classList.remove('hidden');
                     Utils.$('supp-name')?.focus();
                 },
@@ -1156,13 +1244,14 @@
                         name,
                         product: Utils.$('supp-product')?.value?.trim() || '',
                         contact: Utils.$('supp-contact')?.value?.trim() || '',
+                        note: Utils.$('supp-note')?.value?.trim() || '',
                         createdAt: new Date().toISOString()
                     });
 
                     Utils.saveData(CONFIG.KEYS.SUPPLIERS, suppliers);
                     app.suppliers.closeModal();
                     app.suppliers.render();
-                    Utils.toast('供应商已保存', 'success');
+                    Utils.toast('供应商已添加', 'success');
                 },
 
                 render() {
@@ -1183,21 +1272,17 @@
 
                     container.innerHTML = suppliers.map(s => `
                         <div class="glass rounded-xl p-5 hover:border-indigo-500/30 transition group">
-                            <div class="flex justify-between items-start mb-3">
-                                <h3 class="font-bold text-white text-lg">${Utils.escapeHtml(s.name)}</h3>
-                                <span class="text-xs bg-indigo-900/50 text-indigo-300 px-2 py-1 rounded border border-indigo-800/50">
-                                    ${Utils.escapeHtml(s.product) || '综合类'}
-                                </span>
-                            </div>
-                            <div class="text-sm text-gray-400 space-y-1.5">
-                                <p><i class="fas fa-phone w-4 opacity-50"></i> ${Utils.escapeHtml(s.contact) || '-'}</p>
-                                <p><i class="fas fa-calendar w-4 opacity-50"></i> ${Utils.formatDate(s.createdAt)}</p>
-                            </div>
-                            <div class="flex justify-end mt-4 pt-3 border-t border-dark-4/50">
-                                <button onclick="app.suppliers.delete('${s.id}')" class="text-gray-600 hover:text-red-400 transition opacity-0 group-hover:opacity-100">
+                            <div class="flex items-start justify-between mb-3">
+                                <div>
+                                    <h3 class="font-bold text-white">${Utils.escapeHtml(s.name)}</h3>
+                                    ${s.product ? `<span class="text-xs text-indigo-400 bg-indigo-900/30 px-2 py-0.5 rounded">${Utils.escapeHtml(s.product)}</span>` : ''}
+                                </div>
+                                <button onclick="app.suppliers.delete('${s.id}')" class="text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
+                            ${s.contact ? `<div class="text-sm text-gray-400"><i class="fas fa-phone mr-2 w-4 text-center"></i>${Utils.escapeHtml(s.contact)}</div>` : ''}
+                            ${s.note ? `<div class="text-xs text-gray-500 mt-2">${Utils.escapeHtml(s.note)}</div>` : ''}
                         </div>
                     `).join('');
                 },
@@ -1215,11 +1300,15 @@
             // ========== 支出模块 ==========
             expenses: {
                 openAddModal() {
-                    Utils.$('exp-date').value = new Date().toISOString().split('T')[0];
-                    Utils.$('exp-amount').value = '';
-                    Utils.$('exp-note').value = '';
+                    const clearInput = (id) => {
+                        const el = Utils.$(id);
+                        if (el) el.value = '';
+                    };
+                    clearInput('expense-name');
+                    clearInput('expense-amount');
+                    clearInput('expense-note');
                     Utils.$('expense-modal')?.classList.remove('hidden');
-                    Utils.$('exp-amount')?.focus();
+                    Utils.$('expense-name')?.focus();
                 },
 
                 closeModal() {
@@ -1227,31 +1316,25 @@
                 },
 
                 save() {
-                    const date = Utils.$('exp-date')?.value;
-                    const category = Utils.$('exp-category')?.value;
-                    const amount = parseFloat(Utils.$('exp-amount')?.value) || 0;
-                    const note = Utils.$('exp-note')?.value?.trim();
+                    const name = Utils.$('expense-name')?.value?.trim();
+                    const amount = parseFloat(Utils.$('expense-amount')?.value) || 0;
 
-                    if (!date) {
-                        Utils.toast('请选择日期', 'warning');
+                    if (!name) {
+                        Utils.toast('请输入支出项目', 'warning');
                         return;
                     }
                     if (amount <= 0) {
                         Utils.toast('请输入有效金额', 'warning');
                         return;
                     }
-                    if (!note) {
-                        Utils.toast('请填写备注', 'warning');
-                        return;
-                    }
 
                     const expenses = Utils.loadData(CONFIG.KEYS.EXPENSES, []);
                     expenses.unshift({
                         id: Utils.generateId('EXP'),
-                        date,
-                        category,
+                        name,
                         amount: amount.toFixed(2),
-                        note,
+                        category: Utils.$('expense-category')?.value || '其他',
+                        note: Utils.$('expense-note')?.value?.trim() || '',
                         createdAt: new Date().toISOString()
                     });
 
@@ -1259,38 +1342,37 @@
                     app.expenses.closeModal();
                     app.expenses.render();
                     app.calculateKPI();
-                    Utils.toast('支出记录已保存', 'success');
+                    Utils.toast('支出已记录', 'success');
                 },
 
                 render() {
-                    const container = Utils.$('expense-list');
-                    if (!container) return;
+                    const tbody = Utils.$('expenses-tbody');
+                    if (!tbody) return;
 
                     const expenses = Utils.loadData(CONFIG.KEYS.EXPENSES, []);
 
                     if (expenses.length === 0) {
-                        container.innerHTML = `
+                        tbody.innerHTML = `
                             <tr>
-                                <td colspan="5" class="px-6 py-12 text-center text-gray-500">
-                                    <i class="fas fa-receipt text-4xl mb-4 opacity-30"></i>
-                                    <p>暂无支出记录</p>
+                                <td colspan="5" class="text-center py-12 text-gray-500">
+                                    <i class="fas fa-receipt text-3xl mb-3 opacity-30 block"></i>
+                                    暂无支出记录
                                 </td>
                             </tr>
                         `;
                         return;
                     }
 
-                    // 按日期倒序
-                    const sorted = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-                    container.innerHTML = sorted.map(e => `
-                        <tr class="bg-dark-2/50 border-b border-dark-4/30 hover:bg-dark-3/50 transition">
-                            <td class="px-6 py-4 font-mono text-sm">${Utils.escapeHtml(e.date)}</td>
-                            <td class="px-6 py-4">${Utils.escapeHtml(e.category)}</td>
-                            <td class="px-6 py-4">${Utils.escapeHtml(e.note)}</td>
-                            <td class="px-6 py-4 text-right font-mono text-red-400">${Utils.formatAmount(e.amount)}</td>
-                            <td class="px-6 py-4 text-center">
-                                <button onclick="app.expenses.delete('${e.id}')" class="text-gray-600 hover:text-red-400 transition">
+                    tbody.innerHTML = expenses.map(e => `
+                        <tr class="border-b border-dark-4/50 hover:bg-dark-3/50 transition">
+                            <td class="px-4 py-3 text-gray-300">${Utils.formatDate(e.createdAt)}</td>
+                            <td class="px-4 py-3 text-white font-medium">${Utils.escapeHtml(e.name)}</td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 text-xs bg-dark-3 rounded text-gray-400">${Utils.escapeHtml(e.category)}</span>
+                            </td>
+                            <td class="px-4 py-3 text-right text-red-400 font-mono">-${Utils.formatAmount(e.amount)}</td>
+                            <td class="px-4 py-3 text-right">
+                                <button onclick="app.expenses.delete('${e.id}')" class="text-gray-600 hover:text-red-500 transition">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
@@ -1311,112 +1393,58 @@
 
             // ========== 数据导出 ==========
             exportData() {
-                try {
-                    const exportData = {
-                        version: 'V14.3-PRO',
-                        timestamp: new Date().toISOString(),
-                        orders: Utils.loadData(CONFIG.KEYS.ORDERS, []),
-                        customers: Utils.loadData(CONFIG.KEYS.CUSTOMERS, []),
-                        suppliers: Utils.loadData(CONFIG.KEYS.SUPPLIERS, []),
-                        expenses: Utils.loadData(CONFIG.KEYS.EXPENSES, []),
-                        todayActions: Utils.loadData(CONFIG.KEYS.TODAY_ACTIONS, [])
-                    };
+                const data = {
+                    version: CONFIG.VERSION,
+                    exportTime: new Date().toISOString(),
+                    orders: Utils.loadData(CONFIG.KEYS.ORDERS, []),
+                    customers: Utils.loadData(CONFIG.KEYS.CUSTOMERS, []),
+                    suppliers: Utils.loadData(CONFIG.KEYS.SUPPLIERS, []),
+                    expenses: Utils.loadData(CONFIG.KEYS.EXPENSES, []),
+                    todayActions: Utils.loadData(CONFIG.KEYS.TODAY_ACTIONS, [])
+                };
 
-                    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `V5_BACKUP_${new Date().toISOString().split('T')[0]}.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `erp-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
 
-                    Utils.toast('数据备份成功', 'success');
-                } catch (e) {
-                    Utils.toast('数据备份失败', 'error');
-                }
+                Utils.toast('数据已导出', 'success');
             },
 
-            // ========== 退出系统 ==========
+            // ========== 登出 ==========
             logout() {
-                if (!confirm('确定退出战时指挥台吗？')) return;
+                if (!confirm('确定要退出系统吗？')) return;
+
+                // 清除会话数据（保留业务数据）
                 localStorage.removeItem(CONFIG.KEYS.UNLOCK_TIME);
                 localStorage.removeItem(CONFIG.KEYS.EMERGENCY_TIME);
-                location.reload();
-            },
+                localStorage.removeItem(CONFIG.KEYS.TODAY_ACTIONS);
 
-            // ========== 初始化 ==========
-            init() {
-                log('[App] 初始化开始...');
-
-                // 初始化支出日期选择器默认值
-                const expDate = Utils.$('exp-date');
-                if (expDate) {
-                    expDate.value = new Date().toISOString().split('T')[0];
+                // 清理定时器
+                if (app.state.emergencyTimer) {
+                    clearInterval(app.state.emergencyTimer);
+                    app.state.emergencyTimer = null;
                 }
 
-                // 检查生存模式
-                app.survival.initCheck();
-
-                // 初始化各模块
-                app.calculateKPI();
-                app.kanban.render();
-                app.crm.render();
-                app.suppliers.render();
-                app.expenses.render();
-
-                // 隐藏加载界面
-                setTimeout(() => {
-                    const loading = Utils.$('system-loading');
-                    if (loading) {
-                        loading.style.opacity = '0';
-                        setTimeout(() => loading.style.display = 'none', 300);
-                    }
-                }, 500);
-
-                log('[App] ✅ 初始化完成');
+                // 显示生存模式
+                app.survival.showCurtain();
+                Utils.$('emergency-warning')?.classList.add('hidden');
+                
+                Utils.toast('已安全退出', 'info');
             }
         };
 
-        // ==================== 加载进度模拟 ====================
-        function simulateLoading() {
-            const bar = Utils.$('loading-bar');
-            const progress = Utils.$('loading-progress');
-            let percent = 0;
-
-            const interval = setInterval(() => {
-                percent += Math.random() * 15 + 5;
-                if (percent > 95) percent = 95;
-
-                if (bar) bar.style.width = `${percent}%`;
-                if (progress) progress.textContent = `${Math.floor(percent)}%`;
-
-                if (percent >= 95) {
-                    clearInterval(interval);
-                    // 完成加载
-                    setTimeout(() => {
-                        if (bar) bar.style.width = '100%';
-                        if (progress) progress.textContent = '100%';
-                        // 初始化应用
-                        app.init();
-                    }, 200);
-                }
-            }, 100);
-        }
-
-        // ==================== 页面卸载清理 ====================
-        window.addEventListener('beforeunload', () => {
-            if (app.state.emergencyTimer) {
-                clearInterval(app.state.emergencyTimer);
-            }
-        });
-
-        // ==================== DOM 加载完成后启动 ====================
+        // ==================== DOM 加载完成后初始化 ====================
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', simulateLoading);
+            document.addEventListener('DOMContentLoaded', () => app.init());
         } else {
-            simulateLoading();
+            app.init();
         }
 
+        console.log(`[V14.4 PRO] 脚本已加载 - 版本: ${CONFIG.VERSION}`);
     })();
     </script>
 </body>
