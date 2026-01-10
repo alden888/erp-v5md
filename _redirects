@@ -1,0 +1,12 @@
+# Cloudflare Pages Redirects Configuration
+# 注意：workbench 是子目录，规则需要更精确
+
+# 只对 workbench 目录下的 HTML 路由启用 SPA 模式
+# 排除静态资源（js, css, images 等）
+
+# 确保静态资源不被重定向（这些规则优先级更高）
+/workbench/js/* /workbench/js/:splat 200
+/workbench/css/* /workbench/css/:splat 200
+
+# SPA 路由 - 只对没有扩展名的路径生效
+/workbench /workbench/index.html 200
