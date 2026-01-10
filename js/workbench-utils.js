@@ -1,6 +1,6 @@
 // ============================================
 // V14.2 PRO - UTILITIES MODULE (ENHANCED)
-// 通用工具函数封装 + 性能优化 + 功能增强
+// 通用工具函数封装 + 性能优化 + 功能增强 + 空值保护
 // 优化版本 - 2026-01-03
 // ============================================
 
@@ -333,6 +333,71 @@ const WorkbenchUtils = (() => {
             div.textContent = text;
             return div.innerHTML;
         },
+
+        // ============================================
+        // 新增：空值保护工具函数
+        // ============================================
+        /**
+         * 安全获取DOM元素（返回null时不报错）
+         * @param {string} id - DOM元素ID
+         * @returns {HTMLElement|null} DOM元素或null
+         */
+        safeGetElement(id) {
+            if (!id || typeof id !== 'string') {
+                console.warn('[Utils] 无效的DOM元素ID:', id);
+                return null;
+            }
+            return document.getElementById(id) || null;
+        },
+
+        /**
+         * 安全判断数组（确保返回有效数组，避免forEach/length报错）
+         * @param {*} data - 待校验的数据
+         * @returns {Array} 有效数组（空数组或原数组）
+         */
+        safeArray(data) {
+            return Array.isArray(data) ? data : [];
+        },
+
+        /**
+         * 安全更新DOM文本（元素不存在时不报错）
+         * @param {string} id - DOM元素ID
+         * @param {string} text - 要设置的文本
+         */
+        safeUpdateText(id, text) {
+            const el = this.safeGetElement(id);
+            if (el) {
+                el.textContent = text || '';
+            }
+        },
+
+        /**
+         * 安全过滤数组（避免filter调用在null/undefined上）
+         * @param {*} data - 待过滤的数据
+         * @param {Function} callback - 过滤回调函数
+         * @returns {Array} 过滤后的数组
+         */
+        safeFilter(data, callback) {
+            const arr = this.safeArray(data);
+            return typeof callback === 'function' ? arr.filter(callback) : [];
+        },
+
+        /**
+         * 安全遍历数组（避免forEach调用在null/undefined上）
+         * @param {*} data - 待遍历的数据
+         * @param {Function} callback - 遍历回调函数
+         */
+        safeForEach(data, callback) {
+            const arr = this.safeArray(data);
+            if (typeof callback === 'function') {
+                arr.forEach(callback);
+            } else {
+                console.warn('[Utils] 无效的forEach回调函数');
+            }
+        },
+        // ============================================
+        // 空值保护工具函数 结束
+        // ============================================
 
         /**
          * 防抖函数
@@ -679,7 +744,7 @@ const WorkbenchUtils = (() => {
          * @returns {HTMLElement} 加载元素
          */
         showLoading(targetId = 'loading-container', message = '加载中...') {
-            let container = document.getElementById(targetId);
+            let container = this.safeGetElement(targetId); // 替换为安全获取DOM
             
             if (!container) {
                 container = document.createElement('div');
@@ -705,7 +770,7 @@ const WorkbenchUtils = (() => {
          * @param {string} targetId - 目标容器ID
          */
         hideLoading(targetId = 'loading-container') {
-            const container = document.getElementById(targetId);
+            const container = this.safeGetElement(targetId); // 替换为安全获取DOM
             if (container) {
                 container.style.display = 'none';
             }
@@ -803,4 +868,4 @@ if (typeof module !== 'undefined' && module.exports) {
     define([], () => WorkbenchUtils);
 }
 
-console.log('[Utils] 工具模块已加载');
+console.log('[Utils] 工具模块已加载（含空值保护增强）');
