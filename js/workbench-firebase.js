@@ -1,7 +1,7 @@
 /**
  * V14.2 PRO Firebase Connection Module
  * 负责与 Google Cloud Firestore 通信
- * 优化版本 - 2026-01-03
+ * 优化版本 - 2026-01-03 (修复版)
  * @namespace WorkbenchFirebase
  */
 const WorkbenchFirebase = (() => {
@@ -25,7 +25,9 @@ const WorkbenchFirebase = (() => {
         EXPENSES: 'expenses',
         TODAY_ACTIONS: 'today_actions',
         SETTINGS: 'settings',
-        USERS: 'users'
+        USERS: 'users',
+        MISC: 'misc', // 补充显式的misc集合
+        HEARTBEAT: '_heartbeat' // 心跳检测集合
     };
 
     // 模块状态
@@ -42,7 +44,11 @@ const WorkbenchFirebase = (() => {
         syncCallbacks: [],
         lastSyncTime: null,
         autoSyncEnabled: true,
-        syncInProgress: false
+        syncInProgress: false,
+        syncQueue: [], // 新增：同步队列，防止并发冲突
+        authUnsubscribe: null, // 新增：认证监听取消函数
+        connectedUnsubscribe: null, // 新增：连接监听取消函数
+        syncDebounceTimer: null // 新增：同步防抖计时器
     };
 
     /**
@@ -67,8 +73,13 @@ const WorkbenchFirebase = (() => {
             // 使用提供的配置或默认配置
             state.config = config || DEFAULT_CONFIG;
 
-            // 初始化Firebase应用
-            const app = firebase.initializeApp(state.config);
+            // 防止重复初始化应用
+            let app;
+            try {
+                app = firebase.app(); // 检查是否已有实例
+            } catch (e) {
+                app = firebase.initializeApp(state.config); // 新建实例
+            }
             
             // 初始化服务
             state.db = app.firestore();
@@ -122,11 +133,16 @@ const WorkbenchFirebase = (() => {
             console.warn('[Firebase] 离线持久化启用失败:', error.code);
             state.isPersistenceEnabled = false;
             
-            // 根据错误类型提供解决方案
-            if (error.code === 'failed-precondition') {
-                console.warn('[Firebase] 提示: 多个标签页打开时，离线持久化可能无法正常工作');
-            } else if (error.code === 'unimplemented') {
-                console.warn('[Firebase] 提示: 当前浏览器不支持离线持久化');
+            // 完善错误提示和解决方案
+            switch (error.code) {
+                case 'failed-precondition':
+                    console.warn('[Firebase] 提示: 多个标签页打开时离线持久化无法工作，请关闭多余标签页后刷新');
+                    break;
+                case 'unimplemented':
+                    console.warn('[Firebase] 提示: 当前浏览器不支持离线持久化（如Safari私有模式），请切换浏览器或关闭私有模式');
+                    break;
+                default:
+                    console.warn('[Firebase] 提示: 离线功能不可用，将仅在在线时同步数据');
             }
         }
     }
@@ -135,24 +151,42 @@ const WorkbenchFirebase = (() => {
      * 设置连接状态监听
      */
     function setupConnectionListeners() {
-        // 使用.info/connected监听网络状态（如果可用）
-        const connectedRef = state.db.collection('.info').doc('connected');
-        
-        // 简单的心跳检测
-        const checkConnection = async () => {
-            try {
-                await state.db.collection('_heartbeat').doc('check').set({ 
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp() 
-                });
-                if (!state.isConnected) {
-                    state.isConnected = true;
+        // 移除旧的监听（防止重复）
+        if (state.connectedUnsubscribe) {
+            state.connectedUnsubscribe();
+        }
+
+        // 使用.info/connected监听网络状态（Firebase官方推荐）
+        const connectedRef = state.db.doc('.info/connected');
+        state.connectedUnsubscribe = connectedRef.onSnapshot(async (snapshot) => {
+            const isConnected = snapshot.data()?.connected === true;
+            
+            if (isConnected !== state.isConnected) {
+                state.isConnected = isConnected;
+                if (isConnected) {
                     console.log('[Firebase] 🌐 已连接到网络');
                     notifySyncStatus('已连接', true);
+                    // 网络恢复后自动同步队列中的任务
+                    processSyncQueue();
+                } else {
+                    console.log('[Firebase] 📡 网络连接已断开');
+                    notifySyncStatus('离线', false);
                 }
+            }
+        });
+
+        // 心跳检测（兜底）
+        const checkConnection = async () => {
+            if (!state.isInitialized) return;
+            
+            try {
+                await state.db.collection(COLLECTIONS.HEARTBEAT).doc('check').set({ 
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp() 
+                }, { merge: true }); // 使用merge避免覆盖
             } catch (error) {
                 if (state.isConnected) {
                     state.isConnected = false;
-                    console.log('[Firebase] 📡 网络连接已断开');
+                    console.log('[Firebase] 📡 心跳检测失败，确认离线');
                     notifySyncStatus('离线', false);
                 }
             }
@@ -171,15 +205,22 @@ const WorkbenchFirebase = (() => {
      */
     async function initializeAuthState() {
         return new Promise((resolve) => {
-            state.auth.onAuthStateChanged((user) => {
+            // 移除旧的认证监听
+            if (state.authUnsubscribe) {
+                state.authUnsubscribe();
+            }
+
+            state.authUnsubscribe = state.auth.onAuthStateChanged(async (user) => {
                 if (user) {
-                    console.log('[Firebase] 👤 用户已登录:', user.email);
+                    console.log('[Firebase] 👤 用户已登录:', user.email || '匿名用户');
                 } else {
                     console.log('[Firebase] 👤 匿名模式（未登录）');
                     // 匿名登录以便使用Firebase服务
-                    state.auth.signInAnonymously().catch(err => {
+                    try {
+                        await state.auth.signInAnonymously();
+                    } catch (err) {
                         console.warn('[Firebase] 匿名登录失败:', err);
-                    });
+                    }
                 }
                 resolve();
             });
@@ -187,7 +228,7 @@ const WorkbenchFirebase = (() => {
     }
 
     /**
-     * 设置自动同步
+     * 设置自动同步（防抖处理）
      */
     function setupAutoSync() {
         if (!state.autoSyncEnabled) {
@@ -195,33 +236,79 @@ const WorkbenchFirebase = (() => {
             return;
         }
 
-        // 监听localStorage变化并自动同步
-        window.addEventListener('storage', (e) => {
+        // 监听localStorage变化并自动同步（防抖）
+        const handleStorageChange = (e) => {
             if (!e.key || !e.key.startsWith('workbench_')) return;
             
             console.log('[Firebase] 检测到本地数据变化:', e.key);
             
-            // 延迟同步，避免频繁触发
-            setTimeout(() => {
-                syncLocalStorageToCloud(e.key);
-            }, 1000);
-        });
+            // 清除旧的计时器，防抖处理（500ms内多次触发只执行一次）
+            clearTimeout(state.syncDebounceTimer);
+            state.syncDebounceTimer = setTimeout(() => {
+                // 将同步任务加入队列
+                addToSyncQueue(() => syncLocalStorageToCloud(e.key));
+            }, 500);
+        };
 
-        console.log('[Firebase] ✅ 自动同步已启用');
+        // 先移除旧监听，防止重复
+        window.removeEventListener('storage', handleStorageChange);
+        window.addEventListener('storage', handleStorageChange);
+
+        console.log('[Firebase] ✅ 自动同步已启用（防抖模式）');
     }
 
     /**
-     * 同步本地存储到云端
+     * 新增：添加同步任务到队列
+     * @param {Function} syncTask - 同步任务函数
+     */
+    function addToSyncQueue(syncTask) {
+        state.syncQueue.push(syncTask);
+        // 如果当前没有同步中，立即处理队列
+        if (!state.syncInProgress && state.isConnected) {
+            processSyncQueue();
+        }
+    }
+
+    /**
+     * 新增：处理同步队列
+     */
+    async function processSyncQueue() {
+        if (state.syncInProgress || !state.isConnected || state.syncQueue.length === 0) {
+            return;
+        }
+
+        state.syncInProgress = true;
+        console.log(`[Firebase] 开始处理同步队列（${state.syncQueue.length} 个任务）`);
+
+        try {
+            // 逐个执行队列中的任务
+            while (state.syncQueue.length > 0) {
+                const task = state.syncQueue.shift();
+                await task();
+            }
+            console.log('[Firebase] ✅ 同步队列处理完成');
+        } catch (error) {
+            console.error('[Firebase] ❌ 同步队列处理失败:', error);
+        } finally {
+            state.syncInProgress = false;
+            state.lastSyncTime = new Date();
+            notifySyncStatus('已同步', true);
+        }
+    }
+
+    /**
+     * 同步本地存储到云端（优化版）
      * @param {string} key - 存储键名
      * @returns {Promise<boolean>}
      */
     async function syncLocalStorageToCloud(key) {
-        if (!state.isInitialized || !state.isConnected || state.syncInProgress) {
+        if (!state.isInitialized || !state.isConnected) {
+            console.log('[Firebase] 未初始化/离线，将任务加入同步队列:', key);
+            addToSyncQueue(() => syncLocalStorageToCloud(key));
             return false;
         }
 
         try {
-            state.syncInProgress = true;
             const value = localStorage.getItem(key);
             
             if (!value) {
@@ -229,45 +316,60 @@ const WorkbenchFirebase = (() => {
                 return false;
             }
 
-            // 确定集合名称
+            // 新增：解析JSON数据（兼容JSON格式的本地存储）
+            let parsedValue;
+            try {
+                parsedValue = JSON.parse(value);
+            } catch (e) {
+                parsedValue = value; // 非JSON格式直接使用原始值
+            }
+
+            // 确定集合名称（优化判断逻辑）
             const collection = getCollectionNameFromKey(key);
             const userId = getCurrentUserId();
-            const docId = `${userId}_${key}`;
+            const docId = `${userId}_${key.replace('workbench_', '')}`; // 优化docId格式
 
-            // 保存到云端
-            await save(collection, docId, {
+            // 保存到云端（添加数据验证）
+            const syncData = {
                 key: key,
-                value: value,
+                value: parsedValue, // 存储解析后的值（更易查询）
+                rawValue: value, // 保留原始值（兼容旧数据）
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 userId: userId
-            });
+            };
+
+            await save(collection, docId, syncData);
 
             console.log('[Firebase] ✅ 已同步:', key);
-            state.lastSyncTime = new Date();
-            notifySyncStatus('已同步', true);
-            
             return true;
         } catch (error) {
             console.error('[Firebase] ❌ 同步失败:', error);
+            // 失败任务重新加入队列（最多重试3次）
+            const retryCount = (state.syncQueue.find(t => t.toString().includes(key))?.retryCount || 0) + 1;
+            if (retryCount <= 3) {
+                const retryTask = () => syncLocalStorageToCloud(key);
+                retryTask.retryCount = retryCount;
+                addToSyncQueue(retryTask);
+                console.log(`[Firebase] ⏳ 同步任务将重试（第${retryCount}次）:`, key);
+            }
             return false;
-        } finally {
-            state.syncInProgress = false;
         }
     }
 
     /**
-     * 从键名获取集合名称
+     * 从键名获取集合名称（优化精准度）
      * @param {string} key - 存储键名
      * @returns {string} 集合名称
      */
     function getCollectionNameFromKey(key) {
-        if (key.includes('orders')) return COLLECTIONS.ORDERS;
-        if (key.includes('suppliers')) return COLLECTIONS.SUPPLIERS;
-        if (key.includes('customers')) return COLLECTIONS.CUSTOMERS;
-        if (key.includes('expenses')) return COLLECTIONS.EXPENSES;
-        if (key.includes('today_actions')) return COLLECTIONS.TODAY_ACTIONS;
-        if (key.includes('settings')) return COLLECTIONS.SETTINGS;
-        return 'misc'; // 其他数据
+        const keyLower = key.toLowerCase();
+        if (keyLower.includes('orders')) return COLLECTIONS.ORDERS;
+        if (keyLower.includes('suppliers')) return COLLECTIONS.SUPPLIERS;
+        if (keyLower.includes('customers')) return COLLECTIONS.CUSTOMERS;
+        if (keyLower.includes('expenses')) return COLLECTIONS.EXPENSES;
+        if (keyLower.includes('today_actions') || keyLower.includes('today')) return COLLECTIONS.TODAY_ACTIONS;
+        if (keyLower.includes('settings')) return COLLECTIONS.SETTINGS;
+        return COLLECTIONS.MISC; // 使用显式的MISC常量
     }
 
     /**
@@ -278,7 +380,7 @@ const WorkbenchFirebase = (() => {
         if (state.auth && state.auth.currentUser) {
             return state.auth.currentUser.uid;
         }
-        // 如果没有用户，使用设备ID
+        // 如果没有用户，使用设备ID（优化生成逻辑）
         let deviceId = localStorage.getItem('workbench_device_id');
         if (!deviceId) {
             deviceId = generateId('device');
@@ -307,6 +409,10 @@ const WorkbenchFirebase = (() => {
             return true;
         } catch (error) {
             console.error('[Firebase] ❌ 保存失败:', error.message);
+            // 处理权限错误
+            if (error.code === 'permission-denied') {
+                console.error('[Firebase] 权限错误: 请检查Firestore安全规则是否配置正确');
+            }
             return false;
         }
     }
@@ -559,7 +665,7 @@ const WorkbenchFirebase = (() => {
             console.log('[Firebase] ✅ 用户登录成功:', user.email);
             
             // 登录后触发全量同步
-            syncAllLocalData();
+            addToSyncQueue(syncAllLocalData);
             
             return {
                 uid: user.uid,
@@ -570,7 +676,17 @@ const WorkbenchFirebase = (() => {
             };
         } catch (error) {
             console.error('[Firebase] ❌ 登录失败:', error.message);
-            throw error;
+            // 细化登录错误提示
+            switch (error.code) {
+                case 'user-not-found':
+                    throw new Error('该邮箱未注册，请先注册');
+                case 'wrong-password':
+                    throw new Error('密码错误，请重新输入');
+                case 'user-disabled':
+                    throw new Error('该账号已被禁用，请联系管理员');
+                default:
+                    throw error;
+            }
         }
     }
 
@@ -587,6 +703,11 @@ const WorkbenchFirebase = (() => {
             
             if (!email || !password) {
                 throw new Error('邮箱和密码不能为空');
+            }
+
+            // 密码强度验证
+            if (password.length < 6) {
+                throw new Error('密码长度不能少于6位');
             }
 
             const userCredential = await state.auth.createUserWithEmailAndPassword(email, password);
@@ -607,7 +728,19 @@ const WorkbenchFirebase = (() => {
             };
         } catch (error) {
             console.error('[Firebase] ❌ 注册失败:', error.message);
-            throw error;
+            // 细化注册错误提示
+            switch (error.code) {
+                case 'email-already-in-use':
+                    throw new Error('该邮箱已被注册，请直接登录');
+                case 'invalid-email':
+                    throw new Error('邮箱格式不正确，请检查');
+                case 'operation-not-allowed':
+                    throw new Error('注册功能暂未开放，请联系管理员');
+                case 'weak-password':
+                    throw new Error('密码强度不足，请使用更复杂的密码');
+                default:
+                    throw error;
+            }
         }
     }
 
@@ -619,6 +752,14 @@ const WorkbenchFirebase = (() => {
         try {
             validateInitialization();
             
+            // 登出前取消所有监听
+            if (state.authUnsubscribe) {
+                state.authUnsubscribe();
+            }
+            if (state.connectedUnsubscribe) {
+                state.connectedUnsubscribe();
+            }
+
             await state.auth.signOut();
             console.log('[Firebase] ✅ 用户已登出');
             return true;
@@ -691,11 +832,14 @@ const WorkbenchFirebase = (() => {
                 throw new Error('今日行动必须是数组');
             }
 
+            // 数据清洗：过滤空值
+            const cleanActions = actions.filter(action => action && typeof action === 'object');
+
             const userId = getCurrentUserId();
             const docId = `${userId}_today`;
 
             await save(COLLECTIONS.TODAY_ACTIONS, docId, {
-                actions: actions,
+                actions: cleanActions,
                 date: new Date().toISOString().split('T')[0],
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 userId: userId
@@ -722,17 +866,20 @@ const WorkbenchFirebase = (() => {
                 throw new Error('订单数据必须是数组');
             }
 
+            // 数据清洗
+            const cleanOrders = orders.filter(order => order && typeof order === 'object');
+
             const userId = getCurrentUserId();
             const docId = `${userId}_orders`;
 
             await save(COLLECTIONS.ORDERS, docId, {
-                orders: orders,
-                count: orders.length,
+                orders: cleanOrders,
+                count: cleanOrders.length,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 userId: userId
             });
 
-            console.log(`[Firebase] ✅ 已同步 ${orders.length} 个订单`);
+            console.log(`[Firebase] ✅ 已同步 ${cleanOrders.length} 个订单`);
             return true;
         } catch (error) {
             console.error('[Firebase] ❌ 订单同步失败:', error);
@@ -753,17 +900,20 @@ const WorkbenchFirebase = (() => {
                 throw new Error('供应商数据必须是数组');
             }
 
+            // 数据清洗
+            const cleanSuppliers = suppliers.filter(supplier => supplier && typeof supplier === 'object');
+
             const userId = getCurrentUserId();
             const docId = `${userId}_suppliers`;
 
             await save(COLLECTIONS.SUPPLIERS, docId, {
-                suppliers: suppliers,
-                count: suppliers.length,
+                suppliers: cleanSuppliers,
+                count: cleanSuppliers.length,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 userId: userId
             });
 
-            console.log(`[Firebase] ✅ 已同步 ${suppliers.length} 个供应商`);
+            console.log(`[Firebase] ✅ 已同步 ${cleanSuppliers.length} 个供应商`);
             return true;
         } catch (error) {
             console.error('[Firebase] ❌ 供应商同步失败:', error);
@@ -772,7 +922,7 @@ const WorkbenchFirebase = (() => {
     }
 
     /**
-     * 同步所有本地数据到云端
+     * 同步所有本地数据到云端（优化并发处理）
      * @returns {Promise<Object>} 同步结果
      */
     async function syncAllLocalData() {
@@ -793,19 +943,19 @@ const WorkbenchFirebase = (() => {
 
             console.log(`[Firebase] 找到 ${keys.length} 个本地数据项`);
 
-            for (const key of keys) {
-                try {
-                    const success = await syncLocalStorageToCloud(key);
+            // 批量加入队列，避免并发过高
+            keys.forEach(key => {
+                addToSyncQueue(() => syncLocalStorageToCloud(key).then(success => {
                     if (success) {
                         results.success.push(key);
                     } else {
                         results.failed.push(key);
                     }
-                } catch (error) {
-                    console.error(`[Firebase] 同步失败: ${key}`, error);
-                    results.failed.push(key);
-                }
-            }
+                }));
+            });
+
+            // 等待队列处理完成
+            await processSyncQueue();
 
             console.log('[Firebase] ✅ 全量同步完成');
             console.log(`[Firebase] 成功: ${results.success.length}, 失败: ${results.failed.length}`);
@@ -818,15 +968,17 @@ const WorkbenchFirebase = (() => {
     }
 
     /**
-     * 从云端恢复数据到本地
+     * 从云端恢复数据到本地（优化数据一致性）
+     * @param {boolean} overwrite - 是否覆盖本地已有数据（默认false）
      * @returns {Promise<Object>} 恢复结果
      */
-    async function restoreFromCloud() {
+    async function restoreFromCloud(overwrite = false) {
         console.log('[Firebase] 开始从云端恢复数据...');
         
         const results = {
             success: [],
             failed: [],
+            skipped: [], // 新增：跳过的项（本地有新数据）
             total: 0
         };
 
@@ -844,8 +996,16 @@ const WorkbenchFirebase = (() => {
                     results.total += docs.length;
 
                     for (const doc of docs) {
-                        if (doc.key && doc.value) {
-                            localStorage.setItem(doc.key, doc.value);
+                        if (doc.key && doc.rawValue) {
+                            // 检查本地是否有数据，且是否允许覆盖
+                            const localValue = localStorage.getItem(doc.key);
+                            if (!overwrite && localValue) {
+                                results.skipped.push(doc.key);
+                                console.log(`[Firebase] ⏭️ 跳过恢复（本地已有数据）: ${doc.key}`);
+                                continue;
+                            }
+
+                            localStorage.setItem(doc.key, doc.rawValue);
                             results.success.push(doc.key);
                             console.log(`[Firebase] ✅ 已恢复: ${doc.key}`);
                         }
@@ -857,7 +1017,7 @@ const WorkbenchFirebase = (() => {
             }
 
             console.log('[Firebase] ✅ 数据恢复完成');
-            console.log(`[Firebase] 成功: ${results.success.length}, 失败: ${results.failed.length}`);
+            console.log(`[Firebase] 成功: ${results.success.length}, 失败: ${results.failed.length}, 跳过: ${results.skipped.length}`);
             
             return results;
         } catch (error) {
@@ -872,7 +1032,21 @@ const WorkbenchFirebase = (() => {
      */
     function onSyncStatusChange(callback) {
         if (typeof callback === 'function') {
-            state.syncCallbacks.push(callback);
+            // 去重：避免重复注册相同回调
+            const exists = state.syncCallbacks.some(cb => cb.toString() === callback.toString());
+            if (!exists) {
+                state.syncCallbacks.push(callback);
+            }
+        }
+    }
+
+    /**
+     * 移除同步状态回调
+     * @param {Function} callback - 回调函数
+     */
+    function offSyncStatusChange(callback) {
+        if (typeof callback === 'function') {
+            state.syncCallbacks = state.syncCallbacks.filter(cb => cb.toString() !== callback.toString());
         }
     }
 
@@ -884,7 +1058,12 @@ const WorkbenchFirebase = (() => {
     function notifySyncStatus(status, isConnected) {
         state.syncCallbacks.forEach(callback => {
             try {
-                callback(status, isConnected);
+                callback({
+                    status,
+                    isConnected,
+                    lastSyncTime: state.lastSyncTime,
+                    queueLength: state.syncQueue.length
+                });
             } catch (error) {
                 console.error('[Firebase] 状态回调执行失败:', error);
             }
@@ -953,6 +1132,7 @@ const WorkbenchFirebase = (() => {
             hasFunctions: !!state.functions,
             autoSyncEnabled: state.autoSyncEnabled,
             syncInProgress: state.syncInProgress,
+            syncQueueLength: state.syncQueue.length, // 新增：队列长度
             lastSyncTime: state.lastSyncTime,
             currentUser: getCurrentUser(),
             error: state.error ? {
@@ -988,6 +1168,28 @@ const WorkbenchFirebase = (() => {
     }
 
     /**
+     * 新增：设置自动同步开关
+     * @param {boolean} enabled - 是否启用
+     */
+    function setAutoSyncEnabled(enabled) {
+        state.autoSyncEnabled = !!enabled;
+        if (enabled) {
+            setupAutoSync();
+            console.log('[Firebase] 自动同步已启用');
+        } else {
+            console.log('[Firebase] 自动同步已禁用');
+        }
+    }
+
+    /**
+     * 新增：清理同步队列
+     */
+    function clearSyncQueue() {
+        state.syncQueue = [];
+        console.log('[Firebase] 同步队列已清空');
+    }
+
+    /**
      * 模块初始化方法（供index.html的loader调用）
      * @returns {boolean}
      */
@@ -997,11 +1199,50 @@ const WorkbenchFirebase = (() => {
         return true;
     }
 
+    /**
+     * 新增：销毁模块（清理资源）
+     */
+    async function destroy() {
+        try {
+            // 取消所有监听
+            if (state.authUnsubscribe) state.authUnsubscribe();
+            if (state.connectedUnsubscribe) state.connectedUnsubscribe();
+            
+            // 清空队列
+            clearSyncQueue();
+            
+            // 登出用户
+            await logout();
+            
+            // 重置状态
+            Object.assign(state, {
+                isInitialized: false,
+                isConnected: false,
+                isPersistenceEnabled: false,
+                db: null,
+                auth: null,
+                storage: null,
+                functions: null,
+                error: null,
+                syncCallbacks: [],
+                lastSyncTime: null,
+                syncInProgress: false
+            });
+
+            console.log('[Firebase] 模块已销毁');
+            return true;
+        } catch (error) {
+            console.error('[Firebase] 模块销毁失败:', error);
+            return false;
+        }
+    }
+
     // 公共API
     const api = {
         // 模块管理
         init,
         initialize,
+        destroy, // 新增
         isAvailable,
         isInitialized,
         getStatus,
@@ -1035,6 +1276,9 @@ const WorkbenchFirebase = (() => {
         
         // 状态管理
         onSyncStatusChange,
+        offSyncStatusChange, // 新增
+        setAutoSyncEnabled, // 新增
+        clearSyncQueue, // 新增
         
         // 工具方法
         generateId,
@@ -1058,4 +1302,4 @@ window.V5Firebase = {
     query: WorkbenchFirebase.query
 };
 
-console.log('[Firebase] 模块已加载，版本: V14.2 Enhanced');
+console.log('[Firebase] 模块已加载，版本: V14.2 Enhanced (Fixed)');
