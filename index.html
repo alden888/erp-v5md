@@ -751,12 +751,12 @@
 
     <!-- ==================== 模态框 ==================== -->
     
-    <!-- 新增客户模态框 -->
+    <!-- 新增/编辑客户模态框 -->
     <div id="customer-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-lg font-bold text-white">录入客户档案</h3>
-                <button onclick="app.crm.closeModal()" class="text-gray-500 hover:text-white transition text-xl">
+                <h3 id="crm-modal-title" class="text-lg font-bold text-white">录入客户档案</h3>
+                <button onclick="WorkbenchCRM.closeModal()" class="text-gray-500 hover:text-white transition text-xl">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -778,7 +778,7 @@
                 </div>
                 <textarea id="crm-address" rows="2" placeholder="详细地址..." class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-green-500 outline-none transition resize-none"></textarea>
             </div>
-            <button onclick="app.crm.save()" class="w-full mt-6 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-bold py-3 rounded-lg transition shadow-lg">
+            <button id="crm-save-btn" onclick="WorkbenchCRM.save()" class="w-full mt-6 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-bold py-3 rounded-lg transition shadow-lg">
                 保存档案
             </button>
         </div>
@@ -934,6 +934,9 @@
 
     <!-- 隐藏的文件输入 -->
     <input type="file" id="import-file-input" accept=".json" class="hidden" onchange="app.handleImportFile(event)">
+
+    <!-- ==================== 外部模块 ==================== -->
+    <script src="js/workbench-crm.js"></script>
 
     <!-- ==================== 核心 JavaScript ==================== -->
     <script>
@@ -1846,83 +1849,67 @@
                 }
             },
 
-            // ========== 客户模块 ==========
+            // ========== 客户模块（代理到 WorkbenchCRM）==========
             crm: {
                 openAddModal() {
-                    ['crm-name', 'crm-contact', 'crm-whatsapp', 'crm-address'].forEach(id => {
-                        const el = Utils.$(id);
-                        if (el) el.value = '';
-                    });
-                    Utils.$('customer-modal')?.classList.remove('hidden');
-                    Utils.$('crm-name')?.focus();
+                    if (window.WorkbenchCRM) {
+                        WorkbenchCRM.openAddModal();
+                    } else {
+                        console.error('[CRM] WorkbenchCRM 模块未加载');
+                        Utils.toast('CRM模块未加载', 'error');
+                    }
                 },
 
-                closeModal() { Utils.$('customer-modal')?.classList.add('hidden'); },
+                openEditModal(id) {
+                    if (window.WorkbenchCRM) {
+                        WorkbenchCRM.openEditModal(id);
+                    } else {
+                        console.error('[CRM] WorkbenchCRM 模块未加载');
+                        Utils.toast('CRM模块未加载', 'error');
+                    }
+                },
+
+                closeModal() {
+                    if (window.WorkbenchCRM) {
+                        WorkbenchCRM.closeModal();
+                    } else {
+                        Utils.$('customer-modal')?.classList.add('hidden');
+                    }
+                },
 
                 save() {
-                    const name = Utils.$('crm-name')?.value?.trim();
-                    if (!name) { Utils.toast('请输入客户公司名', 'warning'); return; }
-
-                    const customers = Utils.loadData(CONFIG.KEYS.CUSTOMERS, []);
-                    customers.unshift({
-                        id: Utils.generateId('CUST'),
-                        company: name,
-                        contact: Utils.$('crm-contact')?.value?.trim() || '',
-                        country: Utils.$('crm-country')?.value || 'Other',
-                        whatsapp: Utils.$('crm-whatsapp')?.value?.trim() || '',
-                        address: Utils.$('crm-address')?.value?.trim() || '',
-                        createdAt: new Date().toISOString()
-                    });
-
-                    Utils.saveData(CONFIG.KEYS.CUSTOMERS, customers);
-                    if (FirebaseModule.syncEnabled) FirebaseModule.syncToCloud('customers', customers);
-
-                    app.crm.closeModal();
-                    app.crm.render();
-                    Utils.toast('客户档案已保存', 'success');
+                    if (window.WorkbenchCRM) {
+                        WorkbenchCRM.save();
+                    } else {
+                        console.error('[CRM] WorkbenchCRM 模块未加载');
+                        Utils.toast('CRM模块未加载', 'error');
+                    }
                 },
 
                 render() {
-                    const container = Utils.$('customer-grid');
-                    if (!container) return;
-
-                    const customers = Utils.loadData(CONFIG.KEYS.CUSTOMERS, []);
-
-                    if (customers.length === 0) {
-                        container.innerHTML = `
-                            <div class="col-span-full text-center py-12 text-gray-500">
-                                <i class="fas fa-users text-4xl mb-4 opacity-30"></i>
-                                <p>暂无客户档案</p>
-                            </div>
-                        `;
-                        return;
-                    }
-
-                    container.innerHTML = customers.map(c => `
-                        <div class="glass rounded-xl p-5 hover:border-green-500/30 transition group">
-                            <div class="flex items-start justify-between mb-3">
-                                <div>
-                                    <h3 class="font-bold text-white">${Utils.escapeHtml(c.company)}</h3>
-                                    <span class="text-xs text-gray-500">${Utils.escapeHtml(c.country)}</span>
+                    if (window.WorkbenchCRM) {
+                        WorkbenchCRM.render();
+                    } else {
+                        // Fallback: 显示加载中
+                        const container = Utils.$('customer-grid');
+                        if (container) {
+                            container.innerHTML = `
+                                <div class="col-span-full text-center py-12 text-gray-500">
+                                    <i class="fas fa-spinner fa-spin text-4xl mb-4 opacity-30"></i>
+                                    <p>正在加载客户模块...</p>
                                 </div>
-                                <button onclick="app.crm.delete('${c.id}')" class="text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                            ${c.contact ? `<div class="text-sm text-gray-400 mb-1"><i class="fas fa-user mr-2 w-4 text-center"></i>${Utils.escapeHtml(c.contact)}</div>` : ''}
-                            ${c.whatsapp ? `<div class="text-sm text-gray-400 mb-1"><i class="fab fa-whatsapp mr-2 w-4 text-center text-green-500"></i>${Utils.escapeHtml(c.whatsapp)}</div>` : ''}
-                        </div>
-                    `).join('');
+                            `;
+                        }
+                    }
                 },
 
                 delete(id) {
-                    if (!confirm('确定删除此客户档案吗？')) return;
-                    let customers = Utils.loadData(CONFIG.KEYS.CUSTOMERS, []);
-                    customers = customers.filter(c => c.id !== id);
-                    Utils.saveData(CONFIG.KEYS.CUSTOMERS, customers);
-                    if (FirebaseModule.syncEnabled) FirebaseModule.syncToCloud('customers', customers);
-                    app.crm.render();
-                    Utils.toast('客户档案已删除', 'success');
+                    if (window.WorkbenchCRM) {
+                        WorkbenchCRM.delete(id);
+                    } else {
+                        console.error('[CRM] WorkbenchCRM 模块未加载');
+                        Utils.toast('CRM模块未加载', 'error');
+                    }
                 }
             },
 
