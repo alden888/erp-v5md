@@ -1,6 +1,7 @@
 /**
  * V14.7 SURVIVAL - 仪表盘模块（生存优先级版）
  * 在 V14.6 基础上升级，不破坏原功能
+ * 版本: 14.7.0
  */
 const WorkbenchDashboard = (() => {
     'use strict';
@@ -80,9 +81,10 @@ const WorkbenchDashboard = (() => {
 
         let hoursSinceIncome = 0;
         if (incomes.length) {
-            const last = incomes.sort((a, b) =>
+            const sorted = [...incomes].sort((a, b) =>
                 new Date(b.createTime || b.date) - new Date(a.createTime || a.date)
-            )[0];
+            );
+            const last = sorted[0];
             hoursSinceIncome = Math.floor((now - new Date(last.createTime || last.date)) / 36e5);
         }
 
@@ -121,7 +123,7 @@ const WorkbenchDashboard = (() => {
         if (el) el.textContent = text;
     }
 
-    /* ================= 全球时钟升级 ================= */
+    /* ================= 全球时钟升级（P0 联动）================= */
 
     function startGlobalClock() {
         const container = document.getElementById('global-clock-grid');
@@ -130,6 +132,12 @@ const WorkbenchDashboard = (() => {
         const updateClock = () => {
             const now = new Date();
             const { p0List } = getP0Stats();
+
+            // 更新本地时间参考
+            const localRef = document.getElementById('local-time-ref');
+            if (localRef) {
+                localRef.textContent = `Local: ${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+            }
 
             container.innerHTML = GLOBAL_TIME_ZONES.map(tz => {
                 let hour;
@@ -147,20 +155,62 @@ const WorkbenchDashboard = (() => {
                     const utc = now.getTime() + now.getTimezoneOffset() * 60000;
                     const d = new Date(utc + tz.offset * 3600000);
                     hour = d.getHours();
-                    timeStr = `${hour}:${String(d.getMinutes()).padStart(2, '0')}`;
+                    timeStr = `${String(hour).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
                 }
 
                 const open = hour >= 9 && hour < 18;
-                const hasP0 = p0List.some(c => (c.country || '').toLowerCase().includes(tz.city.toLowerCase()));
+                const lunch = hour === 12;
+                const sleeping = hour >= 22 || hour < 7;
+
+                // 检查该地区是否有 P0 客户
+                const hasP0 = p0List.some(c => {
+                    const country = (c.country || '').toLowerCase();
+                    const city = tz.city.toLowerCase();
+                    // 简单匹配逻辑
+                    if (city === 'kunshan' && country === 'china') return true;
+                    if (city === 'manila' && country === 'philippines') return true;
+                    if (city === 'istanbul' && country === 'turkey') return true;
+                    if (city === 'dubai' && (country.includes('uae') || country.includes('gulf'))) return true;
+                    if (city === 'london' && country === 'uk') return true;
+                    if (city === 'new york' && country === 'usa') return true;
+                    return false;
+                });
 
                 const danger = open && hasP0;
 
+                // 样式逻辑
+                let statusClass, dotClass, statusText;
+                if (danger) {
+                    statusClass = 'border-red-600 bg-red-900/30 animate-pulse shadow-[0_0_20px_rgba(220,38,38,0.3)]';
+                    dotClass = 'bg-red-500 animate-pulse';
+                    statusText = 'P0 ACTIVE';
+                } else if (open) {
+                    if (lunch) {
+                        statusClass = 'border-yellow-500/50 bg-yellow-900/20';
+                        dotClass = 'bg-yellow-500';
+                        statusText = 'LUNCH';
+                    } else {
+                        statusClass = 'border-green-500/50 bg-green-900/20 shadow-[0_0_15px_rgba(34,197,94,0.15)]';
+                        dotClass = 'bg-green-500 animate-pulse';
+                        statusText = 'OPEN';
+                    }
+                } else if (sleeping) {
+                    statusClass = 'border-blue-900/50 bg-blue-900/10 opacity-60';
+                    dotClass = 'bg-blue-400';
+                    statusText = 'ZZZ';
+                } else {
+                    statusClass = 'border-gray-600/30 bg-dark-3/50 opacity-70';
+                    dotClass = 'bg-gray-500';
+                    statusText = 'OFF';
+                }
+
                 return `
-                    <div class="rounded-lg p-3 border ${danger ? 'border-red-600 animate-pulse' : 'border-gray-600/30'}">
-                        <div class="text-xs">${tz.label}</div>
-                        <div class="text-2xl font-mono">${timeStr}</div>
-                        <div class="text-[10px] ${danger ? 'text-red-400' : 'text-gray-500'}">
-                            ${danger ? 'P0 ACTIVE' : open ? 'OPEN' : 'OFF'}
+                    <div class="rounded-lg p-3 text-center transition-all duration-300 border ${statusClass} hover:scale-105 cursor-default">
+                        <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-medium">${tz.label}</div>
+                        <div class="text-2xl font-mono font-bold text-white tracking-tight leading-none">${timeStr}</div>
+                        <div class="mt-2 flex items-center justify-center gap-1.5">
+                            <div class="w-2 h-2 rounded-full ${dotClass}"></div>
+                            <span class="text-[9px] font-bold ${danger ? 'text-red-400' : 'text-gray-500'} uppercase">${statusText}</span>
                         </div>
                     </div>
                 `;
@@ -170,6 +220,7 @@ const WorkbenchDashboard = (() => {
         updateClock();
         if (globalClockTimer) clearInterval(globalClockTimer);
         globalClockTimer = setInterval(updateClock, 60000);
+        console.log('[Dashboard] ✅ V14.7 全球时钟已启动（P0 联动）');
     }
 
     /* ================= 生命周期 ================= */
@@ -199,7 +250,8 @@ const WorkbenchDashboard = (() => {
         init,
         renderDashboard,
         startGlobalClock,
-        getDashboardStats
+        getDashboardStats,
+        getP0Stats
     };
 })();
 
