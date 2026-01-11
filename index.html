@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>战时指挥台 V14.4 PRO ERP EDITION · 完全修复版</title>
+    <title>战时指挥台 V14.5 PRO ERP · Firebase同步版</title>
     
     <!-- 预连接优化 -->
     <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
@@ -19,6 +19,11 @@
     
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
     <script>
         // 生产环境日志控制
@@ -171,6 +176,12 @@
             animation: fadeIn 0.2s ease-out;
         }
 
+        /* 同步状态指示器 */
+        .sync-indicator { transition: all 0.3s ease; }
+        .sync-indicator.syncing { animation: pulse 1s infinite; }
+        .sync-indicator.online { color: #22c55e; }
+        .sync-indicator.offline { color: #ef4444; }
+
         /* 响应式 */
         @media (max-width: 768px) {
             .kanban-column { flex: 0 0 260px; }
@@ -242,9 +253,14 @@
                 <i class="fas fa-bars text-xl"></i>
             </button>
             <div class="hidden md:flex items-center gap-3">
-                <span id="sync-status" class="text-xs text-gray-500 flex items-center gap-1.5">
-                    <i class="fas fa-circle text-green-500 text-[8px]"></i>本地
-                </span>
+                <!-- 同步状态指示器 -->
+                <button onclick="app.firebase.showStatus()" id="sync-status" class="sync-indicator text-xs text-gray-500 flex items-center gap-1.5 hover:text-gray-300 transition cursor-pointer" title="点击查看同步状态">
+                    <i id="sync-icon" class="fas fa-circle text-[8px]"></i>
+                    <span id="sync-text">本地</span>
+                </button>
+                <button onclick="app.openSettings()" class="text-gray-500 hover:text-white p-2 transition" title="设置">
+                    <i class="fas fa-cog"></i>
+                </button>
                 <button onclick="app.logout()" class="text-gray-500 hover:text-red-400 p-2 transition" title="退出系统">
                     <i class="fas fa-power-off"></i>
                 </button>
@@ -276,7 +292,10 @@
                 <i class="fas fa-wallet mr-3 w-6"></i>运营支出
             </button>
         </div>
-        <div class="mt-auto pt-6 border-t border-dark-4">
+        <div class="mt-auto pt-6 border-t border-dark-4 space-y-2">
+            <button onclick="app.openSettings(); document.querySelector('.mobile-nav').classList.remove('active')" class="w-full text-left text-gray-400 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition">
+                <i class="fas fa-cog mr-3 w-6"></i>系统设置
+            </button>
             <button onclick="app.logout()" class="w-full text-left text-gray-500 hover:text-red-400 py-3 px-4 rounded-lg hover:bg-dark-3 transition">
                 <i class="fas fa-power-off mr-3 w-6"></i>退出系统
             </button>
@@ -295,7 +314,6 @@
                         <div class="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-2">
                             <i class="fas fa-chart-line text-blue-500"></i> Total Revenue
                         </div>
-                        <!-- 兼容两种ID命名 -->
                         <div class="text-2xl font-bold text-blue-400 font-mono" id="kpi-revenue">¥0.00</div>
                         <div class="text-xs text-gray-600 mt-2" id="dashboard-total-orders">订单: 0</div>
                     </div>
@@ -325,14 +343,6 @@
                     </div>
                 </div>
 
-                <!-- 额外统计信息（兼容Dashboard模块） -->
-                <div class="hidden">
-                    <span id="dashboard-total-income">0</span>
-                    <span id="dashboard-month-income">0</span>
-                    <span id="dashboard-total-suppliers">0</span>
-                    <span id="dashboard-net-profit">0</span>
-                </div>
-
                 <!-- 今日行动 -->
                 <div class="mb-8">
                     <h3 class="text-sm font-bold text-gray-400 uppercase mb-4 flex items-center gap-2">
@@ -357,8 +367,8 @@
                     <button onclick="app.expenses.openAddModal()" class="glass p-5 rounded-xl hover:bg-yellow-900/20 hover:border-yellow-500/30 transition text-sm font-medium group">
                         <i class="fas fa-receipt mb-3 block text-xl text-yellow-500 group-hover:scale-110 transition-transform"></i> 记一笔账
                     </button>
-                    <button onclick="app.exportData()" class="glass p-5 rounded-xl hover:bg-gray-700/30 hover:border-gray-500/30 transition text-sm font-medium group">
-                        <i class="fas fa-download mb-3 block text-xl text-gray-400 group-hover:scale-110 transition-transform"></i> 备份数据
+                    <button onclick="app.firebase.manualSync()" class="glass p-5 rounded-xl hover:bg-cyan-900/20 hover:border-cyan-500/30 transition text-sm font-medium group">
+                        <i class="fas fa-sync mb-3 block text-xl text-cyan-500 group-hover:scale-110 transition-transform"></i> 同步数据
                     </button>
                 </div>
             </div>
@@ -443,8 +453,6 @@
                     </button>
                 </div>
                 <div id="customer-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-                <!-- 兼容CRM模块的容器ID -->
-                <div id="crm-customers" class="hidden"></div>
             </div>
         </div>
 
@@ -458,8 +466,6 @@
                     </button>
                 </div>
                 <div id="supplier-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-                <!-- 兼容Suppliers模块的容器ID -->
-                <div id="supplierList" class="hidden"></div>
             </div>
         </div>
 
@@ -486,8 +492,6 @@
                         <tbody id="expenses-tbody"></tbody>
                     </table>
                 </div>
-                <!-- 兼容Expenses模块的容器ID -->
-                <div id="expenses-list" class="hidden"></div>
             </div>
         </div>
 
@@ -601,28 +605,101 @@
         </div>
     </div>
 
+    <!-- 设置模态框 -->
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="modal-content max-w-lg">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-white"><i class="fas fa-cog mr-2"></i>系统设置</h3>
+                <button onclick="app.closeSettings()" class="text-gray-500 hover:text-white transition text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-6">
+                <!-- Firebase 同步设置 -->
+                <div class="p-4 bg-dark-1 rounded-lg border border-dark-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h4 class="text-white font-medium">☁️ Firebase 云同步</h4>
+                            <p class="text-xs text-gray-500 mt-1">开启后数据将自动同步到云端</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="settings-firebase-enabled" class="sr-only peer" onchange="app.firebase.toggleSync(this.checked)">
+                            <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
+                    </div>
+                    <div id="firebase-status" class="text-xs text-gray-500">
+                        状态: 未连接
+                    </div>
+                </div>
+
+                <!-- 设备ID -->
+                <div class="p-4 bg-dark-1 rounded-lg border border-dark-4">
+                    <h4 class="text-white font-medium mb-2">📱 设备标识</h4>
+                    <p class="text-xs text-gray-500 mb-2">用于跨设备数据同步识别</p>
+                    <div class="flex gap-2">
+                        <input id="settings-device-id" type="text" readonly class="flex-1 bg-dark-2 border border-dark-4 rounded p-2 text-gray-400 text-xs font-mono">
+                        <button onclick="app.firebase.copyDeviceId()" class="px-3 py-2 bg-dark-3 hover:bg-dark-4 text-gray-400 rounded transition text-xs">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 数据操作 -->
+                <div class="p-4 bg-dark-1 rounded-lg border border-dark-4">
+                    <h4 class="text-white font-medium mb-3">🔧 数据操作</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="app.firebase.manualSync()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition">
+                            <i class="fas fa-upload mr-1"></i> 上传到云端
+                        </button>
+                        <button onclick="app.firebase.pullFromCloud()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-medium transition">
+                            <i class="fas fa-download mr-1"></i> 从云端拉取
+                        </button>
+                        <button onclick="app.exportData()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm font-medium transition">
+                            <i class="fas fa-file-export mr-1"></i> 导出JSON
+                        </button>
+                        <button onclick="app.importData()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm font-medium transition">
+                            <i class="fas fa-file-import mr-1"></i> 导入JSON
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 最后同步时间 -->
+                <div class="text-center text-xs text-gray-600">
+                    最后同步: <span id="last-sync-time">从未</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast 容器 -->
     <div id="toast-container" class="fixed bottom-4 right-4 z-[9999] space-y-2"></div>
+
+    <!-- 隐藏的文件输入 -->
+    <input type="file" id="import-file-input" accept=".json" class="hidden" onchange="app.handleImportFile(event)">
 
     <!-- ==================== 核心 JavaScript ==================== -->
     <script>
     /**
-     * V14.4 PRO - 核心应用模块（完全修复版）
-     * 统一的存储和应用逻辑，修复所有空值保护问题
-     * 版本: 14.4.0
-     * 修复内容:
-     * - 所有存储操作使用统一的v5_erp_前缀
-     * - 所有数据加载保证返回数组/对象（永不返回null）
-     * - 看板列ID与HTML完全匹配
-     * - Dashboard元素ID完整
-     * - Toast容器初始化
+     * V14.5 PRO - Firebase 同步版
+     * 集成Firebase云端同步功能
+     * 版本: 14.5.0
      */
     (function() {
         'use strict';
 
+        // ==================== Firebase 配置 ====================
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDBb8AtMjSzjgh1SDmIQNJPHUPxk6tLhQQ",
+            authDomain: "v5merp.firebaseapp.com",
+            projectId: "v5merp",
+            storageBucket: "v5merp.firebasestorage.app",
+            messagingSenderId: "393124793142",
+            appId: "1:393124793142:web:f669fb0287683970d38197"
+        };
+
         // ==================== 配置常量 ====================
         const CONFIG = {
-            VERSION: '14.4.0',
+            VERSION: '14.5.0',
             STORAGE_PREFIX: 'v5_erp_',
             KEYS: {
                 ORDERS: 'v5_erp_orders',
@@ -633,37 +710,25 @@
                 TODAY_ACTIONS: 'v5_erp_today_actions',
                 UNLOCK_TIME: 'v5_erp_unlock_time',
                 EMERGENCY_TIME: 'v5_erp_emergency_time',
-                SETTINGS: 'v5_erp_settings'
+                SETTINGS: 'v5_erp_settings',
+                DEVICE_ID: 'v5_erp_device_id',
+                LAST_SYNC: 'v5_erp_last_sync'
             },
-            // 看板状态与HTML ID完全匹配
             KANBAN_STATUS: ['inquiry', 'pi', 'production', 'shipped', 'paid'],
-            UNLOCK_DURATION: 30 * 60 * 1000, // 30分钟
-            EMERGENCY_DURATION: 10 * 60 * 1000 // 10分钟
+            UNLOCK_DURATION: 30 * 60 * 1000,
+            EMERGENCY_DURATION: 10 * 60 * 1000
         };
 
         // ==================== 工具函数 ====================
         const Utils = {
-            // 安全获取 DOM 元素
-            $(id) {
-                return document.getElementById(id);
-            },
+            $(id) { return document.getElementById(id); },
 
-            /**
-             * 安全读取 localStorage
-             * 核心修复：永远返回正确类型，绝不返回 null
-             */
             loadData(key, defaultValue = []) {
                 try {
                     const data = localStorage.getItem(key);
-                    if (data === null || data === undefined || data === '') {
-                        return defaultValue;
-                    }
+                    if (data === null || data === undefined || data === '') return defaultValue;
                     const parsed = JSON.parse(data);
-                    
-                    // 类型校验：确保返回正确类型
-                    if (Array.isArray(defaultValue)) {
-                        return Array.isArray(parsed) ? parsed : defaultValue;
-                    }
+                    if (Array.isArray(defaultValue)) return Array.isArray(parsed) ? parsed : defaultValue;
                     if (typeof defaultValue === 'object' && defaultValue !== null) {
                         return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : defaultValue;
                     }
@@ -674,7 +739,6 @@
                 }
             },
 
-            // 安全写入 localStorage
             saveData(key, data) {
                 try {
                     localStorage.setItem(key, JSON.stringify(data));
@@ -685,7 +749,6 @@
                 }
             },
 
-            // HTML 转义
             escapeHtml(str) {
                 if (!str) return '';
                 const div = document.createElement('div');
@@ -693,48 +756,44 @@
                 return div.innerHTML;
             },
 
-            // 格式化金额
             formatAmount(amount) {
                 const num = parseFloat(amount) || 0;
                 return `¥${num.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             },
 
-            // 格式化日期
             formatDate(dateStr) {
                 if (!dateStr) return '未知';
                 try {
                     const date = new Date(dateStr);
                     if (isNaN(date.getTime())) return '未知';
                     return date.toLocaleDateString('zh-CN');
-                } catch {
-                    return '未知';
-                }
+                } catch { return '未知'; }
             },
 
-            // 生成唯一 ID
+            formatDateTime(dateStr) {
+                if (!dateStr) return '从未';
+                try {
+                    const date = new Date(dateStr);
+                    if (isNaN(date.getTime())) return '从未';
+                    return date.toLocaleString('zh-CN');
+                } catch { return '从未'; }
+            },
+
             generateId(prefix = 'item') {
                 return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
             },
 
-            // 显示 Toast
             toast(message, type = 'info', duration = 3000) {
                 const container = Utils.$('toast-container');
-                if (!container) {
-                    console.warn('[Utils] Toast容器不存在');
-                    return;
-                }
-
+                if (!container) return;
                 const toast = document.createElement('div');
                 toast.className = `toast ${type}`;
-                
                 const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
                 toast.innerHTML = `
                     <span class="text-xl">${icons[type] || icons.info}</span>
                     <span class="font-medium">${Utils.escapeHtml(message)}</span>
                 `;
-                
                 container.appendChild(toast);
-                
                 setTimeout(() => {
                     toast.style.opacity = '0';
                     toast.style.transform = 'translateX(100%)';
@@ -742,23 +801,327 @@
                 }, duration);
             },
 
-            // 安全数组操作
-            safeArray(data) {
-                return Array.isArray(data) ? data : [];
+            getDeviceId() {
+                let deviceId = localStorage.getItem(CONFIG.KEYS.DEVICE_ID);
+                if (!deviceId) {
+                    deviceId = Utils.generateId('device');
+                    localStorage.setItem(CONFIG.KEYS.DEVICE_ID, deviceId);
+                }
+                return deviceId;
             },
 
-            // 安全过滤
+            safeArray(data) { return Array.isArray(data) ? data : []; },
             safeFilter(data, callback) {
                 const arr = Utils.safeArray(data);
                 return typeof callback === 'function' ? arr.filter(callback) : [];
             },
-
-            // 安全遍历
             safeForEach(data, callback) {
                 const arr = Utils.safeArray(data);
-                if (typeof callback === 'function') {
-                    arr.forEach(callback);
+                if (typeof callback === 'function') arr.forEach(callback);
+            }
+        };
+
+        // ==================== Firebase 模块 ====================
+        const FirebaseModule = {
+            db: null,
+            auth: null,
+            isInitialized: false,
+            isConnected: false,
+            syncEnabled: false,
+            unsubscribers: [],
+
+            async init() {
+                try {
+                    if (typeof firebase === 'undefined') {
+                        console.warn('[Firebase] SDK未加载');
+                        return false;
+                    }
+
+                    // 初始化Firebase
+                    if (!firebase.apps.length) {
+                        firebase.initializeApp(FIREBASE_CONFIG);
+                    }
+
+                    this.db = firebase.firestore();
+                    this.auth = firebase.auth();
+
+                    // 启用离线持久化
+                    try {
+                        await this.db.enablePersistence({ synchronizeTabs: true });
+                        console.log('[Firebase] 离线持久化已启用');
+                    } catch (err) {
+                        if (err.code === 'failed-precondition') {
+                            console.warn('[Firebase] 多标签页打开，离线持久化受限');
+                        } else if (err.code === 'unimplemented') {
+                            console.warn('[Firebase] 浏览器不支持离线持久化');
+                        }
+                    }
+
+                    // 匿名登录
+                    await this.auth.signInAnonymously();
+                    console.log('[Firebase] 匿名登录成功');
+
+                    this.isInitialized = true;
+                    this.isConnected = true;
+
+                    // 加载同步设置
+                    const settings = Utils.loadData(CONFIG.KEYS.SETTINGS, {});
+                    this.syncEnabled = settings.firebaseEnabled || false;
+
+                    if (this.syncEnabled) {
+                        this.startRealtimeSync();
+                    }
+
+                    this.updateSyncStatus();
+                    console.log('[Firebase] ✅ 初始化成功');
+                    return true;
+                } catch (error) {
+                    console.error('[Firebase] ❌ 初始化失败:', error);
+                    this.isConnected = false;
+                    this.updateSyncStatus();
+                    return false;
                 }
+            },
+
+            updateSyncStatus() {
+                const icon = Utils.$('sync-icon');
+                const text = Utils.$('sync-text');
+                const statusEl = Utils.$('sync-status');
+                const firebaseStatus = Utils.$('firebase-status');
+
+                if (!icon || !text) return;
+
+                statusEl.classList.remove('syncing');
+
+                if (!this.isInitialized) {
+                    icon.className = 'fas fa-circle text-[8px] text-gray-500';
+                    text.textContent = '未初始化';
+                    if (firebaseStatus) firebaseStatus.textContent = '状态: Firebase未初始化';
+                } else if (!this.syncEnabled) {
+                    icon.className = 'fas fa-circle text-[8px] text-gray-500';
+                    text.textContent = '仅本地';
+                    if (firebaseStatus) firebaseStatus.textContent = '状态: 同步已关闭（仅本地存储）';
+                } else if (this.isConnected) {
+                    icon.className = 'fas fa-circle text-[8px] text-green-500';
+                    text.textContent = '已同步';
+                    if (firebaseStatus) firebaseStatus.textContent = '状态: 已连接到云端';
+                } else {
+                    icon.className = 'fas fa-circle text-[8px] text-yellow-500';
+                    text.textContent = '离线';
+                    if (firebaseStatus) firebaseStatus.textContent = '状态: 离线模式';
+                }
+
+                // 更新最后同步时间
+                const lastSync = localStorage.getItem(CONFIG.KEYS.LAST_SYNC);
+                const lastSyncEl = Utils.$('last-sync-time');
+                if (lastSyncEl) {
+                    lastSyncEl.textContent = Utils.formatDateTime(lastSync);
+                }
+            },
+
+            showSyncing() {
+                const statusEl = Utils.$('sync-status');
+                const text = Utils.$('sync-text');
+                if (statusEl) statusEl.classList.add('syncing');
+                if (text) text.textContent = '同步中...';
+            },
+
+            getDocId() {
+                return Utils.getDeviceId();
+            },
+
+            async syncToCloud(dataType, data) {
+                if (!this.isInitialized || !this.syncEnabled) return false;
+
+                try {
+                    this.showSyncing();
+                    const docId = this.getDocId();
+                    
+                    await this.db.collection(dataType).doc(docId).set({
+                        data: data,
+                        deviceId: docId,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+
+                    localStorage.setItem(CONFIG.KEYS.LAST_SYNC, new Date().toISOString());
+                    this.updateSyncStatus();
+                    console.log(`[Firebase] ✅ ${dataType} 已同步到云端`);
+                    return true;
+                } catch (error) {
+                    console.error(`[Firebase] ❌ ${dataType} 同步失败:`, error);
+                    this.updateSyncStatus();
+                    return false;
+                }
+            },
+
+            async pullFromCloud(dataType) {
+                if (!this.isInitialized) return null;
+
+                try {
+                    const docId = this.getDocId();
+                    const doc = await this.db.collection(dataType).doc(docId).get();
+                    
+                    if (doc.exists) {
+                        const cloudData = doc.data();
+                        console.log(`[Firebase] ✅ 从云端拉取 ${dataType}`);
+                        return cloudData.data || [];
+                    }
+                    return null;
+                } catch (error) {
+                    console.error(`[Firebase] ❌ 拉取 ${dataType} 失败:`, error);
+                    return null;
+                }
+            },
+
+            async syncAllToCloud() {
+                if (!this.isInitialized || !this.syncEnabled) {
+                    Utils.toast('请先在设置中启用云同步', 'warning');
+                    return;
+                }
+
+                Utils.toast('开始同步数据...', 'info');
+                this.showSyncing();
+
+                try {
+                    const dataTypes = [
+                        { key: CONFIG.KEYS.ORDERS, collection: 'orders' },
+                        { key: CONFIG.KEYS.CUSTOMERS, collection: 'customers' },
+                        { key: CONFIG.KEYS.SUPPLIERS, collection: 'suppliers' },
+                        { key: CONFIG.KEYS.EXPENSES, collection: 'expenses' }
+                    ];
+
+                    for (const { key, collection } of dataTypes) {
+                        const data = Utils.loadData(key, []);
+                        await this.syncToCloud(collection, data);
+                    }
+
+                    Utils.toast('数据同步完成！', 'success');
+                } catch (error) {
+                    Utils.toast('同步失败: ' + error.message, 'error');
+                }
+            },
+
+            async pullAllFromCloud() {
+                if (!this.isInitialized) {
+                    Utils.toast('Firebase未初始化', 'warning');
+                    return;
+                }
+
+                if (!confirm('从云端拉取将覆盖本地数据，确定继续吗？')) return;
+
+                Utils.toast('正在从云端拉取数据...', 'info');
+
+                try {
+                    const dataTypes = [
+                        { key: CONFIG.KEYS.ORDERS, collection: 'orders' },
+                        { key: CONFIG.KEYS.CUSTOMERS, collection: 'customers' },
+                        { key: CONFIG.KEYS.SUPPLIERS, collection: 'suppliers' },
+                        { key: CONFIG.KEYS.EXPENSES, collection: 'expenses' }
+                    ];
+
+                    let pullCount = 0;
+                    for (const { key, collection } of dataTypes) {
+                        const cloudData = await this.pullFromCloud(collection);
+                        if (cloudData !== null) {
+                            Utils.saveData(key, cloudData);
+                            pullCount++;
+                        }
+                    }
+
+                    if (pullCount > 0) {
+                        Utils.toast(`成功拉取 ${pullCount} 类数据，正在刷新...`, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        Utils.toast('云端没有找到数据', 'warning');
+                    }
+                } catch (error) {
+                    Utils.toast('拉取失败: ' + error.message, 'error');
+                }
+            },
+
+            startRealtimeSync() {
+                if (!this.isInitialized || !this.syncEnabled) return;
+
+                // 清除旧的监听器
+                this.stopRealtimeSync();
+
+                const docId = this.getDocId();
+                const collections = ['orders', 'customers', 'suppliers', 'expenses'];
+
+                collections.forEach(collection => {
+                    const unsubscribe = this.db.collection(collection).doc(docId)
+                        .onSnapshot(doc => {
+                            if (doc.exists) {
+                                const cloudData = doc.data();
+                                const localKey = CONFIG.KEYS[collection.toUpperCase()];
+                                
+                                // 比较时间戳，云端更新则覆盖本地
+                                if (cloudData.updatedAt) {
+                                    const cloudTime = cloudData.updatedAt.toDate?.() || new Date(cloudData.updatedAt);
+                                    const localSync = localStorage.getItem(CONFIG.KEYS.LAST_SYNC);
+                                    const localTime = localSync ? new Date(localSync) : new Date(0);
+                                    
+                                    if (cloudTime > localTime && cloudData.data) {
+                                        Utils.saveData(localKey, cloudData.data);
+                                        console.log(`[Firebase] 实时同步: ${collection} 已更新`);
+                                        // 刷新UI
+                                        if (window.app) {
+                                            app.calculateKPI();
+                                            app.kanban.render();
+                                            app.crm.render();
+                                            app.suppliers.render();
+                                            app.expenses.render();
+                                        }
+                                    }
+                                }
+                            }
+                        }, error => {
+                            console.error(`[Firebase] 实时监听 ${collection} 失败:`, error);
+                        });
+
+                    this.unsubscribers.push(unsubscribe);
+                });
+
+                console.log('[Firebase] 实时同步已启动');
+            },
+
+            stopRealtimeSync() {
+                this.unsubscribers.forEach(unsub => unsub());
+                this.unsubscribers = [];
+            },
+
+            toggleSync(enabled) {
+                this.syncEnabled = enabled;
+                
+                // 保存设置
+                const settings = Utils.loadData(CONFIG.KEYS.SETTINGS, {});
+                settings.firebaseEnabled = enabled;
+                Utils.saveData(CONFIG.KEYS.SETTINGS, settings);
+
+                if (enabled) {
+                    this.startRealtimeSync();
+                    Utils.toast('云同步已开启', 'success');
+                    // 立即同步一次
+                    this.syncAllToCloud();
+                } else {
+                    this.stopRealtimeSync();
+                    Utils.toast('云同步已关闭', 'info');
+                }
+
+                this.updateSyncStatus();
+            },
+
+            showStatus() {
+                app.openSettings();
+            },
+
+            copyDeviceId() {
+                const deviceId = Utils.getDeviceId();
+                navigator.clipboard.writeText(deviceId).then(() => {
+                    Utils.toast('设备ID已复制', 'success');
+                }).catch(() => {
+                    Utils.toast('复制失败', 'error');
+                });
             }
         };
 
@@ -770,8 +1133,11 @@
             },
 
             // ========== 初始化 ==========
-            init() {
-                console.log(`[V14.4 PRO] 系统初始化中... 版本: ${CONFIG.VERSION}`);
+            async init() {
+                console.log(`[V14.5 PRO] 系统初始化中... 版本: ${CONFIG.VERSION}`);
+                
+                // 初始化Firebase
+                await FirebaseModule.init();
                 
                 // 检查生存模式
                 app.survival.check();
@@ -783,7 +1149,16 @@
                 app.suppliers.render();
                 app.expenses.render();
                 
-                console.log('[V14.4 PRO] ✅ 系统初始化完成');
+                console.log('[V14.5 PRO] ✅ 系统初始化完成');
+            },
+
+            // ========== Firebase接口 ==========
+            firebase: {
+                manualSync: () => FirebaseModule.syncAllToCloud(),
+                pullFromCloud: () => FirebaseModule.pullAllFromCloud(),
+                toggleSync: (enabled) => FirebaseModule.toggleSync(enabled),
+                showStatus: () => FirebaseModule.showStatus(),
+                copyDeviceId: () => FirebaseModule.copyDeviceId()
             },
 
             // ========== 生存模式 ==========
@@ -793,9 +1168,7 @@
                     const a2 = Utils.$('action-2')?.value?.trim();
                     const a3 = Utils.$('action-3')?.value?.trim();
                     const btn = Utils.$('battle-start-btn');
-                    if (btn) {
-                        btn.disabled = !(a1 && a2 && a3);
-                    }
+                    if (btn) btn.disabled = !(a1 && a2 && a3);
                 },
 
                 check() {
@@ -804,26 +1177,18 @@
                     const now = Date.now();
 
                     if (now < unlockTime) {
-                        // 正常解锁状态
                         app.survival.hideCurtain();
                         app.survival.showActions();
                     } else if (now < emergencyTime) {
-                        // 紧急模式
                         app.survival.hideCurtain();
                         app.survival.startEmergencyTimer(emergencyTime);
                     } else {
-                        // 需要解锁
                         app.survival.showCurtain();
                     }
                 },
 
-                showCurtain() {
-                    Utils.$('survival-curtain')?.classList.remove('hidden');
-                },
-
-                hideCurtain() {
-                    Utils.$('survival-curtain')?.classList.add('hidden');
-                },
+                showCurtain() { Utils.$('survival-curtain')?.classList.remove('hidden'); },
+                hideCurtain() { Utils.$('survival-curtain')?.classList.add('hidden'); },
 
                 unlock() {
                     const a1 = Utils.$('action-1')?.value?.trim();
@@ -835,7 +1200,6 @@
                         return;
                     }
 
-                    // 保存今日行动
                     Utils.saveData(CONFIG.KEYS.TODAY_ACTIONS, [a1, a2, a3]);
                     localStorage.setItem(CONFIG.KEYS.UNLOCK_TIME, String(Date.now() + CONFIG.UNLOCK_DURATION));
 
@@ -859,9 +1223,7 @@
                 startEmergencyTimer(endTime) {
                     Utils.$('emergency-warning')?.classList.remove('hidden');
                     
-                    if (app.state.emergencyTimer) {
-                        clearInterval(app.state.emergencyTimer);
-                    }
+                    if (app.state.emergencyTimer) clearInterval(app.state.emergencyTimer);
 
                     const updateTimer = () => {
                         const remaining = Math.max(0, endTime - Date.now());
@@ -869,9 +1231,7 @@
                         const seconds = Math.floor((remaining % 60000) / 1000);
                         
                         const timerEl = Utils.$('emergency-timer');
-                        if (timerEl) {
-                            timerEl.textContent = `${minutes}:${String(seconds).padStart(2, '0')}`;
-                        }
+                        if (timerEl) timerEl.textContent = `${minutes}:${String(seconds).padStart(2, '0')}`;
 
                         if (remaining <= 0) {
                             clearInterval(app.state.emergencyTimer);
@@ -904,22 +1264,13 @@
             // ========== Tab 切换 ==========
             switchTab(tabId) {
                 app.state.currentTab = tabId;
-
-                // 隐藏所有 tab 内容
-                document.querySelectorAll('.tab-content').forEach(tab => {
-                    tab.classList.remove('active');
-                });
-
-                // 显示目标 tab
+                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
                 Utils.$(`tab-${tabId}`)?.classList.add('active');
-
-                // 更新导航高亮
                 document.querySelectorAll('.nav-tab').forEach(btn => {
                     const isActive = btn.dataset.tab === tabId;
                     btn.classList.toggle('active', isActive);
                 });
 
-                // 按需渲染
                 switch (tabId) {
                     case 'dashboard': app.calculateKPI(); break;
                     case 'kanban': app.kanban.render(); break;
@@ -929,19 +1280,37 @@
                 }
             },
 
+            // ========== 设置 ==========
+            openSettings() {
+                const modal = Utils.$('settings-modal');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    
+                    // 加载设置
+                    const settings = Utils.loadData(CONFIG.KEYS.SETTINGS, {});
+                    const checkbox = Utils.$('settings-firebase-enabled');
+                    if (checkbox) checkbox.checked = settings.firebaseEnabled || false;
+
+                    const deviceIdEl = Utils.$('settings-device-id');
+                    if (deviceIdEl) deviceIdEl.value = Utils.getDeviceId();
+
+                    FirebaseModule.updateSyncStatus();
+                }
+            },
+
+            closeSettings() {
+                Utils.$('settings-modal')?.classList.add('hidden');
+            },
+
             // ========== KPI 计算 ==========
             calculateKPI() {
-                // 使用安全的数据加载
                 const orders = Utils.loadData(CONFIG.KEYS.ORDERS, []);
                 const expenses = Utils.loadData(CONFIG.KEYS.EXPENSES, []);
-                const suppliers = Utils.loadData(CONFIG.KEYS.SUPPLIERS, []);
-                const customers = Utils.loadData(CONFIG.KEYS.CUSTOMERS, []);
 
                 const now = new Date();
                 const currentMonth = now.getMonth();
                 const currentYear = now.getFullYear();
 
-                // 安全过滤本月已付款订单
                 const paidOrders = Utils.safeFilter(orders, o => {
                     if (o.status !== 'paid') return false;
                     const d = new Date(o.createdAt);
@@ -950,50 +1319,28 @@
 
                 const totalRevenue = paidOrders.reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
                 const totalExpenses = Utils.safeArray(expenses).reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
-                const grossProfit = totalRevenue;
-                const netProfit = grossProfit - totalExpenses;
+                const netProfit = totalRevenue - totalExpenses;
 
-                // 更新 DOM（带空值保护）
                 const updateEl = (id, value) => {
                     const el = Utils.$(id);
                     if (el) el.textContent = value;
                 };
 
                 updateEl('kpi-revenue', Utils.formatAmount(totalRevenue));
-                updateEl('kpi-gross', Utils.formatAmount(grossProfit));
+                updateEl('kpi-gross', Utils.formatAmount(totalRevenue));
                 updateEl('kpi-net', Utils.formatAmount(netProfit));
-
-                // 更新Dashboard兼容元素
                 updateEl('dashboard-total-orders', `订单: ${orders.length}`);
                 updateEl('dashboard-pending-orders', `待处理: ${Utils.safeFilter(orders, o => o.status !== 'paid').length}`);
                 updateEl('dashboard-completed-orders', `已完成: ${paidOrders.length}`);
-                updateEl('dashboard-total-income', Utils.formatAmount(totalRevenue));
-                updateEl('dashboard-month-income', Utils.formatAmount(totalRevenue));
-                updateEl('dashboard-total-suppliers', suppliers.length);
-                updateEl('dashboard-net-profit', Utils.formatAmount(netProfit));
-
-                // 计算距上次进账时间
-                const allPaidOrders = Utils.safeFilter(orders, o => o.status === 'paid');
-                const lastPaid = allPaidOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
-
-                const hoursEl = Utils.$('hours-since-income');
-                if (hoursEl && lastPaid) {
-                    const hours = Math.floor((Date.now() - new Date(lastPaid.createdAt)) / 3600000);
-                    hoursEl.textContent = hours;
-                }
             },
 
             // ========== 看板模块 ==========
             kanban: {
                 openQuickAdd() {
-                    const clearInput = (id) => {
+                    ['kanban-title', 'kanban-customer', 'kanban-amount', 'kanban-note'].forEach(id => {
                         const el = Utils.$(id);
                         if (el) el.value = '';
-                    };
-                    clearInput('kanban-title');
-                    clearInput('kanban-customer');
-                    clearInput('kanban-amount');
-                    clearInput('kanban-note');
+                    });
                     Utils.$('kanban-quick-modal')?.classList.remove('hidden');
                     Utils.$('kanban-title')?.focus();
                 },
@@ -1008,28 +1355,26 @@
                     const amount = parseFloat(Utils.$('kanban-amount')?.value) || 0;
                     const note = Utils.$('kanban-note')?.value?.trim();
 
-                    if (!title) {
-                        Utils.toast('请输入订单标题', 'warning');
-                        return;
-                    }
-                    if (amount <= 0) {
-                        Utils.toast('请输入有效金额', 'warning');
-                        return;
-                    }
+                    if (!title) { Utils.toast('请输入订单标题', 'warning'); return; }
+                    if (amount <= 0) { Utils.toast('请输入有效金额', 'warning'); return; }
 
                     const orders = Utils.loadData(CONFIG.KEYS.ORDERS, []);
-                    orders.push({
+                    const newOrder = {
                         id: Utils.generateId('ORDER'),
-                        title,
-                        customer: customer || '未知客户',
-                        amount: amount.toFixed(2),
-                        note,
+                        title, customer: customer || '未知客户', amount: amount.toFixed(2), note,
                         status: 'inquiry',
                         createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString()
-                    });
+                    };
+                    orders.push(newOrder);
 
                     Utils.saveData(CONFIG.KEYS.ORDERS, orders);
+                    
+                    // 同步到云端
+                    if (FirebaseModule.syncEnabled) {
+                        FirebaseModule.syncToCloud('orders', orders);
+                    }
+
                     app.kanban.closeQuickModal();
                     app.kanban.render();
                     app.calculateKPI();
@@ -1038,37 +1383,23 @@
 
                 render() {
                     const orders = Utils.loadData(CONFIG.KEYS.ORDERS, []);
-
-                    // 按状态分组（使用安全数组）
-                    const grouped = {
-                        inquiry: [],
-                        pi: [],
-                        production: [],
-                        shipped: [],
-                        paid: []
-                    };
+                    const grouped = { inquiry: [], pi: [], production: [], shipped: [], paid: [] };
 
                     Utils.safeForEach(orders, order => {
                         const status = order.status || 'inquiry';
-                        if (grouped[status]) {
-                            grouped[status].push(order);
-                        }
+                        if (grouped[status]) grouped[status].push(order);
                     });
 
-                    // 渲染每列
                     CONFIG.KANBAN_STATUS.forEach(status => {
                         const container = Utils.$(`kanban-${status}`);
                         const countEl = Utils.$(`count-${status}`);
                         const list = grouped[status] || [];
 
                         if (countEl) countEl.textContent = list.length;
-
                         if (container) {
-                            if (list.length === 0) {
-                                container.innerHTML = '<div class="text-center text-gray-600 py-8 text-sm">暂无订单</div>';
-                            } else {
-                                container.innerHTML = list.map(order => app.kanban.renderCard(order)).join('');
-                            }
+                            container.innerHTML = list.length === 0 
+                                ? '<div class="text-center text-gray-600 py-8 text-sm">暂无订单</div>'
+                                : list.map(order => app.kanban.renderCard(order)).join('');
                         }
                     });
                 },
@@ -1108,6 +1439,8 @@
                     order.updatedAt = new Date().toISOString();
 
                     Utils.saveData(CONFIG.KEYS.ORDERS, orders);
+                    if (FirebaseModule.syncEnabled) FirebaseModule.syncToCloud('orders', orders);
+
                     app.kanban.render();
                     app.calculateKPI();
                     Utils.toast('订单状态已更新', 'info');
@@ -1115,10 +1448,10 @@
 
                 deleteOrder(id) {
                     if (!confirm('确定删除此订单吗？')) return;
-
                     let orders = Utils.loadData(CONFIG.KEYS.ORDERS, []);
                     orders = orders.filter(o => o.id !== id);
                     Utils.saveData(CONFIG.KEYS.ORDERS, orders);
+                    if (FirebaseModule.syncEnabled) FirebaseModule.syncToCloud('orders', orders);
                     app.kanban.render();
                     app.calculateKPI();
                     Utils.toast('订单已删除', 'success');
@@ -1128,28 +1461,19 @@
             // ========== 客户模块 ==========
             crm: {
                 openAddModal() {
-                    const clearInput = (id) => {
+                    ['crm-name', 'crm-contact', 'crm-whatsapp', 'crm-address'].forEach(id => {
                         const el = Utils.$(id);
                         if (el) el.value = '';
-                    };
-                    clearInput('crm-name');
-                    clearInput('crm-contact');
-                    clearInput('crm-whatsapp');
-                    clearInput('crm-address');
+                    });
                     Utils.$('customer-modal')?.classList.remove('hidden');
                     Utils.$('crm-name')?.focus();
                 },
 
-                closeModal() {
-                    Utils.$('customer-modal')?.classList.add('hidden');
-                },
+                closeModal() { Utils.$('customer-modal')?.classList.add('hidden'); },
 
                 save() {
                     const name = Utils.$('crm-name')?.value?.trim();
-                    if (!name) {
-                        Utils.toast('请输入客户公司名', 'warning');
-                        return;
-                    }
+                    if (!name) { Utils.toast('请输入客户公司名', 'warning'); return; }
 
                     const customers = Utils.loadData(CONFIG.KEYS.CUSTOMERS, []);
                     customers.unshift({
@@ -1163,6 +1487,8 @@
                     });
 
                     Utils.saveData(CONFIG.KEYS.CUSTOMERS, customers);
+                    if (FirebaseModule.syncEnabled) FirebaseModule.syncToCloud('customers', customers);
+
                     app.crm.closeModal();
                     app.crm.render();
                     Utils.toast('客户档案已保存', 'success');
@@ -1197,7 +1523,6 @@
                             </div>
                             ${c.contact ? `<div class="text-sm text-gray-400 mb-1"><i class="fas fa-user mr-2 w-4 text-center"></i>${Utils.escapeHtml(c.contact)}</div>` : ''}
                             ${c.whatsapp ? `<div class="text-sm text-gray-400 mb-1"><i class="fab fa-whatsapp mr-2 w-4 text-center text-green-500"></i>${Utils.escapeHtml(c.whatsapp)}</div>` : ''}
-                            ${c.address ? `<div class="text-xs text-gray-500 mt-2 truncate"><i class="fas fa-map-marker-alt mr-2"></i>${Utils.escapeHtml(c.address)}</div>` : ''}
                         </div>
                     `).join('');
                 },
@@ -1207,6 +1532,7 @@
                     let customers = Utils.loadData(CONFIG.KEYS.CUSTOMERS, []);
                     customers = customers.filter(c => c.id !== id);
                     Utils.saveData(CONFIG.KEYS.CUSTOMERS, customers);
+                    if (FirebaseModule.syncEnabled) FirebaseModule.syncToCloud('customers', customers);
                     app.crm.render();
                     Utils.toast('客户档案已删除', 'success');
                 }
@@ -1215,28 +1541,19 @@
             // ========== 供应商模块 ==========
             suppliers: {
                 openAddModal() {
-                    const clearInput = (id) => {
+                    ['supp-name', 'supp-product', 'supp-contact', 'supp-note'].forEach(id => {
                         const el = Utils.$(id);
                         if (el) el.value = '';
-                    };
-                    clearInput('supp-name');
-                    clearInput('supp-product');
-                    clearInput('supp-contact');
-                    clearInput('supp-note');
+                    });
                     Utils.$('supplier-modal')?.classList.remove('hidden');
                     Utils.$('supp-name')?.focus();
                 },
 
-                closeModal() {
-                    Utils.$('supplier-modal')?.classList.add('hidden');
-                },
+                closeModal() { Utils.$('supplier-modal')?.classList.add('hidden'); },
 
                 save() {
                     const name = Utils.$('supp-name')?.value?.trim();
-                    if (!name) {
-                        Utils.toast('请输入供应商名称', 'warning');
-                        return;
-                    }
+                    if (!name) { Utils.toast('请输入供应商名称', 'warning'); return; }
 
                     const suppliers = Utils.loadData(CONFIG.KEYS.SUPPLIERS, []);
                     suppliers.unshift({
@@ -1249,6 +1566,8 @@
                     });
 
                     Utils.saveData(CONFIG.KEYS.SUPPLIERS, suppliers);
+                    if (FirebaseModule.syncEnabled) FirebaseModule.syncToCloud('suppliers', suppliers);
+
                     app.suppliers.closeModal();
                     app.suppliers.render();
                     Utils.toast('供应商已添加', 'success');
@@ -1282,7 +1601,6 @@
                                 </button>
                             </div>
                             ${s.contact ? `<div class="text-sm text-gray-400"><i class="fas fa-phone mr-2 w-4 text-center"></i>${Utils.escapeHtml(s.contact)}</div>` : ''}
-                            ${s.note ? `<div class="text-xs text-gray-500 mt-2">${Utils.escapeHtml(s.note)}</div>` : ''}
                         </div>
                     `).join('');
                 },
@@ -1292,6 +1610,7 @@
                     let suppliers = Utils.loadData(CONFIG.KEYS.SUPPLIERS, []);
                     suppliers = suppliers.filter(s => s.id !== id);
                     Utils.saveData(CONFIG.KEYS.SUPPLIERS, suppliers);
+                    if (FirebaseModule.syncEnabled) FirebaseModule.syncToCloud('suppliers', suppliers);
                     app.suppliers.render();
                     Utils.toast('供应商已删除', 'success');
                 }
@@ -1300,33 +1619,22 @@
             // ========== 支出模块 ==========
             expenses: {
                 openAddModal() {
-                    const clearInput = (id) => {
+                    ['expense-name', 'expense-amount', 'expense-note'].forEach(id => {
                         const el = Utils.$(id);
                         if (el) el.value = '';
-                    };
-                    clearInput('expense-name');
-                    clearInput('expense-amount');
-                    clearInput('expense-note');
+                    });
                     Utils.$('expense-modal')?.classList.remove('hidden');
                     Utils.$('expense-name')?.focus();
                 },
 
-                closeModal() {
-                    Utils.$('expense-modal')?.classList.add('hidden');
-                },
+                closeModal() { Utils.$('expense-modal')?.classList.add('hidden'); },
 
                 save() {
                     const name = Utils.$('expense-name')?.value?.trim();
                     const amount = parseFloat(Utils.$('expense-amount')?.value) || 0;
 
-                    if (!name) {
-                        Utils.toast('请输入支出项目', 'warning');
-                        return;
-                    }
-                    if (amount <= 0) {
-                        Utils.toast('请输入有效金额', 'warning');
-                        return;
-                    }
+                    if (!name) { Utils.toast('请输入支出项目', 'warning'); return; }
+                    if (amount <= 0) { Utils.toast('请输入有效金额', 'warning'); return; }
 
                     const expenses = Utils.loadData(CONFIG.KEYS.EXPENSES, []);
                     expenses.unshift({
@@ -1339,6 +1647,8 @@
                     });
 
                     Utils.saveData(CONFIG.KEYS.EXPENSES, expenses);
+                    if (FirebaseModule.syncEnabled) FirebaseModule.syncToCloud('expenses', expenses);
+
                     app.expenses.closeModal();
                     app.expenses.render();
                     app.calculateKPI();
@@ -1353,12 +1663,9 @@
 
                     if (expenses.length === 0) {
                         tbody.innerHTML = `
-                            <tr>
-                                <td colspan="5" class="text-center py-12 text-gray-500">
-                                    <i class="fas fa-receipt text-3xl mb-3 opacity-30 block"></i>
-                                    暂无支出记录
-                                </td>
-                            </tr>
+                            <tr><td colspan="5" class="text-center py-12 text-gray-500">
+                                <i class="fas fa-receipt text-3xl mb-3 opacity-30 block"></i>暂无支出记录
+                            </td></tr>
                         `;
                         return;
                     }
@@ -1367,14 +1674,10 @@
                         <tr class="border-b border-dark-4/50 hover:bg-dark-3/50 transition">
                             <td class="px-4 py-3 text-gray-300">${Utils.formatDate(e.createdAt)}</td>
                             <td class="px-4 py-3 text-white font-medium">${Utils.escapeHtml(e.name)}</td>
-                            <td class="px-4 py-3">
-                                <span class="px-2 py-1 text-xs bg-dark-3 rounded text-gray-400">${Utils.escapeHtml(e.category)}</span>
-                            </td>
+                            <td class="px-4 py-3"><span class="px-2 py-1 text-xs bg-dark-3 rounded text-gray-400">${Utils.escapeHtml(e.category)}</span></td>
                             <td class="px-4 py-3 text-right text-red-400 font-mono">-${Utils.formatAmount(e.amount)}</td>
                             <td class="px-4 py-3 text-right">
-                                <button onclick="app.expenses.delete('${e.id}')" class="text-gray-600 hover:text-red-500 transition">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <button onclick="app.expenses.delete('${e.id}')" class="text-gray-600 hover:text-red-500 transition"><i class="fas fa-trash"></i></button>
                             </td>
                         </tr>
                     `).join('');
@@ -1385,17 +1688,19 @@
                     let expenses = Utils.loadData(CONFIG.KEYS.EXPENSES, []);
                     expenses = expenses.filter(e => e.id !== id);
                     Utils.saveData(CONFIG.KEYS.EXPENSES, expenses);
+                    if (FirebaseModule.syncEnabled) FirebaseModule.syncToCloud('expenses', expenses);
                     app.expenses.render();
                     app.calculateKPI();
                     Utils.toast('支出记录已删除', 'success');
                 }
             },
 
-            // ========== 数据导出 ==========
+            // ========== 数据导出导入 ==========
             exportData() {
                 const data = {
                     version: CONFIG.VERSION,
                     exportTime: new Date().toISOString(),
+                    deviceId: Utils.getDeviceId(),
                     orders: Utils.loadData(CONFIG.KEYS.ORDERS, []),
                     customers: Utils.loadData(CONFIG.KEYS.CUSTOMERS, []),
                     suppliers: Utils.loadData(CONFIG.KEYS.SUPPLIERS, []),
@@ -1414,22 +1719,49 @@
                 Utils.toast('数据已导出', 'success');
             },
 
+            importData() {
+                Utils.$('import-file-input')?.click();
+            },
+
+            handleImportFile(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        
+                        if (!confirm(`确定要导入数据吗？这将覆盖当前数据。\n导出时间: ${data.exportTime || '未知'}`)) return;
+
+                        if (data.orders) Utils.saveData(CONFIG.KEYS.ORDERS, data.orders);
+                        if (data.customers) Utils.saveData(CONFIG.KEYS.CUSTOMERS, data.customers);
+                        if (data.suppliers) Utils.saveData(CONFIG.KEYS.SUPPLIERS, data.suppliers);
+                        if (data.expenses) Utils.saveData(CONFIG.KEYS.EXPENSES, data.expenses);
+
+                        Utils.toast('数据导入成功，正在刷新...', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } catch (error) {
+                        Utils.toast('导入失败: 文件格式错误', 'error');
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = '';
+            },
+
             // ========== 登出 ==========
             logout() {
                 if (!confirm('确定要退出系统吗？')) return;
 
-                // 清除会话数据（保留业务数据）
                 localStorage.removeItem(CONFIG.KEYS.UNLOCK_TIME);
                 localStorage.removeItem(CONFIG.KEYS.EMERGENCY_TIME);
                 localStorage.removeItem(CONFIG.KEYS.TODAY_ACTIONS);
 
-                // 清理定时器
                 if (app.state.emergencyTimer) {
                     clearInterval(app.state.emergencyTimer);
                     app.state.emergencyTimer = null;
                 }
 
-                // 显示生存模式
                 app.survival.showCurtain();
                 Utils.$('emergency-warning')?.classList.add('hidden');
                 
@@ -1444,7 +1776,7 @@
             app.init();
         }
 
-        console.log(`[V14.4 PRO] 脚本已加载 - 版本: ${CONFIG.VERSION}`);
+        console.log(`[V14.5 PRO] 脚本已加载 - Firebase同步版 - 版本: ${CONFIG.VERSION}`);
     })();
     </script>
 </body>
