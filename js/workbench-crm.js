@@ -1,456 +1,467 @@
 /**
- * V14.2 PRO - CRM客户关系管理模块
- * 客户档案管理、联系记录、销售跟进
- * @namespace WorkbenchCRM
+ * WorkbenchCRM - 客户关系管理模块
+ * 完整 CRUD 功能：增删改查
+ * 版本: 2.0.0
+ * 
+ * 数据存储键: v5_erp_customers (与 WorkbenchConfig.STORAGE_KEYS.CUSTOMERS 对齐)
  */
-const WorkbenchCRM = (() => {
+const WorkbenchCRM = (function() {
     'use strict';
 
-    // 客户字段配置
-    const CUSTOMER_FIELDS = ['name', 'phone', 'email', 'company', 'address', 'remark'];
+    // ==================== 配置常量 ====================
+    const STORAGE_KEY = 'v5_erp_customers';
+    const ID_PREFIX = 'CUST';
 
-    // 表单验证规则
-    const VALIDATION_RULES = {
-        name: { required: true, message: '客户名称不能为空' },
-        phone: { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确' },
-        email: { pattern: /^[\w.-]+@[\w.-]+\.\w+$/, message: '邮箱格式不正确' }
+    // ==================== 内部工具函数 ====================
+    const Utils = {
+        $(id) {
+            return document.getElementById(id);
+        },
+
+        loadData(key, defaultValue = []) {
+            try {
+                const data = localStorage.getItem(key);
+                if (data === null || data === undefined || data === '') return defaultValue;
+                const parsed = JSON.parse(data);
+                return Array.isArray(parsed) ? parsed : defaultValue;
+            } catch (e) {
+                console.warn('[WorkbenchCRM] 数据读取失败:', e.message);
+                return defaultValue;
+            }
+        },
+
+        saveData(key, data) {
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+                return true;
+            } catch (e) {
+                console.error('[WorkbenchCRM] 数据保存失败:', e.message);
+                return false;
+            }
+        },
+
+        escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        },
+
+        generateId(prefix = 'item') {
+            return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        },
+
+        toast(message, type = 'info') {
+            // 尝试使用全局 Utils.toast，否则使用简单 alert
+            if (window.Utils && typeof window.Utils.toast === 'function') {
+                window.Utils.toast(message, type);
+            } else if (window.app && window.app.toast) {
+                window.app.toast(message, type);
+            } else {
+                console.log(`[${type.toUpperCase()}] ${message}`);
+            }
+        },
+
+        formatDate(dateStr) {
+            if (!dateStr) return '未知';
+            try {
+                const date = new Date(dateStr);
+                if (isNaN(date.getTime())) return '未知';
+                return date.toLocaleDateString('zh-CN');
+            } catch { return '未知'; }
+        }
     };
 
-    // 模块状态
-    const state = {
-        customers: [],
-        isInitialized: false
-    };
+    // ==================== 状态管理 ====================
+    let customers = [];
+    let editingId = null; // 当前正在编辑的客户ID
 
-    /**
-     * 初始化CRM模块
-     * @returns {boolean} 是否成功
-     */
-    function init() {
-        try {
-            console.log('[CRM] CRM模块初始化中...');
-            loadCustomers();
-            console.log('[CRM] ✅ CRM模块已初始化');
-            console.log('[CRM] 客户数量:', state.customers.length);
-            state.isInitialized = true;
+    // ==================== Firebase 同步辅助 ====================
+    function syncToFirebase(data) {
+        if (window.FirebaseModule && window.FirebaseModule.syncEnabled) {
+            window.FirebaseModule.syncToCloud('customers', data);
+        }
+    }
+
+    // ==================== 公开 API ====================
+    return {
+        /**
+         * 初始化模块
+         */
+        init() {
+            customers = Utils.loadData(STORAGE_KEY, []);
+            console.log('[WorkbenchCRM] ✅ 初始化完成，已加载', customers.length, '个客户');
             return true;
-        } catch (error) {
-            console.error('[CRM] ❌ 初始化失败:', error);
-            return false;
-        }
-    }
+        },
 
-    /**
-     * 从存储加载客户数据
-     */
-    function loadCustomers() {
-        try {
-            if (window.WorkbenchStorage) {
-                state.customers = WorkbenchStorage.load('customers') || [];
-            } else {
-                const key = window.WorkbenchConfig?.STORAGE_KEYS?.CUSTOMERS || 'v5_erp_customers';
-                const customersJson = localStorage.getItem(key);
-                state.customers = customersJson ? JSON.parse(customersJson) : [];
-            }
-            console.log(`[CRM] ✅ 已加载 ${state.customers.length} 个客户`);
-        } catch (error) {
-            console.error('[CRM] ❌ 加载客户数据失败:', error);
-            state.customers = [];
-        }
-    }
+        /**
+         * 获取所有客户数据
+         */
+        getAll() {
+            return Utils.loadData(STORAGE_KEY, []);
+        },
 
-    /**
-     * 保存客户数据
-     * @returns {boolean} 是否成功
-     */
-    function saveCustomers() {
-        try {
-            if (window.WorkbenchStorage) {
-                WorkbenchStorage.save('customers', state.customers);
-            } else {
-                const key = window.WorkbenchConfig?.STORAGE_KEYS?.CUSTOMERS || 'v5_erp_customers';
-                localStorage.setItem(key, JSON.stringify(state.customers));
-            }
-            
-            // 同步到WorkbenchState
-            if (window.WorkbenchState) {
-                WorkbenchState.set('data.customers', state.customers, false);
-            }
-            
-            console.log(`[CRM] ✅ 已保存 ${state.customers.length} 个客户`);
-            return true;
-        } catch (error) {
-            console.error('[CRM] ❌ 保存客户数据失败:', error);
-            if (window.WorkbenchUtils) {
-                WorkbenchUtils.toast('客户数据保存失败', 'error');
-            }
-            return false;
-        }
-    }
+        /**
+         * 根据ID获取单个客户
+         */
+        getById(id) {
+            const customers = this.getAll();
+            return customers.find(c => c.id === id) || null;
+        },
 
-    /**
-     * 渲染客户列表
-     */
-    function renderCustomers() {
-        try {
-            const container = document.getElementById('crm-customers');
-            if (!container) {
-                console.warn('[CRM] 容器未找到: #crm-customers');
+        /**
+         * 打开新增客户模态框
+         */
+        openAddModal() {
+            editingId = null;
+            this.resetForm();
+            this.updateModalTitle('录入客户档案');
+            this.updateSaveButtonText('保存档案');
+            Utils.$('customer-modal')?.classList.remove('hidden');
+            Utils.$('crm-name')?.focus();
+        },
+
+        /**
+         * 打开编辑客户模态框
+         * @param {string} id - 客户ID
+         */
+        openEditModal(id) {
+            const customer = this.getById(id);
+            if (!customer) {
+                Utils.toast('客户不存在', 'error');
                 return;
             }
 
-            if (state.customers.length === 0) {
+            editingId = id;
+            this.fillForm(customer);
+            this.updateModalTitle('编辑客户档案');
+            this.updateSaveButtonText('更新档案');
+            Utils.$('customer-modal')?.classList.remove('hidden');
+            Utils.$('crm-name')?.focus();
+        },
+
+        /**
+         * 关闭模态框
+         */
+        closeModal() {
+            Utils.$('customer-modal')?.classList.add('hidden');
+            editingId = null;
+            this.resetForm();
+        },
+
+        /**
+         * 重置表单
+         */
+        resetForm() {
+            const fields = ['crm-name', 'crm-contact', 'crm-whatsapp', 'crm-address'];
+            fields.forEach(id => {
+                const el = Utils.$(id);
+                if (el) el.value = '';
+            });
+            // 重置国家选择框为默认值
+            const countryEl = Utils.$('crm-country');
+            if (countryEl) countryEl.value = 'Other';
+        },
+
+        /**
+         * 填充表单数据（用于编辑）
+         * @param {Object} customer - 客户对象
+         */
+        fillForm(customer) {
+            const nameEl = Utils.$('crm-name');
+            const contactEl = Utils.$('crm-contact');
+            const countryEl = Utils.$('crm-country');
+            const whatsappEl = Utils.$('crm-whatsapp');
+            const addressEl = Utils.$('crm-address');
+
+            if (nameEl) nameEl.value = customer.company || '';
+            if (contactEl) contactEl.value = customer.contact || '';
+            if (countryEl) countryEl.value = customer.country || 'Other';
+            if (whatsappEl) whatsappEl.value = customer.whatsapp || '';
+            if (addressEl) addressEl.value = customer.address || '';
+        },
+
+        /**
+         * 更新模态框标题
+         * @param {string} title - 标题文本
+         */
+        updateModalTitle(title) {
+            const titleEl = Utils.$('crm-modal-title');
+            if (titleEl) titleEl.textContent = title;
+        },
+
+        /**
+         * 更新保存按钮文本
+         * @param {string} text - 按钮文本
+         */
+        updateSaveButtonText(text) {
+            const btn = Utils.$('crm-save-btn');
+            if (btn) btn.textContent = text;
+        },
+
+        /**
+         * 保存客户（新增或更新）
+         */
+        save() {
+            const name = Utils.$('crm-name')?.value?.trim();
+            if (!name) {
+                Utils.toast('请输入客户公司名', 'warning');
+                return;
+            }
+
+            const customerData = {
+                company: name,
+                contact: Utils.$('crm-contact')?.value?.trim() || '',
+                country: Utils.$('crm-country')?.value || 'Other',
+                whatsapp: Utils.$('crm-whatsapp')?.value?.trim() || '',
+                address: Utils.$('crm-address')?.value?.trim() || ''
+            };
+
+            let customers = this.getAll();
+
+            if (editingId) {
+                // 更新现有客户
+                const index = customers.findIndex(c => c.id === editingId);
+                if (index !== -1) {
+                    customers[index] = {
+                        ...customers[index],
+                        ...customerData,
+                        updatedAt: new Date().toISOString()
+                    };
+                    Utils.toast('客户档案已更新', 'success');
+                } else {
+                    Utils.toast('客户不存在', 'error');
+                    return;
+                }
+            } else {
+                // 新增客户
+                const newCustomer = {
+                    id: Utils.generateId(ID_PREFIX),
+                    ...customerData,
+                    createdAt: new Date().toISOString()
+                };
+                customers.unshift(newCustomer);
+                Utils.toast('客户档案已保存', 'success');
+            }
+
+            Utils.saveData(STORAGE_KEY, customers);
+            syncToFirebase(customers);
+
+            this.closeModal();
+            this.render();
+        },
+
+        /**
+         * 删除客户
+         * @param {string} id - 客户ID
+         */
+        delete(id) {
+            if (!confirm('确定删除此客户档案吗？此操作不可撤销。')) return;
+
+            let customers = this.getAll();
+            const originalLength = customers.length;
+            customers = customers.filter(c => c.id !== id);
+
+            if (customers.length === originalLength) {
+                Utils.toast('客户不存在', 'error');
+                return;
+            }
+
+            Utils.saveData(STORAGE_KEY, customers);
+            syncToFirebase(customers);
+            this.render();
+            Utils.toast('客户档案已删除', 'success');
+        },
+
+        /**
+         * 渲染客户列表
+         */
+        render() {
+            const container = Utils.$('customer-grid');
+            if (!container) return;
+
+            const customers = this.getAll();
+
+            if (customers.length === 0) {
                 container.innerHTML = `
                     <div class="col-span-full text-center py-12 text-gray-500">
-                        <i class="fas fa-users text-4xl mb-4 opacity-50"></i>
-                        <p>暂无客户数据</p>
-                        <p class="text-sm mt-2">点击"新增客户"开始添加</p>
+                        <i class="fas fa-users text-4xl mb-4 opacity-30"></i>
+                        <p>暂无客户档案</p>
+                        <p class="text-sm mt-2 text-gray-600">点击"录入客户"添加第一个客户</p>
                     </div>
                 `;
                 return;
             }
 
-            container.innerHTML = state.customers.map(customer => renderCustomerCard(customer)).join('');
-            console.log('[CRM] ✅ 客户列表渲染完成');
-        } catch (error) {
-            console.error('[CRM] ❌ 渲染客户列表失败:', error);
-        }
-    }
-
-    /**
-     * 渲染客户卡片
-     * @param {Object} customer - 客户对象
-     * @returns {string} HTML字符串
-     */
-    function renderCustomerCard(customer) {
-        return `
-            <div class="bg-gray-900 rounded-xl p-6 hover:bg-gray-850 transition-colors border border-gray-800 hover:border-purple-500">
-                <div class="flex items-start justify-between mb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                            ${getInitials(customer.name)}
+            container.innerHTML = customers.map(c => `
+                <div class="glass rounded-xl p-5 hover:border-green-500/30 transition group">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-bold text-white truncate">${Utils.escapeHtml(c.company)}</h3>
+                            <span class="text-xs text-gray-500">${Utils.escapeHtml(c.country || 'Other')}</span>
                         </div>
-                        <div>
-                            <h3 class="font-bold text-white text-lg">${escapeHtml(customer.name)}</h3>
-                            ${customer.company ? `<p class="text-sm text-gray-400">${escapeHtml(customer.company)}</p>` : ''}
+                        <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition ml-2">
+                            <button onclick="WorkbenchCRM.openEditModal('${c.id}')" 
+                                    class="text-gray-500 hover:text-blue-400 transition p-1" 
+                                    title="编辑">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="WorkbenchCRM.delete('${c.id}')" 
+                                    class="text-gray-500 hover:text-red-500 transition p-1" 
+                                    title="删除">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
                     </div>
-                    <button onclick="WorkbenchCRM.deleteCustomer('${customer.id}')" 
-                        class="text-gray-600 hover:text-red-500 transition-colors">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-                
-                <div class="space-y-2 text-sm">
-                    ${customer.phone ? `
-                        <div class="flex items-center gap-2 text-gray-400">
-                            <i class="fas fa-phone w-4"></i>
-                            <span class="font-mono">${escapeHtml(customer.phone)}</span>
+                    ${c.contact ? `
+                        <div class="text-sm text-gray-400 mb-1 flex items-center">
+                            <i class="fas fa-user mr-2 w-4 text-center text-gray-500"></i>
+                            <span class="truncate">${Utils.escapeHtml(c.contact)}</span>
                         </div>
                     ` : ''}
-                    ${customer.email ? `
-                        <div class="flex items-center gap-2 text-gray-400">
-                            <i class="fas fa-envelope w-4"></i>
-                            <span>${escapeHtml(customer.email)}</span>
+                    ${c.whatsapp ? `
+                        <div class="text-sm text-gray-400 mb-1 flex items-center">
+                            <i class="fab fa-whatsapp mr-2 w-4 text-center text-green-500"></i>
+                            <span class="truncate">${Utils.escapeHtml(c.whatsapp)}</span>
                         </div>
                     ` : ''}
-                    ${customer.address ? `
-                        <div class="flex items-center gap-2 text-gray-400">
-                            <i class="fas fa-map-marker-alt w-4"></i>
-                            <span class="line-clamp-1">${escapeHtml(customer.address)}</span>
+                    ${c.address ? `
+                        <div class="text-sm text-gray-400 mb-1 flex items-center">
+                            <i class="fas fa-map-marker-alt mr-2 w-4 text-center text-gray-500"></i>
+                            <span class="truncate">${Utils.escapeHtml(c.address)}</span>
                         </div>
                     ` : ''}
-                </div>
-                
-                ${customer.remark ? `
-                    <div class="mt-3 pt-3 border-t border-gray-800">
-                        <p class="text-xs text-gray-500 line-clamp-2">${escapeHtml(customer.remark)}</p>
+                    <div class="mt-3 pt-3 border-t border-dark-4/50 flex justify-between items-center text-xs text-gray-600">
+                        <span><i class="fas fa-clock mr-1"></i>${Utils.formatDate(c.createdAt)}</span>
+                        ${c.updatedAt ? `<span class="text-gray-500">更新于 ${Utils.formatDate(c.updatedAt)}</span>` : ''}
                     </div>
-                ` : ''}
-                
-                <div class="mt-4 pt-3 border-t border-gray-800 flex items-center justify-between text-xs text-gray-500">
-                    <span>创建时间: ${formatDate(customer.createTime)}</span>
-                    <button onclick="WorkbenchCRM.openCustomerModal('${customer.id}')" 
-                        class="text-purple-400 hover:text-purple-300 transition-colors">
-                        <i class="fas fa-edit mr-1"></i>编辑
-                    </button>
                 </div>
-            </div>
-        `;
-    }
+            `).join('');
+        },
 
-    /**
-     * 打开客户模态框
-     * @param {string} customerId - 客户ID（编辑时传入）
-     */
-    function openCustomerModal(customerId = null) {
-        try {
-            const customer = customerId ? state.customers.find(c => c.id === customerId) : null;
-            
-            if (window.WorkbenchModal) {
-                WorkbenchModal.open({
-                    title: customer ? '编辑客户' : '新增客户',
-                    size: 'lg',
-                    content: generateCustomerForm(customer),
-                    buttons: [
-                        {
-                            text: '取消',
-                            className: 'bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded',
-                            onClick: (modal) => WorkbenchModal.close(modal)
-                        },
-                        {
-                            text: '保存',
-                            className: 'bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded',
-                            onClick: () => handleCustomerSubmit(customerId)
-                        }
-                    ]
-                });
-            } else {
-                console.warn('[CRM] 模态框管理器未加载');
+        /**
+         * 搜索客户
+         * @param {string} keyword - 搜索关键词
+         * @returns {Array} 匹配的客户列表
+         */
+        search(keyword) {
+            if (!keyword || !keyword.trim()) {
+                return this.getAll();
             }
-        } catch (error) {
-            console.error('[CRM] ❌ 打开客户模态框失败:', error);
-        }
-    }
 
-    /**
-     * 生成客户表单
-     * @param {Object} customer - 客户对象（编辑时）
-     * @returns {string} HTML字符串
-     */
-    function generateCustomerForm(customer = null) {
-        return `
-            <form id="customer-form" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">客户名称 *</label>
-                    <input type="text" id="customer-name" value="${customer?.name || ''}" required
-                           class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                           placeholder="请输入客户名称">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">联系电话</label>
-                        <input type="tel" id="customer-phone" value="${customer?.phone || ''}"
-                               class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                               placeholder="手机号码">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">邮箱地址</label>
-                        <input type="email" id="customer-email" value="${customer?.email || ''}"
-                               class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                               placeholder="email@example.com">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">公司名称</label>
-                    <input type="text" id="customer-company" value="${customer?.company || ''}"
-                           class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                           placeholder="公司名称（可选）">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">地址</label>
-                    <textarea id="customer-address" rows="2"
-                              class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                              placeholder="客户地址（可选）">${customer?.address || ''}</textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">备注</label>
-                    <textarea id="customer-remark" rows="3"
-                              class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                              placeholder="备注信息（可选）">${customer?.remark || ''}</textarea>
-                </div>
-            </form>
-        `;
-    }
+            const lowerKeyword = keyword.toLowerCase().trim();
+            const customers = this.getAll();
 
-    /**
-     * 处理客户提交
-     * @param {string} customerId - 客户ID（编辑时）
-     */
-    function handleCustomerSubmit(customerId = null) {
-        try {
-            const formData = {
-                name: document.getElementById('customer-name')?.value?.trim(),
-                phone: document.getElementById('customer-phone')?.value?.trim(),
-                email: document.getElementById('customer-email')?.value?.trim(),
-                company: document.getElementById('customer-company')?.value?.trim(),
-                address: document.getElementById('customer-address')?.value?.trim(),
-                remark: document.getElementById('customer-remark')?.value?.trim()
+            return customers.filter(c => 
+                (c.company && c.company.toLowerCase().includes(lowerKeyword)) ||
+                (c.contact && c.contact.toLowerCase().includes(lowerKeyword)) ||
+                (c.whatsapp && c.whatsapp.toLowerCase().includes(lowerKeyword)) ||
+                (c.country && c.country.toLowerCase().includes(lowerKeyword)) ||
+                (c.address && c.address.toLowerCase().includes(lowerKeyword))
+            );
+        },
+
+        /**
+         * 获取客户统计信息
+         * @returns {Object} 统计信息
+         */
+        getStats() {
+            const customers = this.getAll();
+            const countryStats = {};
+
+            customers.forEach(c => {
+                const country = c.country || 'Other';
+                countryStats[country] = (countryStats[country] || 0) + 1;
+            });
+
+            return {
+                total: customers.length,
+                byCountry: countryStats,
+                recentCount: customers.filter(c => {
+                    if (!c.createdAt) return false;
+                    const created = new Date(c.createdAt);
+                    const weekAgo = new Date();
+                    weekAgo.setDate(weekAgo.getDate() - 7);
+                    return created >= weekAgo;
+                }).length
             };
+        },
 
-            // 验证必填项
-            if (!formData.name) {
-                if (window.WorkbenchUtils) {
-                    WorkbenchUtils.toast('请输入客户名称', 'warning');
+        /**
+         * 导出客户数据
+         * @returns {Array} 客户数据数组
+         */
+        exportData() {
+            return this.getAll();
+        },
+
+        /**
+         * 导入客户数据
+         * @param {Array} data - 要导入的客户数据
+         * @param {boolean} merge - 是否合并（true）或替换（false）
+         * @returns {Object} 导入结果
+         */
+        importData(data, merge = true) {
+            if (!Array.isArray(data)) {
+                return { success: false, message: '数据格式错误' };
+            }
+
+            let customers = merge ? this.getAll() : [];
+            const existingIds = new Set(customers.map(c => c.id));
+            let imported = 0;
+            let skipped = 0;
+
+            data.forEach(item => {
+                if (!item.company) {
+                    skipped++;
+                    return;
                 }
-                return;
-            }
 
-            // 验证手机号（如果填写）
-            if (formData.phone && !VALIDATION_RULES.phone.pattern.test(formData.phone)) {
-                if (window.WorkbenchUtils) {
-                    WorkbenchUtils.toast(VALIDATION_RULES.phone.message, 'warning');
+                if (existingIds.has(item.id)) {
+                    if (merge) {
+                        // 合并模式下更新已存在的记录
+                        const index = customers.findIndex(c => c.id === item.id);
+                        if (index !== -1) {
+                            customers[index] = { ...customers[index], ...item };
+                        }
+                    }
+                    skipped++;
+                } else {
+                    customers.unshift({
+                        id: item.id || Utils.generateId(ID_PREFIX),
+                        company: item.company,
+                        contact: item.contact || '',
+                        country: item.country || 'Other',
+                        whatsapp: item.whatsapp || '',
+                        address: item.address || '',
+                        createdAt: item.createdAt || new Date().toISOString()
+                    });
+                    imported++;
                 }
-                return;
-            }
+            });
 
-            // 验证邮箱（如果填写）
-            if (formData.email && !VALIDATION_RULES.email.pattern.test(formData.email)) {
-                if (window.WorkbenchUtils) {
-                    WorkbenchUtils.toast(VALIDATION_RULES.email.message, 'warning');
-                }
-                return;
-            }
+            Utils.saveData(STORAGE_KEY, customers);
+            syncToFirebase(customers);
+            this.render();
 
-            if (customerId) {
-                // 编辑现有客户
-                const index = state.customers.findIndex(c => c.id === customerId);
-                if (index !== -1) {
-                    state.customers[index] = {
-                        ...state.customers[index],
-                        ...formData,
-                        updateTime: new Date().toISOString()
-                    };
-                }
-            } else {
-                // 新增客户
-                const newCustomer = {
-                    id: window.WorkbenchUtils ? 
-                        WorkbenchUtils.generateId('customer') : 
-                        `customer_${Date.now()}`,
-                    ...formData,
-                    createTime: new Date().toISOString(),
-                    updateTime: new Date().toISOString()
-                };
-                state.customers.push(newCustomer);
-            }
-
-            saveCustomers();
-            renderCustomers();
-
-            if (window.WorkbenchModal) {
-                WorkbenchModal.close();
-            }
-
-            if (window.WorkbenchUtils) {
-                WorkbenchUtils.toast(customerId ? '客户信息已更新' : '客户添加成功', 'success');
-            }
-
-            console.log('[CRM] ✅ 客户信息保存成功');
-        } catch (error) {
-            console.error('[CRM] ❌ 保存客户信息失败:', error);
-            if (window.WorkbenchUtils) {
-                WorkbenchUtils.toast('保存客户信息失败，请重试', 'error');
-            }
+            return {
+                success: true,
+                message: `成功导入 ${imported} 条记录，跳过 ${skipped} 条`,
+                imported,
+                skipped
+            };
         }
-    }
-
-    /**
-     * 删除客户
-     * @param {string} customerId - 客户ID
-     */
-    async function deleteCustomer(customerId) {
-        try {
-            const confirmed = window.WorkbenchModal ? 
-                await WorkbenchModal.confirm('确定要删除这个客户吗？', {
-                    title: '删除确认',
-                    confirmText: '确认删除',
-                    cancelText: '取消'
-                }) :
-                confirm('确定要删除这个客户吗？');
-
-            if (!confirmed) return;
-
-            const index = state.customers.findIndex(c => c.id === customerId);
-            if (index === -1) {
-                console.warn('[CRM] 客户不存在:', customerId);
-                return;
-            }
-
-            state.customers.splice(index, 1);
-            saveCustomers();
-            renderCustomers();
-
-            if (window.WorkbenchUtils) {
-                WorkbenchUtils.toast('客户已删除', 'success');
-            }
-
-            console.log('[CRM] ✅ 客户已删除:', customerId);
-        } catch (error) {
-            console.error('[CRM] ❌ 删除客户失败:', error);
-        }
-    }
-
-    /**
-     * 获取所有客户
-     * @returns {Array} 客户列表
-     */
-    function getAllCustomers() {
-        return [...state.customers];
-    }
-
-    /**
-     * 根据ID获取客户
-     * @param {string} customerId - 客户ID
-     * @returns {Object|null} 客户对象
-     */
-    function getCustomerById(customerId) {
-        return state.customers.find(c => c.id === customerId) || null;
-    }
-
-    // 工具函数
-    function getInitials(name) {
-        if (!name) return '?';
-        const parts = name.trim().split(/\s+/);
-        if (parts.length >= 2) {
-            return (parts[0][0] + parts[1][0]).toUpperCase();
-        }
-        return name.substring(0, 2).toUpperCase();
-    }
-
-    function formatDate(dateStr) {
-        if (!dateStr) return '未知';
-        try {
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('zh-CN');
-        } catch {
-            return '未知';
-        }
-    }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        if (window.WorkbenchUtils && WorkbenchUtils.escapeHtml) {
-            return WorkbenchUtils.escapeHtml(str);
-        }
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
-
-    // 公共API
-    const api = {
-        init,
-        renderCustomers,
-        openCustomerModal,
-        deleteCustomer,
-        getAllCustomers,
-        getCustomerById,
-        CUSTOMER_FIELDS,
-        VALIDATION_RULES
     };
-
-    return api;
 })();
 
-// 挂载到全局
+// 注册到全局
 window.WorkbenchCRM = WorkbenchCRM;
 
-// 模块导出
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = WorkbenchCRM;
-} else if (typeof define === 'function' && define.amd) {
-    define([], () => WorkbenchCRM);
+// 自动初始化
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => WorkbenchCRM.init());
+} else {
+    WorkbenchCRM.init();
 }
 
-console.log('[CRM] CRM客户关系管理模块已加载');
+console.log('[WorkbenchCRM] 模块已加载 v2.0.0');
