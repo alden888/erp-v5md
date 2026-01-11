@@ -1,202 +1,232 @@
 /**
- * V15.2 CRM Module (Combat Survival Edition)
- * 生存优先级 > 美观
- * P0 客户 = 现金氧气
+ * WorkbenchCRM - 客户关系管理模块（生存作战升级版）
+ * 基于 v2.0.0，向下兼容
+ * 版本: 2.1.0 (Combat)
  */
+const WorkbenchCRM = (function() {
+    'use strict';
 
-const WorkbenchCRM = {
-    init() {
-        console.log('[CRM] Initializing Combat CRM V15.2...');
-        this.render();
-    },
+    const STORAGE_KEY = 'v5_erp_customers';
+    const ID_PREFIX = 'CUST';
 
-    async render() {
-        const container = document.getElementById('customer-grid');
-        if (!container) return;
+    const Utils = {
+        $(id) { return document.getElementById(id); },
 
-        const key = window.WorkbenchConfig.STORAGE_KEYS.CUSTOMERS;
-        const customers = (await window.WorkbenchStorage.load(key, []))
-            .sort((a, b) => {
-                const pa = a.priority || 'P2';
-                const pb = b.priority || 'P2';
-                if (pa !== pb) return pa.localeCompare(pb);
+        loadData(key, def = []) {
+            try {
+                const raw = localStorage.getItem(key);
+                if (!raw) return def;
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : def;
+            } catch { return def; }
+        },
+
+        saveData(key, data) {
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+                return true;
+            } catch { return false; }
+        },
+
+        escapeHtml(str) {
+            const d = document.createElement('div');
+            d.textContent = str || '';
+            return d.innerHTML;
+        },
+
+        generateId() {
+            return `${ID_PREFIX}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        },
+
+        toast(msg, type = 'info') {
+            if (window.Utils?.toast) return window.Utils.toast(msg, type);
+            console.log(`[${type}] ${msg}`);
+        },
+
+        hoursSince(dateStr) {
+            if (!dateStr) return null;
+            return Math.floor((Date.now() - new Date(dateStr)) / 36e5);
+        }
+    };
+
+    let editingId = null;
+
+    function syncToFirebase(data) {
+        if (window.FirebaseModule?.syncEnabled) {
+            window.FirebaseModule.syncToCloud('customers', data);
+        }
+    }
+
+    function normalizeCustomer(c) {
+        return {
+            ...c,
+            priority: c.priority || 'P2',
+            legalEntity: c.legalEntity || 'V5 Medical (CN)',
+            currency: c.currency || 'USD'
+        };
+    }
+
+    return {
+        init() {
+            const list = Utils.loadData(STORAGE_KEY, []).map(normalizeCustomer);
+            Utils.saveData(STORAGE_KEY, list);
+            console.log('[WorkbenchCRM] 初始化完成', list.length);
+            this.render();
+        },
+
+        getAll() {
+            return Utils.loadData(STORAGE_KEY, []).map(normalizeCustomer);
+        },
+
+        getById(id) {
+            return this.getAll().find(c => c.id === id) || null;
+        },
+
+        openAddModal() {
+            editingId = null;
+            this.resetForm();
+            Utils.$('crm-modal-title').textContent = '录入作战客户';
+            Utils.$('crm-save-btn').textContent = '保存';
+            Utils.$('customer-modal')?.classList.remove('hidden');
+        },
+
+        openEditModal(id) {
+            const c = this.getById(id);
+            if (!c) return Utils.toast('客户不存在', 'error');
+
+            editingId = id;
+            this.fillForm(c);
+            Utils.$('crm-modal-title').textContent = '编辑作战档案';
+            Utils.$('crm-save-btn').textContent = '更新';
+            Utils.$('customer-modal')?.classList.remove('hidden');
+        },
+
+        closeModal() {
+            Utils.$('customer-modal')?.classList.add('hidden');
+            editingId = null;
+        },
+
+        resetForm() {
+            [
+                'crm-name','crm-contact','crm-whatsapp','crm-address',
+                'crm-next','crm-amount'
+            ].forEach(id => Utils.$(id) && (Utils.$(id).value = ''));
+
+            Utils.$('crm-country').value = 'Other';
+            Utils.$('crm-priority').value = 'P2';
+            Utils.$('crm-entity').value = 'V5 Medical (CN)';
+            Utils.$('crm-currency').value = 'USD';
+        },
+
+        fillForm(c) {
+            Utils.$('crm-name').value = c.company || '';
+            Utils.$('crm-contact').value = c.contact || '';
+            Utils.$('crm-country').value = c.country || 'Other';
+            Utils.$('crm-whatsapp').value = c.whatsapp || '';
+            Utils.$('crm-address').value = c.address || '';
+            Utils.$('crm-priority').value = c.priority;
+            Utils.$('crm-entity').value = c.legalEntity;
+            Utils.$('crm-next').value = c.nextAction || '';
+            Utils.$('crm-amount').value = c.expectedAmount || '';
+            Utils.$('crm-currency').value = c.currency;
+        },
+
+        save() {
+            const name = Utils.$('crm-name').value.trim();
+            if (!name) return Utils.toast('公司名必填', 'warning');
+
+            const data = {
+                company: name,
+                contact: Utils.$('crm-contact').value.trim(),
+                country: Utils.$('crm-country').value,
+                whatsapp: Utils.$('crm-whatsapp').value.trim(),
+                address: Utils.$('crm-address').value.trim(),
+                priority: Utils.$('crm-priority').value,
+                legalEntity: Utils.$('crm-entity').value,
+                nextAction: Utils.$('crm-next').value.trim(),
+                expectedAmount: Utils.$('crm-amount').value.trim(),
+                currency: Utils.$('crm-currency').value,
+                updatedAt: new Date().toISOString()
+            };
+
+            let list = this.getAll();
+
+            if (editingId) {
+                list = list.map(c =>
+                    c.id === editingId ? { ...c, ...data } : c
+                );
+            } else {
+                list.unshift({
+                    id: Utils.generateId(),
+                    createdAt: new Date().toISOString(),
+                    ...data
+                });
+            }
+
+            Utils.saveData(STORAGE_KEY, list);
+            syncToFirebase(list);
+            this.closeModal();
+            this.render();
+            Utils.toast('客户档案已保存', 'success');
+        },
+
+        delete(id) {
+            if (!confirm('确认删除该客户？')) return;
+            let list = this.getAll().filter(c => c.id !== id);
+            Utils.saveData(STORAGE_KEY, list);
+            syncToFirebase(list);
+            this.render();
+        },
+
+        render() {
+            const el = Utils.$('customer-grid');
+            if (!el) return;
+
+            const customers = this.getAll().sort((a, b) => {
+                if (a.priority !== b.priority) return a.priority.localeCompare(b.priority);
                 return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
             });
 
-        if (customers.length === 0) {
-            container.innerHTML = `
-                <div class="col-span-full text-center py-16 text-gray-500 border border-dashed border-gray-800 rounded-xl">
-                    <i class="fas fa-crosshairs text-4xl mb-4 opacity-30"></i>
-                    <p class="mb-2">暂无作战目标</p>
-                    <button onclick="WorkbenchCRM.openAddModal()" class="text-indigo-400 underline">
-                        立即建立第一个生存目标
-                    </button>
+            if (!customers.length) {
+                el.innerHTML = `<div class="col-span-full text-center text-gray-500 py-12">
+                    暂无作战目标
                 </div>`;
-            return;
-        }
+                return;
+            }
 
-        container.innerHTML = customers.map(c => {
-            const priority = c.priority || 'P2';
-            const isP0 = priority === 'P0';
+            el.innerHTML = customers.map(c => {
+                const isP0 = c.priority === 'P0';
+                const hours = Utils.hoursSince(c.updatedAt);
+                const danger = isP0 && hours > 72;
 
-            const lastUpdateHours = c.updatedAt
-                ? Math.floor((Date.now() - new Date(c.updatedAt)) / 36e5)
-                : null;
-
-            const danger = isP0 && lastUpdateHours !== null && lastUpdateHours > 72;
-
-            const borderClass = danger
-                ? 'border-red-700 shadow-[0_0_20px_rgba(220,38,38,0.45)]'
-                : isP0
-                    ? 'border-red-600 shadow-[0_0_12px_rgba(220,38,38,0.3)]'
-                    : 'border-gray-800 hover:border-gray-600';
-
-            const priorityBadge = isP0
-                ? `<span class="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded font-bold animate-pulse">
-                        P0 生死
-                   </span>`
-                : `<span class="bg-gray-800 text-gray-400 text-[10px] px-2 py-0.5 rounded">${priority}</span>`;
-
-            return `
-            <div class="bg-gray-900 border ${borderClass} p-5 rounded-xl transition relative group">
-                <div class="flex justify-between items-start mb-3">
-                    <div>
-                        <div class="flex items-center gap-2 mb-1">
-                            ${priorityBadge}
-                            <span class="text-[10px] text-blue-400 border border-blue-900 px-1 rounded">
-                                ${c.legalEntity || 'V5'}
-                            </span>
-                        </div>
-                        <h3 class="font-bold text-lg text-white">${this.escape(c.company)}</h3>
-                        ${c.nextAction ? `
-                            <div class="text-[11px] text-yellow-400 mt-1">
-                                ▶ 下一步：${this.escape(c.nextAction)}
-                            </div>` : ''}
+                return `
+                <div class="glass p-5 rounded-xl border ${danger ? 'border-red-600 animate-pulse' : ''}">
+                    <div class="flex justify-between mb-2">
+                        <h3 class="font-bold text-white">${Utils.escapeHtml(c.company)}</h3>
+                        <span class="text-xs ${isP0 ? 'text-red-400' : 'text-gray-500'}">${c.priority}</span>
                     </div>
-                    <span class="text-xs text-gray-500">${c.country || ''}</span>
-                </div>
 
-                <div class="text-sm text-gray-400 space-y-1.5">
-                    <div><i class="fas fa-user w-4 opacity-50"></i> ${this.escape(c.contact || '-')}</div>
-                    <div><i class="fab fa-whatsapp w-4 text-green-500"></i> ${this.escape(c.whatsapp || '-')}</div>
-                    ${c.expectedAmount ? `
-                        <div class="text-green-400 font-mono">
-                            💰 ${c.expectedAmount} ${c.currency || 'USD'}
-                        </div>` : ''}
-                </div>
+                    ${c.nextAction ? `<div class="text-xs text-yellow-400">▶ ${Utils.escapeHtml(c.nextAction)}</div>` : ''}
+                    ${c.expectedAmount ? `<div class="text-xs text-green-400">💰 ${c.expectedAmount} ${c.currency}</div>` : ''}
 
-                <div class="text-[10px] text-gray-500 mt-3">
-                    ${lastUpdateHours !== null ? `⏱ ${lastUpdateHours}h 未更新` : '⏱ 新目标'}
-                </div>
+                    <div class="text-[10px] text-gray-500 mt-2">
+                        ${hours !== null ? `${hours}h 未更新` : ''}
+                    </div>
 
-                <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                    <button onclick="WorkbenchCRM.openEditModal('${c.id}')" class="text-gray-400 hover:text-white">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button onclick="WorkbenchCRM.delete('${c.id}')" class="text-gray-400 hover:text-red-500">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>`;
-        }).join('');
-    },
-
-    openAddModal() {
-        this.resetForm();
-        document.getElementById('modal-title').innerText = "录入作战目标";
-        document.getElementById('customer-modal')?.classList.remove('hidden');
-    },
-
-    async openEditModal(id) {
-        const key = window.WorkbenchConfig.STORAGE_KEYS.CUSTOMERS;
-        const customers = await window.WorkbenchStorage.load(key, []);
-        const c = customers.find(x => x.id === id);
-        if (!c) return;
-
-        const map = {
-            'crm-id': c.id,
-            'crm-name': c.company,
-            'crm-contact': c.contact,
-            'crm-country': c.country,
-            'crm-whatsapp': c.whatsapp,
-            'crm-address': c.address,
-            'crm-priority': c.priority || 'P2',
-            'crm-entity': c.legalEntity || 'V5 Medical (CN)',
-            'crm-next': c.nextAction || '',
-            'crm-amount': c.expectedAmount || '',
-            'crm-currency': c.currency || 'USD'
-        };
-
-        Object.entries(map).forEach(([id, val]) => {
-            const el = document.getElementById(id);
-            if (el) el.value = val;
-        });
-
-        document.getElementById('modal-title').innerText = "编辑作战档案";
-        document.getElementById('customer-modal')?.classList.remove('hidden');
-    },
-
-    resetForm() {
-        ['crm-id','crm-name','crm-contact','crm-whatsapp','crm-address','crm-next','crm-amount']
-            .forEach(id => document.getElementById(id).value = '');
-        document.getElementById('crm-country').value = 'Philippines';
-        document.getElementById('crm-priority').value = 'P2';
-        document.getElementById('crm-entity').value = 'V5 Medical (CN)';
-        document.getElementById('crm-currency').value = 'USD';
-    },
-
-    async save() {
-        const name = document.getElementById('crm-name').value;
-        if (!name) return alert('公司名称必填');
-
-        const key = window.WorkbenchConfig.STORAGE_KEYS.CUSTOMERS;
-        let customers = await window.WorkbenchStorage.load(key, []);
-
-        const id = document.getElementById('crm-id').value || 'CUST-' + Date.now();
-
-        const data = {
-            id,
-            company: name,
-            contact: document.getElementById('crm-contact').value,
-            country: document.getElementById('crm-country').value,
-            whatsapp: document.getElementById('crm-whatsapp').value,
-            address: document.getElementById('crm-address').value,
-            priority: document.getElementById('crm-priority').value,
-            legalEntity: document.getElementById('crm-entity').value,
-            nextAction: document.getElementById('crm-next').value,
-            expectedAmount: document.getElementById('crm-amount').value,
-            currency: document.getElementById('crm-currency').value,
-            updatedAt: new Date().toISOString(),
-            createdAt: customers.find(c => c.id === id)?.createdAt || new Date().toISOString()
-        };
-
-        customers = customers.filter(c => c.id !== id);
-        customers.push(data);
-
-        await window.WorkbenchStorage.save(key, customers);
-        this.closeModal();
-        this.render();
-        window.WorkbenchUtils?.toast('作战档案已更新', 'success');
-    },
-
-    async delete(id) {
-        if (!confirm('删除该目标？')) return;
-        const key = window.WorkbenchConfig.STORAGE_KEYS.CUSTOMERS;
-        let list = await window.WorkbenchStorage.load(key, []);
-        list = list.filter(c => c.id !== id);
-        await window.WorkbenchStorage.save(key, list);
-        this.render();
-    },
-
-    closeModal() {
-        document.getElementById('customer-modal')?.classList.add('hidden');
-    },
-
-    escape(str) {
-        const div = document.createElement('div');
-        div.textContent = str || '';
-        return div.innerHTML;
-    }
-};
+                    <div class="mt-2 flex gap-2">
+                        <button onclick="WorkbenchCRM.openEditModal('${c.id}')">✏️</button>
+                        <button onclick="WorkbenchCRM.delete('${c.id}')">🗑</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+    };
+})();
 
 window.WorkbenchCRM = WorkbenchCRM;
+
+document.readyState === 'loading'
+    ? document.addEventListener('DOMContentLoaded', () => WorkbenchCRM.init())
+    : WorkbenchCRM.init();
+
+console.log('[WorkbenchCRM] 已加载 v2.1.0 Combat');
