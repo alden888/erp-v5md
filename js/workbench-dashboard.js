@@ -1,506 +1,464 @@
 /**
- * V14.2 PRO - 仪表盘模块（优化版）
- * 数据统计、可视化、趋势分析
+ * V14.6 PRO - 仪表盘模块（全球时钟升级版）
+ * 数据统计、可视化、趋势分析、全球商机时钟
  * @namespace WorkbenchDashboard
- * @author 优化版
- * @version 14.2.1
  */
 const WorkbenchDashboard = (() => {
     'use strict';
 
-    // ============================ 常量定义（统一维护，便于修改） ============================
-    const CONSTANTS = {
-        // 存储键名配置
-        STORAGE_KEYS: {
-            ORDERS: 'v5_erp_orders',
-            INCOMES: 'v5_erp_incomes',
-            SUPPLIERS: 'v5_erp_suppliers',
-            EXPENSES: 'v5_erp_expenses',
-            SETTINGS: 'v5_erp_settings'
-        },
-        // 默认配置
-        DEFAULT_SETTINGS: {
-            target: 5000000,
-            exchangeRate: 7.25,
-            firebaseEnabled: false
-        },
-        // 日期格式化选项
-        DATE_FORMATS: {
-            TIME: { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false },
-            SHORT_TIME: { hour: '2-digit', minute: '2-digit', hour12: false }
-        },
-        // 订单状态枚举（语义化）
-        ORDER_STATUS: {
-            PENDING: ['New', 'Processing'],
-            COMPLETED: ['Paid', 'Shipped', 'Completed']
-        }
-    };
-
-    // ============================ 私有状态管理 ============================
+    // 定时器
     let refreshTimer = null;
     let clockTimer = null;
-    let clockElement = null; // 缓存时钟DOM元素，避免重复查询
-    let lastSyncElement = null; // 缓存同步时间DOM元素
+    let globalClockTimer = null;
 
-    // ============================ 工具函数（封装重复逻辑） ============================
-    /**
-     * 安全加载存储数据（兼容WorkbenchStorage和localStorage）
-     * @param {string} key - 存储键名
-     * @returns {Array} 解析后的数据数组（兜底空数组）
-     */
-    const safeLoadStorageData = (key) => {
-        try {
-            // 优先使用WorkbenchStorage
-            if (window.WorkbenchStorage) {
-                return WorkbenchStorage.load(key) || [];
-            }
+    // 🌍 全球商机时钟配置 - 可自定义
+    const GLOBAL_TIME_ZONES = [
+        { city: 'Kunshan',   label: '🇨🇳 Base',    tz: 'Asia/Shanghai',      offset: 8 },
+        { city: 'Manila',    label: '🇵🇭 Mikki',   tz: 'Asia/Manila',        offset: 8 },
+        { city: 'Istanbul',  label: '🇹🇷 Turhan',  tz: 'Europe/Istanbul',    offset: 3 },
+        { city: 'Dubai',     label: '🇦🇪 Gulf',    tz: 'Asia/Dubai',         offset: 4 },
+        { city: 'London',    label: '🇬🇧 Amazon',  tz: 'Europe/London',      offset: 0 },
+        { city: 'New York',  label: '🇺🇸 Market',  tz: 'America/New_York',   offset: -5 }
+    ];
 
-            // 降级到localStorage，兼容配置的键名
-            const configKey = window.WorkbenchConfig?.STORAGE_KEYS?.[key.toUpperCase()] || CONSTANTS.STORAGE_KEYS[key.toUpperCase()];
-            const rawData = localStorage.getItem(configKey);
-            return rawData ? JSON.parse(rawData) : [];
-        } catch (error) {
-            console.error(`[Dashboard] 加载${key}数据失败:`, error);
-            return [];
-        }
-    };
+    // 🔥 励志金句
+    const MOTIVATIONAL_QUOTES = [
+        "Every 'No' brings you closer to a 'Yes'. 每一次拒绝都让你离成交更近",
+        "Quality is the best business plan. 质量是最好的商业计划",
+        "Don't wait for opportunity. Create it. 不要等待机会，去创造它",
+        "今天多打一个电话，明天多一个订单！",
+        "Speed is the new currency of business. 速度是新的商业货币",
+        "500万不是梦，是必须拿下的山头！",
+        "Great things never come from comfort zones. 伟大成就从不源于舒适区",
+        "Your network is your net worth. 你的人脉就是你的净资产",
+        "成交之前的每一次拒绝，都是在积累运气。",
+        "Action is the foundational key to all success. 行动是所有成功的基石",
+        "The fortune is in the follow-up. 财富在跟进中",
+        "今日事今日毕，明日订单滚滚来！"
+    ];
 
-    /**
-     * 安全格式化数字（保留两位小数，避免NaN）
-     * @param {any} num - 待格式化的数字
-     * @returns {string} 格式化后的字符串（如"0.00"）
-     */
-    const safeFormatNumber = (num) => {
-        const parsed = Number(num);
-        return isNaN(parsed) ? '0.00' : parsed.toFixed(2);
-    };
-
-    /**
-     * 校验是否为当月数据（容错日期解析）
-     * @param {Object} item - 包含日期的条目（createTime/createdAt/date）
-     * @returns {boolean} 是否为当月
-     */
-    const isCurrentMonth = (item) => {
-        try {
-            const now = new Date();
-            const dateStr = item.createTime || item.createdAt || item.date;
-            const transactionDate = new Date(dateStr);
-
-            // 日期解析失败则返回false
-            if (transactionDate.toString() === 'Invalid Date') return false;
-
-            return transactionDate.getMonth() === now.getMonth() &&
-                   transactionDate.getFullYear() === now.getFullYear();
-        } catch (error) {
-            return false;
-        }
-    };
-
-    /**
-     * 计算数组金额总和（安全求和）
-     * @param {Array} list - 包含amount的条目数组
-     * @returns {number} 总和
-     */
-    const calculateTotalAmount = (list) => {
-        return list.reduce((sum, item) => {
-            const amount = Number(item.amount);
-            return sum + (isNaN(amount) ? 0 : amount);
-        }, 0);
-    };
-
-    // ============================ 核心业务函数 ============================
     /**
      * 初始化仪表盘模块
-     * @returns {boolean} 是否成功
      */
-    const init = () => {
+    function init() {
         try {
             console.log('[Dashboard] 仪表盘模块初始化中...');
-            
-            // 预缓存常用DOM元素，减少重复查询
-            clockElement = document.getElementById('current-time');
-            lastSyncElement = document.getElementById('last-sync');
-            
             renderDashboard();
             bindEvents();
-            startClock(); // 初始化时自动启动时钟
-            
-            console.log('[Dashboard] ✅ 仪表盘模块已初始化');
+            startGlobalClock();
+            startClock();
+            showDailyQuote();
+            console.log('[Dashboard] ✅ 仪表盘模块已初始化（含全球时钟）');
             return true;
         } catch (error) {
             console.error('[Dashboard] ❌ 初始化失败:', error);
             return false;
         }
-    };
+    }
 
     /**
-     * 绑定事件监听器（防抖处理，避免重复绑定）
+     * 绑定事件监听器
      */
-    const bindEvents = () => {
+    function bindEvents() {
         try {
             const refreshBtn = document.getElementById('dashboard-refresh');
             if (refreshBtn) {
-                // 先移除旧监听，避免重复绑定
-                refreshBtn.removeEventListener('click', refreshDashboard);
-                refreshBtn.addEventListener('click', refreshDashboard);
+                refreshBtn.addEventListener('click', () => refreshDashboard());
             }
         } catch (error) {
             console.warn('[Dashboard] 绑定事件失败:', error);
         }
-    };
+    }
 
     /**
-     * 更新元素文本（增强容错，简化逻辑）
-     * @param {string} id - 元素ID
-     * @param {string|number} text - 文本内容
+     * 更新元素文本
      */
-    const updateElementText = (id, text) => {
-        if (!id || typeof id !== 'string') {
-            console.warn('[Dashboard] 元素ID必须为非空字符串');
-            return;
-        }
-
+    function updateElementText(id, text) {
         try {
             const element = document.getElementById(id);
-            if (!element) {
-                console.warn(`[Dashboard] 元素未找到：${id}`);
-                return;
-            }
-            
-            // 统一格式化文本内容
-            const textContent = (typeof text === 'string' || typeof text === 'number') 
-                ? text.toString() 
-                : '';
-            element.textContent = textContent;
+            if (!element) return;
+            element.textContent = typeof text === 'string' || typeof text === 'number' ? text.toString() : '';
         } catch (error) {
-            console.error(`[Dashboard] ❌ 更新元素${id}文本失败:`, error);
+            console.error('[Dashboard] ❌ 更新元素文本失败:', error);
         }
-    };
+    }
 
     /**
-     * 统计仪表盘核心数据（拆分逻辑，降低圈复杂度）
-     * @returns {Object} 统计数据
+     * 统计仪表盘核心数据
      */
-    const getDashboardStats = () => {
+    function getDashboardStats() {
         try {
-            // 批量加载存储数据
-            const orders = safeLoadStorageData('orders');
-            const incomes = safeLoadStorageData('incomes');
-            const suppliers = safeLoadStorageData('suppliers');
-            const expenses = safeLoadStorageData('expenses');
+            let orders = [], incomes = [], suppliers = [], expenses = [];
 
-            // 订单统计
+            // 从存储获取数据
+            if (window.WorkbenchStorage) {
+                orders = WorkbenchStorage.load('orders') || [];
+                incomes = WorkbenchStorage.load('incomes') || [];
+                suppliers = WorkbenchStorage.load('suppliers') || [];
+                expenses = WorkbenchStorage.load('expenses') || [];
+            } else {
+                const ordersKey = window.WorkbenchConfig?.STORAGE_KEYS?.ORDERS || 'v5_erp_orders';
+                const incomesKey = window.WorkbenchConfig?.STORAGE_KEYS?.INCOMES || 'v5_erp_incomes';
+                const suppliersKey = window.WorkbenchConfig?.STORAGE_KEYS?.SUPPLIERS || 'v5_erp_suppliers';
+                const expensesKey = window.WorkbenchConfig?.STORAGE_KEYS?.EXPENSES || 'v5_erp_expenses';
+                
+                orders = JSON.parse(localStorage.getItem(ordersKey) || '[]');
+                incomes = JSON.parse(localStorage.getItem(incomesKey) || '[]');
+                suppliers = JSON.parse(localStorage.getItem(suppliersKey) || '[]');
+                expenses = JSON.parse(localStorage.getItem(expensesKey) || '[]');
+            }
+
             const totalOrders = orders.length;
-            const pendingOrders = orders.filter(o => CONSTANTS.ORDER_STATUS.PENDING.includes(o.kanbanStatus)).length;
-            const completedOrders = orders.filter(o => CONSTANTS.ORDER_STATUS.COMPLETED.includes(o.kanbanStatus)).length;
+            const pendingOrders = orders.filter(o => 
+                ['inquiry', 'pi', 'production', 'New', 'Processing'].includes(o.kanbanStatus)
+            ).length;
+            const completedOrders = orders.filter(o => 
+                ['paid', 'shipped', 'Paid', 'Shipped', 'Completed'].includes(o.kanbanStatus)
+            ).length;
 
-            // 收入统计
-            const totalIncome = calculateTotalAmount(incomes);
-            const monthIncome = calculateTotalAmount(incomes.filter(isCurrentMonth));
+            const totalIncome = incomes.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
             
-            // 支出统计
-            const monthExpense = calculateTotalAmount(expenses.filter(isCurrentMonth));
+            const now = new Date();
+            const monthIncome = incomes
+                .filter(item => {
+                    const itemDate = new Date(item.createTime || item.date);
+                    return itemDate.getMonth() === now.getMonth() && 
+                           itemDate.getFullYear() === now.getFullYear();
+                })
+                .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
-            // 供应商统计
-            const totalSuppliers = suppliers.length;
+            const monthExpense = expenses
+                .filter(item => {
+                    const itemDate = new Date(item.createdAt || item.date);
+                    return itemDate.getMonth() === now.getMonth() && 
+                           itemDate.getFullYear() === now.getFullYear();
+                })
+                .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
-            // 统一格式化数字，避免NaN
+            // 计算距上次进账的小时数
+            let hoursSinceIncome = 0;
+            if (incomes.length > 0) {
+                const sortedIncomes = [...incomes].sort((a, b) => 
+                    new Date(b.createTime || b.date) - new Date(a.createTime || a.date)
+                );
+                const lastIncomeDate = new Date(sortedIncomes[0].createTime || sortedIncomes[0].date);
+                hoursSinceIncome = Math.floor((now - lastIncomeDate) / (1000 * 60 * 60));
+            }
+
             return {
                 totalOrders,
                 pendingOrders,
                 completedOrders,
-                totalIncome: safeFormatNumber(totalIncome),
-                monthIncome: safeFormatNumber(monthIncome),
-                monthExpense: safeFormatNumber(monthExpense),
-                netProfit: safeFormatNumber(monthIncome - monthExpense),
-                totalSuppliers
+                totalIncome: totalIncome.toFixed(2),
+                monthIncome: monthIncome.toFixed(2),
+                monthExpense: monthExpense.toFixed(2),
+                netProfit: (monthIncome - monthExpense).toFixed(2),
+                totalSuppliers: suppliers.length,
+                hoursSinceIncome
             };
         } catch (error) {
             console.error('[Dashboard] ❌ 统计数据失败:', error);
-            // 兜底默认值（统一格式化）
             return {
-                totalOrders: 0,
-                pendingOrders: 0,
-                completedOrders: 0,
-                totalIncome: '0.00',
-                monthIncome: '0.00',
-                monthExpense: '0.00',
-                netProfit: '0.00',
-                totalSuppliers: 0
+                totalOrders: 0, pendingOrders: 0, completedOrders: 0,
+                totalIncome: '0.00', monthIncome: '0.00', monthExpense: '0.00',
+                netProfit: '0.00', totalSuppliers: 0, hoursSinceIncome: 0
             };
         }
-    };
+    }
 
     /**
-     * 渲染仪表盘（核心入口，简化逻辑）
+     * 渲染仪表盘
      */
-    const renderDashboard = () => {
+    function renderDashboard() {
         try {
             const stats = getDashboardStats();
 
-            // 批量更新核心指标
-            const textUpdates = [
-                ['dashboard-total-orders', stats.totalOrders],
-                ['dashboard-pending-orders', stats.pendingOrders],
-                ['dashboard-completed-orders', stats.completedOrders],
-                ['dashboard-total-income', `¥${stats.totalIncome}`],
-                ['dashboard-month-income', `¥${stats.monthIncome}`],
-                ['dashboard-total-suppliers', stats.totalSuppliers],
-                ['dashboard-net-profit', `¥${stats.netProfit}`]
-            ];
-            
-            // 批量执行更新，减少重复代码
-            textUpdates.forEach(([id, text]) => updateElementText(id, text));
+            updateElementText('dashboard-total-orders', `订单: ${stats.totalOrders}`);
+            updateElementText('dashboard-pending-orders', `待处理: ${stats.pendingOrders}`);
+            updateElementText('dashboard-completed-orders', `已完成: ${stats.completedOrders}`);
+            updateElementText('dashboard-total-income', `¥${stats.totalIncome}`);
+            updateElementText('dashboard-month-income', `¥${stats.monthIncome}`);
+            updateElementText('dashboard-total-suppliers', stats.totalSuppliers);
+            updateElementText('dashboard-net-profit', `¥${stats.netProfit}`);
+            updateElementText('hours-since-income', stats.hoursSinceIncome);
+
+            // 更新KPI卡片
+            updateElementText('kpi-revenue', `¥${stats.monthIncome}`);
+            updateElementText('kpi-gross', `¥${stats.totalIncome}`);
+            updateElementText('kpi-net', `¥${stats.netProfit}`);
 
             console.log('[Dashboard] ✅ 仪表盘渲染完成');
-            console.log('[Dashboard] 统计数据:', stats);
         } catch (error) {
             console.error('[Dashboard] ❌ 渲染仪表盘失败:', error);
-            if (window.WorkbenchUtils) {
-                WorkbenchUtils.toast(`仪表盘渲染失败：${error.message}`, 'error');
-            }
         }
-    };
+    }
 
     /**
-     * 刷新仪表盘数据（支持防抖，避免频繁执行）
-     * @param {number} interval - 刷新间隔（毫秒，0为仅刷新一次）
+     * 🌍 启动全球商机时钟
      */
-    const refreshDashboard = (interval = 0) => {
+    function startGlobalClock() {
+        const container = document.getElementById('global-clock-grid');
+        if (!container) {
+            console.warn('[Dashboard] 全球时钟容器未找到');
+            return;
+        }
+
+        const updateGlobalClock = () => {
+            const now = new Date();
+            
+            // 更新本地时间参考
+            const localRef = document.getElementById('local-time-ref');
+            if (localRef) {
+                localRef.textContent = `Local: ${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+            }
+
+            container.innerHTML = GLOBAL_TIME_ZONES.map(tz => {
+                let timeString, hour;
+                
+                // 尝试使用 Intl API (更精确)
+                try {
+                    const options = { timeZone: tz.tz, hour: 'numeric', minute: '2-digit', hour12: false };
+                    timeString = new Intl.DateTimeFormat('en-GB', options).format(now);
+                    hour = parseInt(timeString.split(':')[0]);
+                } catch (e) {
+                    // 降级到偏移量计算
+                    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+                    const cityTime = new Date(utc + (3600000 * tz.offset));
+                    hour = cityTime.getHours();
+                    const minute = cityTime.getMinutes().toString().padStart(2, '0');
+                    timeString = `${hour}:${minute}`;
+                }
+
+                // 状态判断
+                let statusClass, dotClass, statusText;
+                
+                if (hour >= 9 && hour < 18) {
+                    if (hour === 12) {
+                        // 午餐时间
+                        statusClass = 'border-yellow-500/50 bg-yellow-900/20';
+                        dotClass = 'bg-yellow-500';
+                        statusText = 'LUNCH';
+                    } else {
+                        // 工作时间 (OPEN)
+                        statusClass = 'border-green-500/50 bg-green-900/20 shadow-[0_0_15px_rgba(34,197,94,0.15)]';
+                        dotClass = 'bg-green-500 animate-pulse';
+                        statusText = 'OPEN';
+                    }
+                } else if (hour >= 22 || hour < 7) {
+                    // 睡眠时间
+                    statusClass = 'border-blue-900/50 bg-blue-900/10 opacity-60';
+                    dotClass = 'bg-blue-400';
+                    statusText = 'ZZZ';
+                } else {
+                    // 下班/休息
+                    statusClass = 'border-gray-600/30 bg-dark-3/50 opacity-70';
+                    dotClass = 'bg-gray-500';
+                    statusText = 'OFF';
+                }
+
+                return `
+                    <div class="rounded-lg p-3 text-center transition-all duration-300 border ${statusClass} hover:scale-105 cursor-default">
+                        <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-medium">${tz.label}</div>
+                        <div class="text-2xl font-mono font-bold text-white tracking-tight leading-none">${timeString}</div>
+                        <div class="mt-2 flex items-center justify-center gap-1.5">
+                            <div class="w-2 h-2 rounded-full ${dotClass}"></div>
+                            <span class="text-[9px] font-bold text-gray-500 uppercase">${statusText}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        // 立即更新一次
+        updateGlobalClock();
+
+        // 每分钟更新
+        if (globalClockTimer) clearInterval(globalClockTimer);
+        globalClockTimer = setInterval(updateGlobalClock, 60000);
+
+        console.log('[Dashboard] ✅ 全球商机时钟已启动');
+    }
+
+    /**
+     * 停止全球时钟
+     */
+    function stopGlobalClock() {
+        if (globalClockTimer) {
+            clearInterval(globalClockTimer);
+            globalClockTimer = null;
+            console.log('[Dashboard] 全球时钟已停止');
+        }
+    }
+
+    /**
+     * 刷新仪表盘
+     */
+    function refreshDashboard(interval = 0) {
         try {
-            // 立即刷新
             renderDashboard();
             
-            // 设置自动刷新（先清后设，避免多个定时器）
             if (interval > 0) {
-                stopAutoRefresh();
+                clearInterval(refreshTimer);
                 refreshTimer = setInterval(renderDashboard, interval);
-                console.log(`[Dashboard] ✅ 已设置自动刷新，间隔${interval}ms`);
-            } else {
-                console.log('[Dashboard] ✅ 仪表盘已刷新');
             }
         } catch (error) {
             console.error('[Dashboard] ❌ 刷新失败:', error);
         }
-    };
+    }
 
     /**
-     * 停止自动刷新（增强容错）
+     * 停止自动刷新
      */
-    const stopAutoRefresh = () => {
+    function stopAutoRefresh() {
         if (refreshTimer) {
             clearInterval(refreshTimer);
             refreshTimer = null;
-            console.log('[Dashboard] ✅ 已停止自动刷新');
         }
-    };
+    }
 
     /**
-     * 启动实时时钟（缓存DOM元素，提升性能）
+     * 启动本地实时时钟
      */
-    const startClock = () => {
+    function startClock() {
         try {
-            if (!clockElement) {
-                clockElement = document.getElementById('current-time');
-                if (!clockElement) throw new Error('时钟元素未找到');
-            }
-
-            // 时钟更新函数（独立封装）
             const updateClock = () => {
-                const timeString = new Date().toLocaleTimeString('zh-CN', CONSTANTS.DATE_FORMATS.TIME);
-                clockElement.textContent = timeString;
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('zh-CN', {
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+                });
+                
+                const clockElement = document.getElementById('current-time');
+                if (clockElement) clockElement.textContent = timeString;
             };
 
-            // 立即更新 + 定时更新（先清后设）
             updateClock();
-            stopClock();
+            if (clockTimer) clearInterval(clockTimer);
             clockTimer = setInterval(updateClock, 1000);
-            
-            console.log('[Dashboard] ✅ 实时时钟已启动');
         } catch (error) {
             console.error('[Dashboard] ❌ 启动时钟失败:', error);
         }
-    };
+    }
 
     /**
-     * 停止实时时钟（增强容错）
+     * 停止本地时钟
      */
-    const stopClock = () => {
+    function stopClock() {
         if (clockTimer) {
             clearInterval(clockTimer);
             clockTimer = null;
-            console.log('[Dashboard] ✅ 实时时钟已停止');
         }
-    };
-
-    /**
-     * 更新同步时间显示（缓存DOM元素，提升性能）
-     * @param {Date} syncTime - 同步时间
-     */
-    const updateLastSyncTime = (syncTime = new Date()) => {
-        try {
-            if (!lastSyncElement) {
-                lastSyncElement = document.getElementById('last-sync');
-                if (!lastSyncElement) return;
-            }
-
-            const timeString = syncTime.toLocaleTimeString('zh-CN', CONSTANTS.DATE_FORMATS.SHORT_TIME);
-            lastSyncElement.textContent = `上次同步: ${timeString}`;
-        } catch (error) {
-            console.error('[Dashboard] ❌ 更新同步时间失败:', error);
-        }
-    };
-
-    /**
-     * 保存设置到存储（封装重复逻辑）
-     * @param {Object} newSettings - 新设置
-     */
-    const saveSettings = (newSettings) => {
-        try {
-            const configKey = window.WorkbenchConfig?.STORAGE_KEYS?.SETTINGS || CONSTANTS.STORAGE_KEYS.SETTINGS;
-            const currentSettings = JSON.parse(localStorage.getItem(configKey) || '{}');
-            const mergedSettings = { ...currentSettings, ...newSettings };
-            
-            localStorage.setItem(configKey, JSON.stringify(mergedSettings));
-            return true;
-        } catch (error) {
-            console.error('[Dashboard] ❌ 保存设置失败:', error);
-            return false;
-        }
-    };
-
-    /**
-     * 设置目标金额（复用保存逻辑）
-     * @param {number} target - 目标金额
-     */
-    const setTarget = (target) => {
-        try {
-            if (typeof target !== 'number' || target <= 0) {
-                throw new Error('目标金额必须是大于0的数字');
-            }
-            
-            if (saveSettings({ target })) {
-                console.log('[Dashboard] ✅ 目标金额已设置:', target);
-                renderDashboard();
-            }
-        } catch (error) {
-            console.error('[Dashboard] ❌ 设置目标金额失败:', error);
-        }
-    };
-
-    /**
-     * 设置汇率（复用保存逻辑）
-     * @param {number} rate - 汇率
-     */
-    const setExchangeRate = (rate) => {
-        try {
-            if (typeof rate !== 'number' || rate <= 0) {
-                throw new Error('汇率必须是大于0的数字');
-            }
-            
-            if (saveSettings({ rate })) {
-                console.log('[Dashboard] ✅ 汇率已设置:', rate);
-                renderDashboard();
-            }
-        } catch (error) {
-            console.error('[Dashboard] ❌ 设置汇率失败:', error);
-        }
-    };
-
-    /**
-     * 获取当前设置（增强容错）
-     * @returns {Object} 设置对象
-     */
-    const getSettings = () => {
-        try {
-            const configKey = window.WorkbenchConfig?.STORAGE_KEYS?.SETTINGS || CONSTANTS.STORAGE_KEYS.SETTINGS;
-            const storedSettings = JSON.parse(localStorage.getItem(configKey) || '{}');
-            // 合并默认设置，避免缺失字段
-            return { ...CONSTANTS.DEFAULT_SETTINGS, ...storedSettings };
-        } catch (error) {
-            console.error('[Dashboard] ❌ 获取设置失败:', error);
-            return { ...CONSTANTS.DEFAULT_SETTINGS };
-        }
-    };
-
-    /**
-     * 清理资源（统一管理，避免内存泄漏）
-     */
-    const cleanup = () => {
-        stopAutoRefresh();
-        stopClock();
-        
-        // 移除事件监听（避免内存泄漏）
-        const refreshBtn = document.getElementById('dashboard-refresh');
-        if (refreshBtn) {
-            refreshBtn.removeEventListener('click', refreshDashboard);
-        }
-        
-        // 清空缓存的DOM引用
-        clockElement = null;
-        lastSyncElement = null;
-        
-        console.log('[Dashboard] ✅ 已清理所有资源');
-    };
-
-    // ============================ 全局事件监听 ============================
-    if (typeof window !== 'undefined') {
-        // 页面卸载前清理资源
-        window.addEventListener('beforeunload', cleanup);
-        
-        // 页面隐藏时暂停定时器，显示时恢复（性能优化）
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                stopAutoRefresh();
-                stopClock();
-            } else {
-                startClock();
-                // 如果有自动刷新配置，恢复刷新（这里简化处理，仅恢复时钟）
-            }
-        });
     }
 
-    // ============================ 暴露公共API ============================
-    return {
-        // 初始化
-        init,
+    /**
+     * 🔥 显示每日励志金句
+     */
+    function showDailyQuote() {
+        const quoteEl = document.getElementById('daily-quote');
+        if (quoteEl) {
+            const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+            quoteEl.textContent = randomQuote;
+        }
+    }
+
+    /**
+     * 更新同步时间
+     */
+    function updateLastSyncTime(syncTime = new Date()) {
+        const lastSyncElement = document.getElementById('last-sync');
+        if (lastSyncElement) {
+            const timeString = syncTime.toLocaleTimeString('zh-CN', {
+                hour: '2-digit', minute: '2-digit', hour12: false
+            });
+            lastSyncElement.textContent = `上次同步: ${timeString}`;
+        }
+    }
+
+    /**
+     * 获取设置
+     */
+    function getSettings() {
+        try {
+            const settings = JSON.parse(localStorage.getItem(
+                window.WorkbenchConfig?.STORAGE_KEYS?.SETTINGS || 'v5_erp_settings'
+            ) || '{}');
+            
+            return {
+                target: settings.target || 5000000,
+                exchangeRate: settings.rate || 7.25,
+                firebaseEnabled: settings.firebaseEnabled || false
+            };
+        } catch (error) {
+            return { target: 5000000, exchangeRate: 7.25, firebaseEnabled: false };
+        }
+    }
+
+    /**
+     * 设置目标
+     */
+    function setTarget(target) {
+        if (typeof target !== 'number' || target <= 0) return;
         
-        // 渲染操作
+        const settingsKey = window.WorkbenchConfig?.STORAGE_KEYS?.SETTINGS || 'v5_erp_settings';
+        const settings = JSON.parse(localStorage.getItem(settingsKey) || '{}');
+        settings.target = target;
+        localStorage.setItem(settingsKey, JSON.stringify(settings));
+        
+        renderDashboard();
+    }
+
+    /**
+     * 设置汇率
+     */
+    function setExchangeRate(rate) {
+        if (typeof rate !== 'number' || rate <= 0) return;
+        
+        const settingsKey = window.WorkbenchConfig?.STORAGE_KEYS?.SETTINGS || 'v5_erp_settings';
+        const settings = JSON.parse(localStorage.getItem(settingsKey) || '{}');
+        settings.rate = rate;
+        localStorage.setItem(settingsKey, JSON.stringify(settings));
+        
+        renderDashboard();
+    }
+
+    /**
+     * 清理
+     */
+    function cleanup() {
+        stopAutoRefresh();
+        stopClock();
+        stopGlobalClock();
+    }
+
+    // 页面卸载时清理
+    if (typeof window !== 'undefined') {
+        window.addEventListener('beforeunload', cleanup);
+    }
+
+    // 公共API
+    return {
+        init,
         renderDashboard,
         refreshDashboard,
         stopAutoRefresh,
-        
-        // 时钟操作
         startClock,
         stopClock,
-        
-        // 数据统计
+        startGlobalClock,
+        stopGlobalClock,
         getDashboardStats,
-        
-        // 设置管理
         setTarget,
         setExchangeRate,
         getSettings,
-        
-        // 同步时间
         updateLastSyncTime,
-        
-        // 工具方法
+        showDailyQuote,
         updateElementText,
-        
-        // 清理
-        cleanup
+        cleanup,
+        // 暴露配置供外部修改
+        timeZones: GLOBAL_TIME_ZONES,
+        quotes: MOTIVATIONAL_QUOTES
     };
 })();
 
 // 挂载到全局
 window.WorkbenchDashboard = WorkbenchDashboard;
 
-// 模块化导出（兼容CommonJS/AMD）
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = WorkbenchDashboard;
-} else if (typeof define === 'function' && define.amd) {
-    define([], () => WorkbenchDashboard);
-}
-
-console.log('[Dashboard] 仪表盘模块已加载（优化版 v14.2.1）');
+console.log('[Dashboard] 仪表盘模块已加载（V14.6 全球时钟版）');
