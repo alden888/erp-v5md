@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>战时指挥台 V14.5 PRO ERP · Firebase同步版</title>
+    <title>战时指挥台 V14.5.1 PRO ERP · Firebase同步版</title>
     
     <!-- 预连接优化 -->
     <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
@@ -630,6 +630,12 @@
                     <div id="firebase-status" class="text-xs text-gray-500">
                         状态: 未连接
                     </div>
+                    <div id="firebase-help" class="mt-2 text-xs text-yellow-600 hidden">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        <a href="https://console.firebase.google.com/project/v5merp/authentication/providers" target="_blank" class="underline hover:text-yellow-500">
+                            启用匿名认证
+                        </a>
+                    </div>
                 </div>
 
                 <!-- 设备ID -->
@@ -682,7 +688,7 @@
     /**
      * V14.5 PRO - Firebase 同步版
      * 集成Firebase云端同步功能
-     * 版本: 14.5.0
+     * 版本: 14.5.1
      */
     (function() {
         'use strict';
@@ -699,7 +705,7 @@
 
         // ==================== 配置常量 ====================
         const CONFIG = {
-            VERSION: '14.5.0',
+            VERSION: '14.5.1',
             STORAGE_PREFIX: 'v5_erp_',
             KEYS: {
                 ORDERS: 'v5_erp_orders',
@@ -828,6 +834,7 @@
             isInitialized: false,
             isConnected: false,
             syncEnabled: false,
+            authEnabled: false, // 是否启用了认证
             unsubscribers: [],
 
             async init() {
@@ -857,9 +864,18 @@
                         }
                     }
 
-                    // 匿名登录
-                    await this.auth.signInAnonymously();
-                    console.log('[Firebase] 匿名登录成功');
+                    // 尝试匿名登录（可选，失败不影响Firestore使用）
+                    try {
+                        await this.auth.signInAnonymously();
+                        this.authEnabled = true;
+                        console.log('[Firebase] 匿名登录成功');
+                    } catch (authError) {
+                        console.warn('[Firebase] 匿名登录跳过:', authError.code);
+                        console.log('[Firebase] 提示: 请在Firebase Console启用匿名认证');
+                        console.log('[Firebase] 路径: Authentication > Sign-in method > Anonymous > 启用');
+                        // 认证失败不影响继续使用Firestore
+                        this.authEnabled = false;
+                    }
 
                     this.isInitialized = true;
                     this.isConnected = true;
@@ -873,7 +889,7 @@
                     }
 
                     this.updateSyncStatus();
-                    console.log('[Firebase] ✅ 初始化成功');
+                    console.log('[Firebase] ✅ 初始化成功' + (this.authEnabled ? '' : '（无认证模式）'));
                     return true;
                 } catch (error) {
                     console.error('[Firebase] ❌ 初始化失败:', error);
@@ -888,10 +904,14 @@
                 const text = Utils.$('sync-text');
                 const statusEl = Utils.$('sync-status');
                 const firebaseStatus = Utils.$('firebase-status');
+                const firebaseHelp = Utils.$('firebase-help');
 
                 if (!icon || !text) return;
 
                 statusEl.classList.remove('syncing');
+
+                // 隐藏帮助链接默认
+                if (firebaseHelp) firebaseHelp.classList.add('hidden');
 
                 if (!this.isInitialized) {
                     icon.className = 'fas fa-circle text-[8px] text-gray-500';
@@ -900,11 +920,22 @@
                 } else if (!this.syncEnabled) {
                     icon.className = 'fas fa-circle text-[8px] text-gray-500';
                     text.textContent = '仅本地';
-                    if (firebaseStatus) firebaseStatus.textContent = '状态: 同步已关闭（仅本地存储）';
+                    if (firebaseStatus) {
+                        firebaseStatus.textContent = '状态: 同步已关闭（仅本地存储）';
+                        if (!this.authEnabled) {
+                            firebaseStatus.textContent += ' - 匿名认证未启用';
+                            if (firebaseHelp) firebaseHelp.classList.remove('hidden');
+                        }
+                    }
                 } else if (this.isConnected) {
                     icon.className = 'fas fa-circle text-[8px] text-green-500';
                     text.textContent = '已同步';
-                    if (firebaseStatus) firebaseStatus.textContent = '状态: 已连接到云端';
+                    if (firebaseStatus) {
+                        firebaseStatus.textContent = '状态: 已连接到云端';
+                        if (!this.authEnabled) {
+                            firebaseStatus.textContent += '（无认证模式）';
+                        }
+                    }
                 } else {
                     icon.className = 'fas fa-circle text-[8px] text-yellow-500';
                     text.textContent = '离线';
@@ -949,6 +980,12 @@
                     return true;
                 } catch (error) {
                     console.error(`[Firebase] ❌ ${dataType} 同步失败:`, error);
+                    // 处理权限错误
+                    if (error.code === 'permission-denied') {
+                        console.log('[Firebase] 提示: 请检查Firestore安全规则');
+                        console.log('[Firebase] 临时规则: allow read, write: if true;');
+                        Utils.toast('同步失败: 请检查Firestore权限设置', 'error');
+                    }
                     this.updateSyncStatus();
                     return false;
                 }
