@@ -612,39 +612,194 @@
                 </div>
             </div>
             
-            <!-- 其他 Tab 占位 -->
+            <!-- 客户管理 -->
             <div id="tab-customers" class="tab-content">
-                <div class="card p-8 text-center">
-                    <i class="fas fa-users text-6xl text-slate-200 mb-4"></i>
-                    <p class="text-slate-500">客户管理功能开发中...</p>
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-bold text-slate-800">客户资产库</h3>
+                    <button onclick="showCustomerModal()" class="btn-primary">
+                        <i class="fas fa-user-plus"></i> 录入客户
+                    </button>
+                </div>
+                <div id="customers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- 由 JS 填充 -->
                 </div>
             </div>
             
+            <!-- 供应商管理 -->
             <div id="tab-suppliers" class="tab-content">
-                <div class="card p-8 text-center">
-                    <i class="fas fa-truck text-6xl text-slate-200 mb-4"></i>
-                    <p class="text-slate-500">供应商管理功能开发中...</p>
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-bold text-slate-800">供应链管理</h3>
+                    <button onclick="showSupplierModal()" class="btn-primary">
+                        <i class="fas fa-plus"></i> 新增供应商
+                    </button>
+                </div>
+                <div id="suppliers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- 由 JS 填充 -->
                 </div>
             </div>
             
+            <!-- 财务中心 -->
             <div id="tab-finance" class="tab-content">
-                <div class="card p-8 text-center">
-                    <i class="fas fa-chart-line text-6xl text-slate-200 mb-4"></i>
-                    <p class="text-slate-500">财务中心功能开发中...</p>
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-bold text-slate-800">财务中心</h3>
+                    <div class="flex gap-2">
+                        <button onclick="setAnnualTarget()" class="bg-slate-600 hover:bg-slate-700 text-white font-semibold py-2 px-4 rounded-lg transition">
+                            <i class="fas fa-bullseye"></i> 设置目标
+                        </button>
+                        <button onclick="setExchangeRate()" class="bg-slate-600 hover:bg-slate-700 text-white font-semibold py-2 px-4 rounded-lg transition">
+                            <i class="fas fa-exchange-alt"></i> 汇率: <span id="header-rate">7.25</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="font-bold text-slate-800">收支概览</span>
+                        </div>
+                        <div class="p-4">
+                            <canvas id="finance-chart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="font-bold text-slate-800">财务统计</span>
+                        </div>
+                        <div class="p-4 space-y-4">
+                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                                <span class="text-slate-600">总收入</span>
+                                <span class="font-bold text-success" id="finance-income">¥0</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                                <span class="text-slate-600">总支出</span>
+                                <span class="font-bold text-danger" id="finance-expense">¥0</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                                <span class="text-slate-600">净利润</span>
+                                <span class="font-bold text-primary" id="finance-profit">¥0</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
+            <!-- 支出管理 -->
             <div id="tab-expenses" class="tab-content">
-                <div class="card p-8 text-center">
-                    <i class="fas fa-receipt text-6xl text-slate-200 mb-4"></i>
-                    <p class="text-slate-500">支出管理功能开发中...</p>
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-bold text-slate-800">资金流水</h3>
+                    <button onclick="showExpenseModal()" class="btn-primary">
+                        <i class="fas fa-plus"></i> 记一笔
+                    </button>
+                </div>
+                <div class="card">
+                    <div class="overflow-x-auto">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>日期</th>
+                                    <th>项目</th>
+                                    <th>分类</th>
+                                    <th class="text-right">金额</th>
+                                    <th class="text-right">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenses-table-body">
+                                <!-- 由 JS 填充 -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             
+            <!-- 报价工具 -->
             <div id="tab-tools" class="tab-content">
-                <div class="card p-8 text-center">
-                    <i class="fas fa-calculator text-6xl text-slate-200 mb-4"></i>
-                    <p class="text-slate-500">报价工具功能开发中...</p>
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-bold text-slate-800">外贸工具箱</h3>
+                    <button onclick="resetAllTools()" class="text-slate-500 hover:text-slate-700 text-sm">
+                        <i class="fas fa-redo mr-1"></i> 重置
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- FOB 报价计算器 -->
+                    <div class="card border-t-4 border-t-primary">
+                        <div class="card-header">
+                            <span class="font-bold text-slate-800"><i class="fas fa-calculator text-primary mr-2"></i>FOB 报价计算器</span>
+                        </div>
+                        <div class="p-5 space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">工厂含税价 (RMB)</label>
+                                    <input type="number" id="calc-cost" class="input-field" placeholder="例如: 100">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">汇率 (USD/RMB)</label>
+                                    <input type="number" id="calc-rate" class="input-field" value="7.25" step="0.01">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">利润率 (%)</label>
+                                    <input type="number" id="calc-margin" class="input-field" value="20" placeholder="20">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">退税率 (%)</label>
+                                    <input type="number" id="calc-rebate" class="input-field" value="13" placeholder="13">
+                                </div>
+                            </div>
+                            <button onclick="calculateFOB()" class="w-full btn-primary">
+                                <i class="fas fa-calculator"></i> 计算 FOB 价格
+                            </button>
+                            <div id="fob-result" class="hidden mt-4 p-4 bg-slate-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-slate-600">FOB 美元单价:</span>
+                                    <span class="text-2xl font-bold text-primary" id="fob-price">$0.00</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-slate-600">单件利润:</span>
+                                    <span class="font-bold text-success" id="fob-profit">¥0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- CBM 体积计算器 -->
+                    <div class="card border-t-4 border-t-success">
+                        <div class="card-header">
+                            <span class="font-bold text-slate-800"><i class="fas fa-box text-success mr-2"></i>CBM 体积计算器</span>
+                        </div>
+                        <div class="p-5 space-y-4">
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">长 (cm)</label>
+                                    <input type="number" id="cbm-l" class="input-field" placeholder="60">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">宽 (cm)</label>
+                                    <input type="number" id="cbm-w" class="input-field" placeholder="40">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">高 (cm)</label>
+                                    <input type="number" id="cbm-h" class="input-field" placeholder="30">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">件数</label>
+                                <input type="number" id="cbm-qty" class="input-field" value="1" placeholder="1">
+                            </div>
+                            <button onclick="calculateCBM()" class="w-full btn-success">
+                                <i class="fas fa-cube"></i> 计算体积
+                            </button>
+                            <div id="cbm-result" class="hidden mt-4 p-4 bg-slate-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-slate-600">总体积:</span>
+                                    <span class="text-xl font-bold text-success" id="cbm-total">0 CBM</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-slate-600">材积重:</span>
+                                    <span class="font-bold text-slate-700" id="cbm-weight">0 kg</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -714,6 +869,18 @@
             
             // 更新仪表盘
             updateDashboard();
+            
+            // 渲染各模块数据
+            renderCustomers();
+            renderSuppliers();
+            renderExpenses();
+            
+            // 加载汇率设置
+            const savedRate = localStorage.getItem(CONFIG.storagePrefix + 'usd_rate');
+            if (savedRate) {
+                CONFIG.currency.USD = parseFloat(savedRate);
+                document.getElementById('header-rate').textContent = CONFIG.currency.USD;
+            }
             
             // 开始时钟更新
             setInterval(updateWorldClock, 1000);
@@ -1157,30 +1324,337 @@
             input.value = '';
         }
         
-        // ==================== 快捷操作 ====================
+        // ==================== 订单管理功能 ====================
         function quickCreateOrder() {
-            showToast('订单创建功能开发中...', 'info');
-        }
-        
-        function quickCreateCustomer() {
-            showToast('客户创建功能开发中...', 'info');
+            const title = prompt('请输入订单标题:');
+            if (!title) return;
+            
+            const customer = prompt('请输入客户名称:');
+            const amount = parseFloat(prompt('请输入订单金额 (USD):')) || 0;
+            
+            const order = {
+                id: generateId('ORDER'),
+                title: title,
+                customer: customer || '未知客户',
+                amount: amount,
+                status: 'new',
+                createdAt: new Date().toISOString()
+            };
+            
+            state.orders.push(order);
+            saveData('orders', state.orders);
+            updateDashboard();
+            showToast('订单创建成功', 'success');
         }
         
         function showOrderModal() {
-            showToast('订单编辑功能开发中...', 'info');
+            quickCreateOrder();
         }
         
         function editOrder(id) {
-            showToast('编辑订单: ' + id, 'info');
+            const order = state.orders.find(o => o.id === id);
+            if (!order) return;
+            
+            const newStatus = prompt('更新订单状态 (new/pending/paid/cancelled):', order.status);
+            if (newStatus && ['new', 'pending', 'paid', 'cancelled'].includes(newStatus)) {
+                order.status = newStatus;
+                saveData('orders', state.orders);
+                updateDashboard();
+                showToast('订单状态已更新', 'success');
+            }
         }
         
         function deleteOrder(id) {
             if (confirm('确定要删除此订单吗？')) {
-                const orders = state.orders.filter(o => o.id !== id);
-                saveData('orders', orders);
+                state.orders = state.orders.filter(o => o.id !== id);
+                saveData('orders', state.orders);
                 updateDashboard();
                 showToast('订单已删除', 'success');
             }
+        }
+        
+        // ==================== 客户管理功能 ====================
+        function quickCreateCustomer() {
+            showCustomerModal();
+        }
+        
+        function showCustomerModal() {
+            const name = prompt('请输入客户名称:');
+            if (!name) return;
+            
+            const country = prompt('请输入国家/地区:');
+            const email = prompt('请输入邮箱:');
+            const phone = prompt('请输入电话:');
+            
+            const customer = {
+                id: generateId('CUST'),
+                name: name,
+                country: country || '',
+                email: email || '',
+                phone: phone || '',
+                createdAt: new Date().toISOString()
+            };
+            
+            state.customers.push(customer);
+            saveData('customers', state.customers);
+            renderCustomers();
+            updateDashboard();
+            showToast('客户录入成功', 'success');
+        }
+        
+        function renderCustomers() {
+            const container = document.getElementById('customers-grid');
+            if (!container) return;
+            
+            if (state.customers.length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center py-12 text-slate-400">暂无客户数据</div>';
+                return;
+            }
+            
+            container.innerHTML = state.customers.map(c => `
+                <div class="card p-4 hover:shadow-md transition-shadow">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                                ${c.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-800">${escapeHtml(c.name)}</h4>
+                                <p class="text-xs text-slate-500">${escapeHtml(c.country)}</p>
+                            </div>
+                        </div>
+                        <button onclick="deleteCustomer('${c.id}')" class="text-slate-400 hover:text-danger transition">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                    <div class="space-y-1 text-sm text-slate-600">
+                        ${c.email ? `<div><i class="fas fa-envelope text-slate-400 w-4"></i> ${escapeHtml(c.email)}</div>` : ''}
+                        ${c.phone ? `<div><i class="fas fa-phone text-slate-400 w-4"></i> ${escapeHtml(c.phone)}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function deleteCustomer(id) {
+            if (confirm('确定要删除此客户吗？')) {
+                state.customers = state.customers.filter(c => c.id !== id);
+                saveData('customers', state.customers);
+                renderCustomers();
+                showToast('客户已删除', 'success');
+            }
+        }
+        
+        // ==================== 供应商管理功能 ====================
+        function showSupplierModal() {
+            const name = prompt('请输入供应商名称:');
+            if (!name) return;
+            
+            const product = prompt('主要产品:');
+            const contact = prompt('联系方式:');
+            
+            const supplier = {
+                id: generateId('SUPP'),
+                name: name,
+                product: product || '',
+                contact: contact || '',
+                createdAt: new Date().toISOString()
+            };
+            
+            state.suppliers.push(supplier);
+            saveData('suppliers', state.suppliers);
+            renderSuppliers();
+            showToast('供应商添加成功', 'success');
+        }
+        
+        function renderSuppliers() {
+            const container = document.getElementById('suppliers-grid');
+            if (!container) return;
+            
+            if (state.suppliers.length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center py-12 text-slate-400">暂无供应商数据</div>';
+                return;
+            }
+            
+            container.innerHTML = state.suppliers.map(s => `
+                <div class="card p-4 hover:shadow-md transition-shadow">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
+                                <i class="fas fa-truck"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-800">${escapeHtml(s.name)}</h4>
+                                <p class="text-xs text-slate-500">${escapeHtml(s.product)}</p>
+                            </div>
+                        </div>
+                        <button onclick="deleteSupplier('${s.id}')" class="text-slate-400 hover:text-danger transition">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                    ${s.contact ? `<div class="text-sm text-slate-600"><i class="fas fa-phone text-slate-400 w-4"></i> ${escapeHtml(s.contact)}</div>` : ''}
+                </div>
+            `).join('');
+        }
+        
+        function deleteSupplier(id) {
+            if (confirm('确定要删除此供应商吗？')) {
+                state.suppliers = state.suppliers.filter(s => s.id !== id);
+                saveData('suppliers', state.suppliers);
+                renderSuppliers();
+                showToast('供应商已删除', 'success');
+            }
+        }
+        
+        // ==================== 支出管理功能 ====================
+        function showExpenseModal() {
+            const item = prompt('支出项目:');
+            if (!item) return;
+            
+            const category = prompt('分类 (办公/差旅/工资/租金/其他):', '办公');
+            const amount = parseFloat(prompt('金额 (RMB):')) || 0;
+            
+            const expense = {
+                id: generateId('EXP'),
+                item: item,
+                category: category || '其他',
+                amount: amount,
+                date: new Date().toISOString().split('T')[0]
+            };
+            
+            state.expenses.push(expense);
+            saveData('expenses', state.expenses);
+            renderExpenses();
+            updateDashboard();
+            showToast('支出记录已添加', 'success');
+        }
+        
+        function renderExpenses() {
+            const tbody = document.getElementById('expenses-table-body');
+            if (!tbody) return;
+            
+            if (state.expenses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-slate-400 py-8">暂无支出记录</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = state.expenses.slice().reverse().map(e => `
+                <tr>
+                    <td>${e.date}</td>
+                    <td>${escapeHtml(e.item)}</td>
+                    <td><span class="px-2 py-1 bg-slate-100 rounded text-xs">${escapeHtml(e.category)}</span></td>
+                    <td class="text-right font-medium text-danger">-¥${e.amount.toLocaleString()}</td>
+                    <td class="text-right">
+                        <button onclick="deleteExpense('${e.id}')" class="text-slate-400 hover:text-danger transition">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function deleteExpense(id) {
+            if (confirm('确定要删除此支出记录吗？')) {
+                state.expenses = state.expenses.filter(e => e.id !== id);
+                saveData('expenses', state.expenses);
+                renderExpenses();
+                updateDashboard();
+                showToast('支出记录已删除', 'success');
+            }
+        }
+        
+        // ==================== 财务中心功能 ====================
+        function setAnnualTarget() {
+            const newTarget = prompt('请输入年度销售目标 (RMB):', CONFIG.annualTarget);
+            if (newTarget && !isNaN(newTarget)) {
+                CONFIG.annualTarget = parseInt(newTarget);
+                localStorage.setItem(CONFIG.storagePrefix + 'annual_target', CONFIG.annualTarget);
+                updateDashboard();
+                showToast('年度目标已更新', 'success');
+            }
+        }
+        
+        function setExchangeRate() {
+            const newRate = prompt('请输入汇率 (USD/RMB):', CONFIG.currency.USD);
+            if (newRate && !isNaN(newRate)) {
+                CONFIG.currency.USD = parseFloat(newRate);
+                localStorage.setItem(CONFIG.storagePrefix + 'usd_rate', CONFIG.currency.USD);
+                document.getElementById('header-rate').textContent = CONFIG.currency.USD;
+                updateDashboard();
+                showToast('汇率已更新', 'success');
+            }
+        }
+        
+        // ==================== 报价工具功能 ====================
+        function calculateFOB() {
+            const cost = parseFloat(document.getElementById('calc-cost')?.value) || 0;
+            const rate = parseFloat(document.getElementById('calc-rate')?.value) || 7.25;
+            const margin = parseFloat(document.getElementById('calc-margin')?.value) || 20;
+            const rebate = parseFloat(document.getElementById('calc-rebate')?.value) || 13;
+            
+            if (cost <= 0) {
+                showToast('请输入有效的工厂含税价', 'warning');
+                return;
+            }
+            
+            // 计算逻辑
+            const taxBase = cost / 1.13;
+            const taxRefund = taxBase * (rebate / 100);
+            const realCost = cost - taxRefund;
+            const finalPrice = (realCost / (1 - margin/100)) / rate;
+            const profitRMB = (finalPrice * rate) - realCost;
+            
+            document.getElementById('fob-price').textContent = '$' + finalPrice.toFixed(2);
+            document.getElementById('fob-profit').textContent = '¥' + profitRMB.toFixed(2);
+            document.getElementById('fob-result').classList.remove('hidden');
+        }
+        
+        function calculateCBM() {
+            const l = parseFloat(document.getElementById('cbm-l')?.value) || 0;
+            const w = parseFloat(document.getElementById('cbm-w')?.value) || 0;
+            const h = parseFloat(document.getElementById('cbm-h')?.value) || 0;
+            const qty = parseInt(document.getElementById('cbm-qty')?.value) || 1;
+            
+            if (l <= 0 || w <= 0 || h <= 0) {
+                showToast('请输入有效的尺寸', 'warning');
+                return;
+            }
+            
+            // CBM = 长 x 宽 x 高 (cm) / 1,000,000
+            const cbm = (l * w * h * qty) / 1000000;
+            // 材积重 = CBM x 167 (空运)
+            const weight = cbm * 167;
+            
+            document.getElementById('cbm-total').textContent = cbm.toFixed(3) + ' CBM';
+            document.getElementById('cbm-weight').textContent = weight.toFixed(1) + ' kg';
+            document.getElementById('cbm-result').classList.remove('hidden');
+        }
+        
+        function resetAllTools() {
+            document.getElementById('calc-cost').value = '';
+            document.getElementById('calc-rate').value = '7.25';
+            document.getElementById('calc-margin').value = '20';
+            document.getElementById('calc-rebate').value = '13';
+            document.getElementById('fob-result').classList.add('hidden');
+            
+            document.getElementById('cbm-l').value = '';
+            document.getElementById('cbm-w').value = '';
+            document.getElementById('cbm-h').value = '';
+            document.getElementById('cbm-qty').value = '1';
+            document.getElementById('cbm-result').classList.add('hidden');
+            
+            showToast('已重置所有计算器', 'info');
+        }
+        
+        // ==================== 工具函数 ====================
+        function generateId(prefix) {
+            return prefix + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5).toUpperCase();
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
         
         // ==================== Toast 提示 ====================
@@ -1231,6 +1705,17 @@
         window.showOrderModal = showOrderModal;
         window.editOrder = editOrder;
         window.deleteOrder = deleteOrder;
+        window.showCustomerModal = showCustomerModal;
+        window.deleteCustomer = deleteCustomer;
+        window.showSupplierModal = showSupplierModal;
+        window.deleteSupplier = deleteSupplier;
+        window.showExpenseModal = showExpenseModal;
+        window.deleteExpense = deleteExpense;
+        window.setAnnualTarget = setAnnualTarget;
+        window.setExchangeRate = setExchangeRate;
+        window.calculateFOB = calculateFOB;
+        window.calculateCBM = calculateCBM;
+        window.resetAllTools = resetAllTools;
     </script>
 </body>
 </html>
