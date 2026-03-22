@@ -585,18 +585,89 @@
             
             <!-- 订单管理 -->
             <div id="tab-orders" class="tab-content">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-lg font-bold text-slate-800">订单列表</h3>
-                    <button onclick="showOrderModal()" class="btn-primary">
-                        <i class="fas fa-plus"></i> 新建订单
-                    </button>
+                <!-- 看板视图 -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">订单看板</h3>
+                        <button onclick="showOrderModal()" class="btn-primary">
+                            <i class="fas fa-plus"></i> 新建订单
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4" id="orders-kanban">
+                        <!-- 新询盘 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="bg-blue-50 px-4 py-3 border-b border-blue-100">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-blue-700 text-sm font-bold">新询盘</span>
+                                    <span class="bg-blue-200 text-blue-800 text-xs px-2 py-0.5 rounded-full" id="count-inquiry">0</span>
+                                </div>
+                            </div>
+                            <div class="p-3 space-y-3 min-h-[200px]" id="kanban-inquiry"></div>
+                        </div>
+                        <!-- PI已发 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="bg-yellow-50 px-4 py-3 border-b border-yellow-100">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-yellow-700 text-sm font-bold">PI已发</span>
+                                    <span class="bg-yellow-200 text-yellow-800 text-xs px-2 py-0.5 rounded-full" id="count-pi">0</span>
+                                </div>
+                            </div>
+                            <div class="p-3 space-y-3 min-h-[200px]" id="kanban-pi"></div>
+                        </div>
+                        <!-- 生产中 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="bg-purple-50 px-4 py-3 border-b border-purple-100">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-purple-700 text-sm font-bold">生产中</span>
+                                    <span class="bg-purple-200 text-purple-800 text-xs px-2 py-0.5 rounded-full" id="count-production">0</span>
+                                </div>
+                            </div>
+                            <div class="p-3 space-y-3 min-h-[200px]" id="kanban-production"></div>
+                        </div>
+                        <!-- 已发货 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="bg-cyan-50 px-4 py-3 border-b border-cyan-100">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-cyan-700 text-sm font-bold">已发货</span>
+                                    <span class="bg-cyan-200 text-cyan-800 text-xs px-2 py-0.5 rounded-full" id="count-shipped">0</span>
+                                </div>
+                            </div>
+                            <div class="p-3 space-y-3 min-h-[200px]" id="kanban-shipped"></div>
+                        </div>
+                        <!-- 已完成 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="bg-green-50 px-4 py-3 border-b border-green-100">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-green-700 text-sm font-bold">已完成</span>
+                                    <span class="bg-green-200 text-green-800 text-xs px-2 py-0.5 rounded-full" id="count-paid">0</span>
+                                </div>
+                            </div>
+                            <div class="p-3 space-y-3 min-h-[200px]" id="kanban-paid"></div>
+                        </div>
+                    </div>
                 </div>
+                
+                <!-- 订单列表 -->
                 <div class="card">
+                    <div class="card-header">
+                        <span class="font-bold text-slate-800">订单列表</span>
+                        <div class="flex gap-2">
+                            <select id="order-filter-status" class="input-field text-xs py-1 w-32" onchange="renderOrdersList()">
+                                <option value="all">全部状态</option>
+                                <option value="inquiry">新询盘</option>
+                                <option value="pi">PI已发</option>
+                                <option value="production">生产中</option>
+                                <option value="shipped">已发货</option>
+                                <option value="paid">已完成</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="overflow-x-auto">
                         <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>订单号</th>
+                                    <th>标题</th>
                                     <th>客户</th>
                                     <th>金额</th>
                                     <th>状态</th>
@@ -1018,6 +1089,128 @@
         </div>
     </div>
 
+    <!-- 订单管理模态框 -->
+    <div id="order-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <div class="bg-gradient-to-r from-primary to-blue-600 px-6 py-4 flex justify-between items-center">
+                <h3 id="order-modal-title" class="text-lg font-bold text-white">新建订单</h3>
+                <button onclick="closeOrderModal()" class="text-white/80 hover:text-white transition text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                <input type="hidden" id="order-id">
+                
+                <!-- 基础信息 -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">基础信息</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">订单标题 <span class="text-danger">*</span></label>
+                            <input id="order-title" type="text" placeholder="例如：土耳其医院手术包订单" class="input-field">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">客户名称 <span class="text-danger">*</span></label>
+                                <select id="order-customer-select" class="input-field">
+                                    <option value="">选择客户</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">或输入新客户</label>
+                                <input id="order-customer-input" type="text" placeholder="新客户名称" class="input-field">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 订单详情 -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">订单详情</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">订单金额 (USD) <span class="text-danger">*</span></label>
+                            <input id="order-amount" type="number" step="0.01" min="0" placeholder="0.00" class="input-field">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">当前状态</label>
+                            <select id="order-status" class="input-field">
+                                <option value="inquiry">新询盘</option>
+                                <option value="pi">PI已发</option>
+                                <option value="production">生产中</option>
+                                <option value="shipped">已发货</option>
+                                <option value="paid">已完成</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">贸易条款</label>
+                        <select id="order-term" class="input-field">
+                            <option value="FOB Shanghai">FOB Shanghai</option>
+                            <option value="FOB Shenzhen">FOB Shenzhen</option>
+                            <option value="CIF">CIF</option>
+                            <option value="EXW">EXW</option>
+                            <option value="DAP">DAP</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- 产品信息 -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">产品信息</h4>
+                    <div id="order-products-list" class="space-y-3">
+                        <div class="product-item grid grid-cols-12 gap-2">
+                            <div class="col-span-6">
+                                <input type="text" placeholder="产品名称" class="input-field order-product-name">
+                            </div>
+                            <div class="col-span-3">
+                                <input type="number" placeholder="数量" class="input-field order-product-qty">
+                            </div>
+                            <div class="col-span-3">
+                                <input type="number" placeholder="单价" class="input-field order-product-price">
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="addOrderProductRow()" class="mt-3 text-sm text-primary hover:text-blue-700 flex items-center gap-1">
+                        <i class="fas fa-plus-circle"></i> 添加产品
+                    </button>
+                </div>
+                
+                <!-- 其他信息 -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">其他信息</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">预期发货日期</label>
+                            <input id="order-ship-date" type="date" class="input-field">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">付款方式</label>
+                            <select id="order-payment" class="input-field">
+                                <option value="T/T">T/T 电汇</option>
+                                <option value="L/C">L/C 信用证</option>
+                                <option value="D/P">D/P 付款交单</option>
+                                <option value="Western Union">Western Union</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">订单备注</label>
+                        <textarea id="order-note" rows="3" placeholder="订单备注信息..." class="input-field resize-none"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
+                <button onclick="closeOrderModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-3 rounded-lg transition">
+                    取消
+                </button>
+                <button onclick="saveOrder()" class="flex-1 bg-gradient-to-r from-primary to-blue-600 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                    <i class="fas fa-save mr-2"></i>保存订单
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast 通知 -->
     <div id="toast" class="toast">
         <i id="toast-icon" class="fas fa-check-circle text-success text-xl"></i>
@@ -1087,6 +1280,8 @@
             renderCustomers();
             renderSuppliers();
             renderExpenses();
+            renderOrdersKanban();
+            renderOrdersList();
             
             // 加载汇率设置
             const savedRate = localStorage.getItem(CONFIG.storagePrefix + 'usd_rate');
@@ -1538,43 +1733,176 @@
         }
         
         // ==================== 订单管理功能 ====================
+        let editingOrderId = null;
+        
         function quickCreateOrder() {
-            const title = prompt('请输入订单标题:');
-            if (!title) return;
-            
-            const customer = prompt('请输入客户名称:');
-            const amount = parseFloat(prompt('请输入订单金额 (USD):')) || 0;
-            
-            const order = {
-                id: generateId('ORDER'),
-                title: title,
-                customer: customer || '未知客户',
-                amount: amount,
-                status: 'new',
-                createdAt: new Date().toISOString()
-            };
-            
-            state.orders.push(order);
-            saveData('orders', state.orders);
-            updateDashboard();
-            showToast('订单创建成功', 'success');
+            showOrderModal();
         }
         
         function showOrderModal() {
-            quickCreateOrder();
+            editingOrderId = null;
+            document.getElementById('order-modal-title').textContent = '新建订单';
+            document.getElementById('order-id').value = '';
+            
+            // 清空表单
+            document.getElementById('order-title').value = '';
+            document.getElementById('order-customer-select').value = '';
+            document.getElementById('order-customer-input').value = '';
+            document.getElementById('order-amount').value = '';
+            document.getElementById('order-status').value = 'inquiry';
+            document.getElementById('order-term').value = 'FOB Shanghai';
+            document.getElementById('order-ship-date').value = '';
+            document.getElementById('order-payment').value = 'T/T';
+            document.getElementById('order-note').value = '';
+            
+            // 重置产品列表
+            document.getElementById('order-products-list').innerHTML = `
+                <div class="product-item grid grid-cols-12 gap-2">
+                    <div class="col-span-6">
+                        <input type="text" placeholder="产品名称" class="input-field order-product-name">
+                    </div>
+                    <div class="col-span-3">
+                        <input type="number" placeholder="数量" class="input-field order-product-qty">
+                    </div>
+                    <div class="col-span-3">
+                        <input type="number" placeholder="单价" class="input-field order-product-price">
+                    </div>
+                </div>
+            `;
+            
+            // 加载客户列表
+            loadCustomerOptions();
+            
+            document.getElementById('order-modal').classList.remove('hidden');
         }
         
-        function editOrder(id) {
+        function showEditOrderModal(id) {
             const order = state.orders.find(o => o.id === id);
             if (!order) return;
             
-            const newStatus = prompt('更新订单状态 (new/pending/paid/cancelled):', order.status);
-            if (newStatus && ['new', 'pending', 'paid', 'cancelled'].includes(newStatus)) {
-                order.status = newStatus;
-                saveData('orders', state.orders);
-                updateDashboard();
-                showToast('订单状态已更新', 'success');
+            editingOrderId = id;
+            document.getElementById('order-modal-title').textContent = '编辑订单';
+            document.getElementById('order-id').value = id;
+            
+            // 填充表单
+            document.getElementById('order-title').value = order.title || '';
+            document.getElementById('order-customer-select').value = order.customer || '';
+            document.getElementById('order-customer-input').value = order.customer || '';
+            document.getElementById('order-amount').value = order.amount || '';
+            document.getElementById('order-status').value = order.status || 'inquiry';
+            document.getElementById('order-term').value = order.term || 'FOB Shanghai';
+            document.getElementById('order-ship-date').value = order.shipDate || '';
+            document.getElementById('order-payment').value = order.payment || 'T/T';
+            document.getElementById('order-note').value = order.note || '';
+            
+            // 加载客户列表
+            loadCustomerOptions();
+            
+            document.getElementById('order-modal').classList.remove('hidden');
+        }
+        
+        function closeOrderModal() {
+            document.getElementById('order-modal').classList.add('hidden');
+            editingOrderId = null;
+        }
+        
+        function loadCustomerOptions() {
+            const select = document.getElementById('order-customer-select');
+            select.innerHTML = '<option value="">选择客户</option>';
+            state.customers.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c.name;
+                option.textContent = c.name;
+                select.appendChild(option);
+            });
+        }
+        
+        function addOrderProductRow() {
+            const container = document.getElementById('order-products-list');
+            const row = document.createElement('div');
+            row.className = 'product-item grid grid-cols-12 gap-2 mt-2';
+            row.innerHTML = `
+                <div class="col-span-6">
+                    <input type="text" placeholder="产品名称" class="input-field order-product-name">
+                </div>
+                <div class="col-span-3">
+                    <input type="number" placeholder="数量" class="input-field order-product-qty">
+                </div>
+                <div class="col-span-3">
+                    <input type="number" placeholder="单价" class="input-field order-product-price">
+                </div>
+            `;
+            container.appendChild(row);
+        }
+        
+        function saveOrder() {
+            const title = document.getElementById('order-title').value.trim();
+            if (!title) {
+                showToast('请输入订单标题', 'warning');
+                return;
             }
+            
+            const customerSelect = document.getElementById('order-customer-select').value;
+            const customerInput = document.getElementById('order-customer-input').value.trim();
+            const customer = customerSelect || customerInput;
+            
+            if (!customer) {
+                showToast('请选择或输入客户名称', 'warning');
+                return;
+            }
+            
+            const amount = parseFloat(document.getElementById('order-amount').value) || 0;
+            if (amount <= 0) {
+                showToast('请输入有效的订单金额', 'warning');
+                return;
+            }
+            
+            // 收集产品信息
+            const products = [];
+            document.querySelectorAll('.product-item').forEach(item => {
+                const name = item.querySelector('.order-product-name').value.trim();
+                const qty = parseInt(item.querySelector('.order-product-qty').value) || 0;
+                const price = parseFloat(item.querySelector('.order-product-price').value) || 0;
+                if (name) {
+                    products.push({ name, qty, price });
+                }
+            });
+            
+            const orderData = {
+                id: editingOrderId || generateId('ORDER'),
+                title: title,
+                customer: customer,
+                amount: amount,
+                status: document.getElementById('order-status').value,
+                term: document.getElementById('order-term').value,
+                shipDate: document.getElementById('order-ship-date').value,
+                payment: document.getElementById('order-payment').value,
+                products: products,
+                note: document.getElementById('order-note').value.trim(),
+                updatedAt: new Date().toISOString()
+            };
+            
+            if (!editingOrderId) {
+                orderData.createdAt = new Date().toISOString();
+                state.orders.push(orderData);
+                showToast('订单创建成功', 'success');
+            } else {
+                const index = state.orders.findIndex(o => o.id === editingOrderId);
+                if (index !== -1) {
+                    state.orders[index] = { ...state.orders[index], ...orderData };
+                }
+                showToast('订单信息已更新', 'success');
+            }
+            
+            saveData('orders', state.orders);
+            updateDashboard();
+            renderOrdersKanban();
+            renderOrdersList();
+            closeOrderModal();
+        }
+        
+        function editOrder(id) {
+            showEditOrderModal(id);
         }
         
         function deleteOrder(id) {
@@ -1582,8 +1910,162 @@
                 state.orders = state.orders.filter(o => o.id !== id);
                 saveData('orders', state.orders);
                 updateDashboard();
+                renderOrdersKanban();
+                renderOrdersList();
                 showToast('订单已删除', 'success');
             }
+        }
+        
+        function updateOrderStatus(id, direction) {
+            const order = state.orders.find(o => o.id === id);
+            if (!order) return;
+            
+            const statusFlow = ['inquiry', 'pi', 'production', 'shipped', 'paid'];
+            const currentIdx = statusFlow.indexOf(order.status);
+            
+            let newIdx;
+            if (direction === 'next') {
+                newIdx = Math.min(currentIdx + 1, statusFlow.length - 1);
+            } else if (direction === 'prev') {
+                newIdx = Math.max(currentIdx - 1, 0);
+            } else {
+                return;
+            }
+            
+            order.status = statusFlow[newIdx];
+            order.updatedAt = new Date().toISOString();
+            
+            saveData('orders', state.orders);
+            updateDashboard();
+            renderOrdersKanban();
+            renderOrdersList();
+            showToast('订单状态已更新', 'success');
+        }
+        
+        function renderOrdersKanban() {
+            const containers = {
+                inquiry: document.getElementById('kanban-inquiry'),
+                pi: document.getElementById('kanban-pi'),
+                production: document.getElementById('kanban-production'),
+                shipped: document.getElementById('kanban-shipped'),
+                paid: document.getElementById('kanban-paid')
+            };
+            
+            const counts = {
+                inquiry: document.getElementById('count-inquiry'),
+                pi: document.getElementById('count-pi'),
+                production: document.getElementById('count-production'),
+                shipped: document.getElementById('count-shipped'),
+                paid: document.getElementById('count-paid')
+            };
+            
+            // 清空容器
+            Object.values(containers).forEach(c => c.innerHTML = '');
+            
+            // 按状态分组
+            const grouped = { inquiry: [], pi: [], production: [], shipped: [], paid: [] };
+            state.orders.forEach(order => {
+                const status = order.status || 'inquiry';
+                if (grouped[status]) grouped[status].push(order);
+            });
+            
+            // 渲染每个列
+            Object.keys(grouped).forEach(status => {
+                const list = grouped[status];
+                if (counts[status]) counts[status].textContent = list.length;
+                
+                if (containers[status]) {
+                    if (list.length === 0) {
+                        containers[status].innerHTML = '<div class="text-center text-slate-400 py-4 text-xs">暂无订单</div>';
+                    } else {
+                        containers[status].innerHTML = list.map(order => renderOrderCard(order)).join('');
+                    }
+                }
+            });
+        }
+        
+        function renderOrderCard(order) {
+            const statusColors = {
+                'inquiry': 'border-l-blue-500',
+                'pi': 'border-l-yellow-500',
+                'production': 'border-l-purple-500',
+                'shipped': 'border-l-cyan-500',
+                'paid': 'border-l-green-500'
+            };
+            
+            const statusNames = {
+                'inquiry': '新询盘',
+                'pi': 'PI已发',
+                'production': '生产中',
+                'shipped': '已发货',
+                'paid': '已完成'
+            };
+            
+            return `
+                <div class="bg-white rounded-lg border border-slate-200 border-l-4 ${statusColors[order.status] || 'border-l-slate-500'} p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onclick="showEditOrderModal('${order.id}')">
+                    <div class="font-semibold text-slate-800 text-sm mb-1 truncate">${escapeHtml(order.title)}</div>
+                    <div class="flex justify-between items-center text-xs text-slate-500 mb-2">
+                        <span>${escapeHtml(order.customer)}</span>
+                        <span class="font-mono text-primary font-bold">$${order.amount?.toLocaleString() || 0}</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-100">
+                        <span class="text-xs text-slate-400">${statusNames[order.status] || order.status}</span>
+                        <div class="flex gap-1">
+                            ${order.status !== 'inquiry' ? `<button onclick="event.stopPropagation(); updateOrderStatus('${order.id}', 'prev')" class="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200"><i class="fas fa-arrow-left"></i></button>` : ''}
+                            ${order.status !== 'paid' ? `<button onclick="event.stopPropagation(); updateOrderStatus('${order.id}', 'next')" class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"><i class="fas fa-arrow-right"></i></button>` : ''}
+                            <button onclick="event.stopPropagation(); deleteOrder('${order.id}')" class="text-xs px-1.5 py-0.5 bg-red-100 text-red-600 rounded hover:bg-red-200"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderOrdersList() {
+            const tbody = document.getElementById('orders-table-body');
+            if (!tbody) return;
+            
+            const filterStatus = document.getElementById('order-filter-status')?.value || 'all';
+            let orders = state.orders || [];
+            
+            if (filterStatus !== 'all') {
+                orders = orders.filter(o => o.status === filterStatus);
+            }
+            
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-slate-400 py-8">暂无订单数据</td></tr>';
+                return;
+            }
+            
+            const statusColors = {
+                'inquiry': 'bg-blue-100 text-blue-700',
+                'pi': 'bg-yellow-100 text-yellow-700',
+                'production': 'bg-purple-100 text-purple-700',
+                'shipped': 'bg-cyan-100 text-cyan-700',
+                'paid': 'bg-green-100 text-green-700'
+            };
+            
+            const statusNames = {
+                'inquiry': '新询盘',
+                'pi': 'PI已发',
+                'production': '生产中',
+                'shipped': '已发货',
+                'paid': '已完成'
+            };
+            
+            tbody.innerHTML = orders.slice().reverse().map(order => `
+                <tr>
+                    <td class="font-mono text-xs">${order.id?.split('_')[1] || order.id}</td>
+                    <td>${escapeHtml(order.title)}</td>
+                    <td>${escapeHtml(order.customer)}</td>
+                    <td class="font-medium">$${order.amount?.toLocaleString() || 0}</td>
+                    <td><span class="px-2 py-1 rounded text-xs ${statusColors[order.status] || 'bg-slate-100'}">${statusNames[order.status] || order.status}</span></td>
+                    <td class="text-slate-500 text-xs">${formatDate(order.createdAt)}</td>
+                    <td>
+                        <button onclick="editOrder('${order.id}')" class="text-primary hover:text-blue-700 mr-2"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteOrder('${order.id}')" class="text-danger hover:text-red-700"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
         }
         
         // ==================== 客户管理功能 ====================
@@ -2160,8 +2642,14 @@
         window.quickCreateOrder = quickCreateOrder;
         window.quickCreateCustomer = quickCreateCustomer;
         window.showOrderModal = showOrderModal;
+        window.showEditOrderModal = showEditOrderModal;
+        window.closeOrderModal = closeOrderModal;
+        window.saveOrder = saveOrder;
+        window.addOrderProductRow = addOrderProductRow;
         window.editOrder = editOrder;
         window.deleteOrder = deleteOrder;
+        window.updateOrderStatus = updateOrderStatus;
+        window.renderOrdersList = renderOrdersList;
         window.showCustomerModal = showCustomerModal;
         window.showEditCustomerModal = showEditCustomerModal;
         window.closeCustomerModal = closeCustomerModal;
