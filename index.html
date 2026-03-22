@@ -424,7 +424,7 @@
                     <i class="fas fa-chart-line"></i> 财务中心
                 </a>
                 <a class="sidebar-nav-item" data-tab="expenses">
-                    <i class="fas fa-receipt"></i> 支出管理
+                    <i class="fas fa-receipt"></i> 收支管理
                 </a>
                 <a class="sidebar-nav-item" data-tab="tools">
                     <i class="fas fa-calculator"></i> 报价工具
@@ -760,10 +760,64 @@
                         </button>
                     </div>
                 </div>
+                
+                <!-- 财务概览卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-sm text-slate-500 mb-1">本月收入</div>
+                                <div class="text-2xl font-bold text-success" id="finance-income-month">¥0</div>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-arrow-down text-success text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-sm text-slate-500 mb-1">本月支出</div>
+                                <div class="text-2xl font-bold text-danger" id="finance-expense-month">¥0</div>
+                            </div>
+                            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-arrow-up text-danger text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-sm text-slate-500 mb-1">本月利润</div>
+                                <div class="text-2xl font-bold text-primary" id="finance-profit-month">¥0</div>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-chart-line text-primary text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-sm text-slate-500 mb-1">利润率</div>
+                                <div class="text-2xl font-bold text-purple-600" id="finance-margin-month">0%</div>
+                            </div>
+                            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-percentage text-purple-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 图表和统计 -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="card">
-                        <div class="card-header">
-                            <span class="font-bold text-slate-800">收支概览</span>
+                        <div class="card-header flex justify-between items-center">
+                            <span class="font-bold text-slate-800">收支趋势</span>
+                            <select id="finance-chart-period" class="text-xs border-slate-200 rounded" onchange="updateFinanceChart()">
+                                <option value="6">近6个月</option>
+                                <option value="12">近12个月</option>
+                            </select>
                         </div>
                         <div class="p-4">
                             <canvas id="finance-chart" width="400" height="200"></canvas>
@@ -771,43 +825,118 @@
                     </div>
                     <div class="card">
                         <div class="card-header">
-                            <span class="font-bold text-slate-800">财务统计</span>
+                            <span class="font-bold text-slate-800">支出分类占比</span>
                         </div>
-                        <div class="p-4 space-y-4">
-                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                                <span class="text-slate-600">总收入</span>
-                                <span class="font-bold text-success" id="finance-income">¥0</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-red-50 rounded-lg">
-                                <span class="text-slate-600">总支出</span>
-                                <span class="font-bold text-danger" id="finance-expense">¥0</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                                <span class="text-slate-600">净利润</span>
-                                <span class="font-bold text-primary" id="finance-profit">¥0</span>
+                        <div class="p-4">
+                            <div id="expense-category-chart" class="space-y-3">
+                                <!-- 动态生成 -->
                             </div>
                         </div>
                     </div>
                 </div>
+                
+                <!-- 累计统计 -->
+                <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-4 text-white">
+                        <div class="text-green-100 text-sm mb-1">累计收入</div>
+                        <div class="text-2xl font-bold" id="finance-income-total">¥0</div>
+                    </div>
+                    <div class="bg-gradient-to-r from-red-500 to-rose-600 rounded-xl p-4 text-white">
+                        <div class="text-red-100 text-sm mb-1">累计支出</div>
+                        <div class="text-2xl font-bold" id="finance-expense-total">¥0</div>
+                    </div>
+                    <div class="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl p-4 text-white">
+                        <div class="text-blue-100 text-sm mb-1">累计净利润</div>
+                        <div class="text-2xl font-bold" id="finance-profit-total">¥0</div>
+                    </div>
+                </div>
             </div>
             
-            <!-- 支出管理 -->
+            <!-- 收支管理 -->
             <div id="tab-expenses" class="tab-content">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-lg font-bold text-slate-800">资金流水</h3>
-                    <button onclick="showExpenseModal()" class="btn-primary">
-                        <i class="fas fa-plus"></i> 记一笔
-                    </button>
+                    <h3 class="text-lg font-bold text-slate-800">收支管理</h3>
+                    <div class="flex gap-2">
+                        <button onclick="exportFinanceReport()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition">
+                            <i class="fas fa-file-export"></i> 导出报表
+                        </button>
+                        <button onclick="showExpenseModal()" class="btn-primary">
+                            <i class="fas fa-plus"></i> 记一笔
+                        </button>
+                    </div>
                 </div>
+                
+                <!-- 筛选栏 -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4">
+                    <div class="flex flex-wrap gap-4 items-center">
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-slate-600">类型:</label>
+                            <select id="expense-filter-type" class="input-field text-sm py-1 w-28" onchange="renderExpenses()">
+                                <option value="all">全部</option>
+                                <option value="income">收入</option>
+                                <option value="expense">支出</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-slate-600">分类:</label>
+                            <select id="expense-filter-category" class="input-field text-sm py-1 w-32" onchange="renderExpenses()">
+                                <option value="all">全部分类</option>
+                                <option value="销售收入">销售收入</option>
+                                <option value="服务收入">服务收入</option>
+                                <option value="其他收入">其他收入</option>
+                                <option value="采购成本">采购成本</option>
+                                <option value="办公费用">办公费用</option>
+                                <option value="差旅费用">差旅费用</option>
+                                <option value="工资薪资">工资薪资</option>
+                                <option value="租金物业">租金物业</option>
+                                <option value="物流费用">物流费用</option>
+                                <option value="税费">税费</option>
+                                <option value="其他支出">其他支出</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-slate-600">月份:</label>
+                            <select id="expense-filter-month" class="input-field text-sm py-1 w-36" onchange="renderExpenses()">
+                                <option value="all">全部月份</option>
+                            </select>
+                        </div>
+                        <button onclick="resetExpenseFilters()" class="text-sm text-slate-500 hover:text-primary">
+                            <i class="fas fa-undo"></i> 重置
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 收支统计卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                        <div class="text-sm text-slate-500 mb-1">本月收入</div>
+                        <div class="text-xl font-bold text-success" id="expense-income-month">¥0</div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                        <div class="text-sm text-slate-500 mb-1">本月支出</div>
+                        <div class="text-xl font-bold text-danger" id="expense-expense-month">¥0</div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                        <div class="text-sm text-slate-500 mb-1">本月结余</div>
+                        <div class="text-xl font-bold text-primary" id="expense-balance-month">¥0</div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                        <div class="text-sm text-slate-500 mb-1">累计结余</div>
+                        <div class="text-xl font-bold text-slate-700" id="expense-balance-total">¥0</div>
+                    </div>
+                </div>
+                
                 <div class="card">
                     <div class="overflow-x-auto">
                         <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>日期</th>
+                                    <th>类型</th>
                                     <th>项目</th>
                                     <th>分类</th>
                                     <th class="text-right">金额</th>
+                                    <th>备注</th>
                                     <th class="text-right">操作</th>
                                 </tr>
                             </thead>
@@ -1304,6 +1433,77 @@
         </div>
     </div>
 
+    <!-- 收支录入弹窗 -->
+    <div id="expense-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+            <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white">记一笔</h3>
+                <button onclick="closeExpenseModal()" class="text-white/80 hover:text-white transition text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                <!-- 收支类型 -->
+                <div class="mb-6">
+                    <label class="block text-xs font-semibold text-slate-600 mb-2">收支类型 <span class="text-danger">*</span></label>
+                    <div class="flex gap-4">
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="expense-type" value="income" class="hidden peer" onchange="updateExpenseCategories()">
+                            <div class="text-center py-3 border-2 border-slate-200 rounded-lg peer-checked:border-success peer-checked:bg-green-50 transition">
+                                <i class="fas fa-arrow-down text-success text-xl mb-1"></i>
+                                <div class="text-sm font-medium text-slate-700">收入</div>
+                            </div>
+                        </label>
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="expense-type" value="expense" class="hidden peer" checked onchange="updateExpenseCategories()">
+                            <div class="text-center py-3 border-2 border-slate-200 rounded-lg peer-checked:border-danger peer-checked:bg-red-50 transition">
+                                <i class="fas fa-arrow-up text-danger text-xl mb-1"></i>
+                                <div class="text-sm font-medium text-slate-700">支出</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- 基本信息 -->
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">日期 <span class="text-danger">*</span></label>
+                        <input id="expense-date" type="date" class="input-field">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">金额 (¥) <span class="text-danger">*</span></label>
+                        <input id="expense-amount" type="number" step="0.01" min="0" placeholder="0.00" class="input-field">
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">分类 <span class="text-danger">*</span></label>
+                    <select id="expense-category" class="input-field">
+                        <!-- 动态生成 -->
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">项目名称 <span class="text-danger">*</span></label>
+                    <input id="expense-item" type="text" placeholder="例如：办公室租金" class="input-field">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">备注</label>
+                    <textarea id="expense-note" rows="2" placeholder="可选填备注信息..." class="input-field resize-none"></textarea>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
+                <button onclick="closeExpenseModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-3 rounded-lg transition">
+                    取消
+                </button>
+                <button onclick="saveExpense()" class="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                    <i class="fas fa-save mr-2"></i>保存
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast 通知 -->
     <div id="toast" class="toast">
         <i id="toast-icon" class="fas fa-check-circle text-success text-xl"></i>
@@ -1560,8 +1760,97 @@
             // 更新订单表格
             renderOrdersList();
             
+            // 更新财务统计
+            updateFinanceStats();
+            
             // 更新同步计数
             updateSyncCounts();
+        }
+        
+        function updateFinanceStats() {
+            // 计算本月数据
+            const thisMonth = new Date().toISOString().substring(0, 7);
+            let incomeMonth = 0, expenseMonth = 0;
+            let incomeTotal = 0, expenseTotal = 0;
+            
+            (state.expenses || []).forEach(e => {
+                if (e.type === 'income') {
+                    incomeTotal += e.amount;
+                    if (e.date && e.date.startsWith(thisMonth)) {
+                        incomeMonth += e.amount;
+                    }
+                } else {
+                    expenseTotal += e.amount;
+                    if (e.date && e.date.startsWith(thisMonth)) {
+                        expenseMonth += e.amount;
+                    }
+                }
+            });
+            
+            const profitMonth = incomeMonth - expenseMonth;
+            const marginMonth = incomeMonth > 0 ? (profitMonth / incomeMonth * 100).toFixed(1) : 0;
+            const profitTotal = incomeTotal - expenseTotal;
+            
+            // 更新财务中心显示
+            const incomeMonthEl = document.getElementById('finance-income-month');
+            const expenseMonthEl = document.getElementById('finance-expense-month');
+            const profitMonthEl = document.getElementById('finance-profit-month');
+            const marginMonthEl = document.getElementById('finance-margin-month');
+            const incomeTotalEl = document.getElementById('finance-income-total');
+            const expenseTotalEl = document.getElementById('finance-expense-total');
+            const profitTotalEl = document.getElementById('finance-profit-total');
+            
+            if (incomeMonthEl) incomeMonthEl.textContent = '¥' + incomeMonth.toLocaleString();
+            if (expenseMonthEl) expenseMonthEl.textContent = '¥' + expenseMonth.toLocaleString();
+            if (profitMonthEl) profitMonthEl.textContent = '¥' + profitMonth.toLocaleString();
+            if (marginMonthEl) marginMonthEl.textContent = marginMonth + '%';
+            if (incomeTotalEl) incomeTotalEl.textContent = '¥' + incomeTotal.toLocaleString();
+            if (expenseTotalEl) expenseTotalEl.textContent = '¥' + expenseTotal.toLocaleString();
+            if (profitTotalEl) profitTotalEl.textContent = '¥' + profitTotal.toLocaleString();
+            
+            // 更新支出分类图表
+            updateExpenseCategoryChart();
+        }
+        
+        function updateExpenseCategoryChart() {
+            const chartContainer = document.getElementById('expense-category-chart');
+            if (!chartContainer) return;
+            
+            // 统计各分类支出
+            const categoryStats = {};
+            (state.expenses || []).forEach(e => {
+                if (e.type === 'expense') {
+                    categoryStats[e.category] = (categoryStats[e.category] || 0) + e.amount;
+                }
+            });
+            
+            const total = Object.values(categoryStats).reduce((a, b) => a + b, 0);
+            
+            if (total === 0) {
+                chartContainer.innerHTML = '<div class="text-center text-slate-400 py-8">暂无支出数据</div>';
+                return;
+            }
+            
+            // 排序并生成图表
+            const sorted = Object.entries(categoryStats).sort((a, b) => b[1] - a[1]);
+            const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500', 'bg-blue-500', 'bg-indigo-500', 'bg-purple-500', 'bg-pink-500'];
+            
+            chartContainer.innerHTML = sorted.map(([category, amount], index) => {
+                const percent = (amount / total * 100).toFixed(1);
+                const color = colors[index % colors.length];
+                return `
+                    <div class="flex items-center gap-3">
+                        <div class="w-20 text-xs text-slate-600 truncate">${category}</div>
+                        <div class="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full ${color} rounded-full" style="width: ${percent}%"></div>
+                        </div>
+                        <div class="w-24 text-right">
+                            <span class="text-sm font-medium">¥${amount.toLocaleString()}</span>
+                            <span class="text-xs text-slate-400 ml-1">${percent}%</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
         
         function formatNumber(num) {
@@ -2825,60 +3114,258 @@
         }
         
         // ==================== 支出管理功能 ====================
+        // 收支分类配置
+        const EXPENSE_CATEGORIES = {
+            income: [
+                { value: '销售收入', label: '销售收入', icon: 'fa-shopping-cart' },
+                { value: '服务收入', label: '服务收入', icon: 'fa-handshake' },
+                { value: '其他收入', label: '其他收入', icon: 'fa-coins' }
+            ],
+            expense: [
+                { value: '采购成本', label: '采购成本', icon: 'fa-box' },
+                { value: '办公费用', label: '办公费用', icon: 'fa-building' },
+                { value: '差旅费用', label: '差旅费用', icon: 'fa-plane' },
+                { value: '工资薪资', label: '工资薪资', icon: 'fa-users' },
+                { value: '租金物业', label: '租金物业', icon: 'fa-home' },
+                { value: '物流费用', label: '物流费用', icon: 'fa-truck' },
+                { value: '税费', label: '税费', icon: 'fa-file-invoice-dollar' },
+                { value: '其他支出', label: '其他支出', icon: 'fa-ellipsis-h' }
+            ]
+        };
+
         function showExpenseModal() {
-            const item = prompt('支出项目:');
-            if (!item) return;
+            // 设置默认日期为今天
+            document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('expense-amount').value = '';
+            document.getElementById('expense-item').value = '';
+            document.getElementById('expense-note').value = '';
             
-            const category = prompt('分类 (办公/差旅/工资/租金/其他):', '办公');
-            const amount = parseFloat(prompt('金额 (RMB):')) || 0;
+            // 初始化分类选项
+            updateExpenseCategories();
+            
+            document.getElementById('expense-modal').classList.remove('hidden');
+        }
+        
+        function closeExpenseModal() {
+            document.getElementById('expense-modal').classList.add('hidden');
+        }
+        
+        function updateExpenseCategories() {
+            const type = document.querySelector('input[name="expense-type"]:checked').value;
+            const categorySelect = document.getElementById('expense-category');
+            
+            categorySelect.innerHTML = EXPENSE_CATEGORIES[type].map(cat => 
+                `<option value="${cat.value}">${cat.label}</option>`
+            ).join('');
+        }
+        
+        function saveExpense() {
+            const type = document.querySelector('input[name="expense-type"]:checked').value;
+            const date = document.getElementById('expense-date').value;
+            const amount = parseFloat(document.getElementById('expense-amount').value) || 0;
+            const category = document.getElementById('expense-category').value;
+            const item = document.getElementById('expense-item').value.trim();
+            const note = document.getElementById('expense-note').value.trim();
+            
+            if (!date) {
+                showToast('请选择日期', 'warning');
+                return;
+            }
+            if (amount <= 0) {
+                showToast('请输入有效金额', 'warning');
+                return;
+            }
+            if (!item) {
+                showToast('请输入项目名称', 'warning');
+                return;
+            }
             
             const expense = {
                 id: generateId('EXP'),
-                item: item,
-                category: category || '其他',
+                type: type,
+                date: date,
                 amount: amount,
-                date: new Date().toISOString().split('T')[0]
+                category: category,
+                item: item,
+                note: note,
+                createdAt: new Date().toISOString()
             };
             
             state.expenses.push(expense);
             saveData('expenses', state.expenses);
+            
             renderExpenses();
             updateDashboard();
-            showToast('支出记录已添加', 'success');
+            updateExpenseStats();
+            closeExpenseModal();
+            
+            showToast(type === 'income' ? '收入记录已添加' : '支出记录已添加', 'success');
         }
         
         function renderExpenses() {
             const tbody = document.getElementById('expenses-table-body');
             if (!tbody) return;
             
-            if (state.expenses.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-slate-400 py-8">暂无支出记录</td></tr>';
+            // 初始化月份筛选器
+            initExpenseMonthFilter();
+            
+            // 获取筛选条件
+            const filterType = document.getElementById('expense-filter-type')?.value || 'all';
+            const filterCategory = document.getElementById('expense-filter-category')?.value || 'all';
+            const filterMonth = document.getElementById('expense-filter-month')?.value || 'all';
+            
+            // 筛选数据
+            let filtered = state.expenses || [];
+            
+            if (filterType !== 'all') {
+                filtered = filtered.filter(e => e.type === filterType);
+            }
+            if (filterCategory !== 'all') {
+                filtered = filtered.filter(e => e.category === filterCategory);
+            }
+            if (filterMonth !== 'all') {
+                filtered = filtered.filter(e => e.date && e.date.startsWith(filterMonth));
+            }
+            
+            // 更新统计
+            updateExpenseStats();
+            
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-slate-400 py-8">暂无记录</td></tr>';
                 return;
             }
             
-            tbody.innerHTML = state.expenses.slice().reverse().map(e => `
+            tbody.innerHTML = filtered.slice().reverse().map(e => {
+                const isIncome = e.type === 'income';
+                const amountClass = isIncome ? 'text-success' : 'text-danger';
+                const amountPrefix = isIncome ? '+' : '-';
+                const typeBadge = isIncome 
+                    ? '<span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">收入</span>'
+                    : '<span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">支出</span>';
+                
+                return `
                 <tr>
-                    <td>${e.date}</td>
+                    <td>${e.date || '-'}</td>
+                    <td>${typeBadge}</td>
                     <td>${escapeHtml(e.item)}</td>
                     <td><span class="px-2 py-1 bg-slate-100 rounded text-xs">${escapeHtml(e.category)}</span></td>
-                    <td class="text-right font-medium text-danger">-¥${e.amount.toLocaleString()}</td>
+                    <td class="text-right font-medium ${amountClass}">${amountPrefix}¥${e.amount.toLocaleString()}</td>
+                    <td class="text-slate-500 text-xs">${escapeHtml(e.note || '-')}</td>
                     <td class="text-right">
-                        <button onclick="deleteExpense('${e.id}')" class="text-slate-400 hover:text-danger transition">
+                        <button onclick="deleteExpense('${e.id}')" class="text-slate-400 hover:text-danger transition px-2 py-1 rounded hover:bg-red-50">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     </td>
                 </tr>
-            `).join('');
+            `;}).join('');
+        }
+        
+        function initExpenseMonthFilter() {
+            const monthSelect = document.getElementById('expense-filter-month');
+            if (!monthSelect || monthSelect.options.length > 1) return;
+            
+            // 获取所有不重复的月份
+            const months = new Set();
+            state.expenses.forEach(e => {
+                if (e.date && e.date.length >= 7) {
+                    months.add(e.date.substring(0, 7));
+                }
+            });
+            
+            // 添加最近24个月选项
+            const today = new Date();
+            for (let i = 0; i < 24; i++) {
+                const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                months.add(monthStr);
+            }
+            
+            // 排序并添加选项
+            const sortedMonths = Array.from(months).sort().reverse();
+            sortedMonths.forEach(month => {
+                const option = document.createElement('option');
+                option.value = month;
+                option.textContent = month;
+                monthSelect.appendChild(option);
+            });
+        }
+        
+        function updateExpenseStats() {
+            const thisMonth = new Date().toISOString().substring(0, 7);
+            
+            let incomeMonth = 0, expenseMonth = 0;
+            let incomeTotal = 0, expenseTotal = 0;
+            
+            (state.expenses || []).forEach(e => {
+                if (e.type === 'income') {
+                    incomeTotal += e.amount;
+                    if (e.date && e.date.startsWith(thisMonth)) {
+                        incomeMonth += e.amount;
+                    }
+                } else {
+                    expenseTotal += e.amount;
+                    if (e.date && e.date.startsWith(thisMonth)) {
+                        expenseMonth += e.amount;
+                    }
+                }
+            });
+            
+            const balanceMonth = incomeMonth - expenseMonth;
+            const balanceTotal = incomeTotal - expenseTotal;
+            
+            document.getElementById('expense-income-month').textContent = '¥' + incomeMonth.toLocaleString();
+            document.getElementById('expense-expense-month').textContent = '¥' + expenseMonth.toLocaleString();
+            document.getElementById('expense-balance-month').textContent = (balanceMonth >= 0 ? '+' : '') + '¥' + balanceMonth.toLocaleString();
+            document.getElementById('expense-balance-month').className = 'text-xl font-bold ' + (balanceMonth >= 0 ? 'text-success' : 'text-danger');
+            document.getElementById('expense-balance-total').textContent = (balanceTotal >= 0 ? '+' : '') + '¥' + balanceTotal.toLocaleString();
+        }
+        
+        function resetExpenseFilters() {
+            document.getElementById('expense-filter-type').value = 'all';
+            document.getElementById('expense-filter-category').value = 'all';
+            document.getElementById('expense-filter-month').value = 'all';
+            renderExpenses();
         }
         
         function deleteExpense(id) {
-            if (confirm('确定要删除此支出记录吗？')) {
+            if (confirm('确定要删除此记录吗？')) {
                 state.expenses = state.expenses.filter(e => e.id !== id);
                 saveData('expenses', state.expenses);
                 renderExpenses();
                 updateDashboard();
-                showToast('支出记录已删除', 'success');
+                showToast('记录已删除', 'success');
             }
+        }
+        
+        function exportFinanceReport() {
+            // 准备CSV数据
+            let csv = '\uFEFF日期,类型,项目,分类,金额,备注\n';
+            
+            const filtered = state.expenses || [];
+            filtered.slice().reverse().forEach(e => {
+                const type = e.type === 'income' ? '收入' : '支出';
+                csv += `${e.date},${type},${e.item},${e.category},${e.type === 'income' ? e.amount : -e.amount},"${e.note || ''}"\n`;
+            });
+            
+            // 添加统计
+            csv += '\n统计\n';
+            let incomeTotal = 0, expenseTotal = 0;
+            filtered.forEach(e => {
+                if (e.type === 'income') incomeTotal += e.amount;
+                else expenseTotal += e.amount;
+            });
+            csv += `总收入,${incomeTotal}\n`;
+            csv += `总支出,${expenseTotal}\n`;
+            csv += `结余,${incomeTotal - expenseTotal}\n`;
+            
+            // 下载文件
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `财务报表_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+            
+            showToast('报表已导出', 'success');
         }
         
         // ==================== 财务中心功能 ====================
@@ -3044,6 +3531,11 @@
         window.saveSupplier = saveSupplier;
         window.deleteSupplier = deleteSupplier;
         window.showExpenseModal = showExpenseModal;
+        window.closeExpenseModal = closeExpenseModal;
+        window.saveExpense = saveExpense;
+        window.updateExpenseCategories = updateExpenseCategories;
+        window.resetExpenseFilters = resetExpenseFilters;
+        window.exportFinanceReport = exportFinanceReport;
         window.deleteExpense = deleteExpense;
         window.setAnnualTarget = setAnnualTarget;
         window.setExchangeRate = setExchangeRate;
