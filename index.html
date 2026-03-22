@@ -569,22 +569,33 @@
                                     <span id="sync-expenses-count" class="font-medium">0 条</span>
                                 </div>
                                 <div id="sync-error-msg" class="hidden text-xs text-red-600 bg-red-50 p-2 rounded"></div>
-                                <div class="flex gap-2 mt-3">
-                                    <button onclick="forceSync()" class="flex-1 btn-success text-sm">
-                                        <i class="fas fa-sync-alt"></i> 同步
-                                    </button>
-                                    <button onclick="reconnectFirebase()" id="reconnect-btn" class="hidden flex-1 bg-slate-600 hover:bg-slate-700 text-white text-sm font-semibold py-2 px-3 rounded-lg transition">
-                                        <i class="fas fa-plug"></i> 重连
-                                    </button>
+                                <!-- 同步策略选择 -->
+                                <div class="bg-blue-50 rounded-lg p-3">
+                                    <div class="text-xs text-slate-600 mb-2 font-medium">同步策略</div>
+                                    <select id="sync-strategy" class="input-field text-xs py-1.5 mb-2">
+                                        <option value="auto">🔄 自动双向同步</option>
+                                        <option value="local_to_cloud">⬆️ 本地覆盖云端</option>
+                                        <option value="cloud_to_local">⬇️ 云端覆盖本地</option>
+                                        <option value="manual">✋ 手动模式（不同步）</option>
+                                    </select>
+                                    <div class="flex gap-2">
+                                        <button onclick="executeSyncStrategy()" class="flex-1 btn-success text-sm">
+                                            <i class="fas fa-play"></i> 执行
+                                        </button>
+                                        <button onclick="reconnectFirebase()" id="reconnect-btn" class="hidden flex-1 bg-slate-600 hover:bg-slate-700 text-white text-sm font-semibold py-2 px-2 rounded transition">
+                                            <i class="fas fa-plug"></i>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="border-t border-slate-200 pt-3 mt-3">
+                                
+                                <div class="border-t border-slate-200 pt-3">
                                     <div class="text-xs text-slate-500 mb-2">数据修复工具</div>
                                     <div class="flex gap-2">
                                         <button onclick="emergencyDataRecovery()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold py-2 px-2 rounded transition">
-                                            <i class="fas fa-broom"></i> 清理数据
+                                            <i class="fas fa-broom"></i> 清理
                                         </button>
                                         <button onclick="restoreFromEmergencyBackup()" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white text-xs font-semibold py-2 px-2 rounded transition">
-                                            <i class="fas fa-history"></i> 恢复备份
+                                            <i class="fas fa-history"></i> 恢复
                                         </button>
                                     </div>
                                 </div>
@@ -2199,12 +2210,27 @@
         // 同步防抖计时器
         let syncDebounceTimer = null;
         
-        function saveData(key, data) {
+        // 当前同步策略
+        let currentSyncStrategy = 'auto';
+        
+        function getSyncStrategy() {
+            return document.getElementById('sync-strategy')?.value || 'auto';
+        }
+        
+        function saveData(key, data, options = {}) {
             state[key] = data;
             localStorage.setItem(CONFIG.storagePrefix + key, JSON.stringify(data));
             
             // 更新同步计数
             updateSyncCounts();
+            
+            const strategy = getSyncStrategy();
+            
+            // 如果策略是手动模式或跳过同步，则不同步
+            if (strategy === 'manual' || options.skipSync) {
+                console.log(`[SaveData] ${key} 已保存（跳过同步）`);
+                return;
+            }
             
             // 防抖同步到云端（延迟 2 秒，避免频繁同步）
             if (state.isOnline && !state.isSyncing) {
@@ -2855,16 +2881,127 @@
                 return;
             }
             
+            await executeSyncStrategy();
+        }
+        
+        // 执行选定的同步策略
+        async function executeSyncStrategy() {
+            if (!state.isOnline) {
+                showToast('当前处于离线模式', 'warning');
+                return;
+            }
+            
+            const strategy = getSyncStrategy();
+            console.log('[Sync] 执行同步策略:', strategy);
+            
             document.getElementById('loading-overlay').classList.remove('hidden');
             
             try {
-                await syncAllData();
-                showToast('数据同步成功', 'success');
+                switch(strategy) {
+                    case 'local_to_cloud':
+                        // 本地覆盖云端
+                        await syncLocalToCloud();
+                        showToast('本地数据已覆盖云端', 'success');
+                        break;
+                        
+                    case 'cloud_to_local':
+                        // 云端覆盖本地
+                        await syncCloudToLocal();
+                        showToast('云端数据已覆盖本地', 'success');
+                        break;
+                        
+                    case 'auto':
+                    default:
+                        // 自动双向同步（合并）
+                        await syncAllData();
+                        showToast('双向同步完成', 'success');
+                        break;
+                }
             } catch (error) {
+                console.error('[Sync] 策略执行失败:', error);
                 showToast('同步失败: ' + error.message, 'error');
             } finally {
                 document.getElementById('loading-overlay').classList.add('hidden');
             }
+        }
+        
+        // 本地覆盖云端
+        async function syncLocalToCloud() {
+            if (!firebaseDb) return;
+            
+            console.log('[Sync] 本地覆盖云端...');
+            
+            // 先清空云端数据
+            const collections = ['orders', 'customers', 'expenses', 'suppliers', 'trash', 'todos'];
+            
+            for (const collection of collections) {
+                const snapshot = await firebaseDb.collection(collection).get();
+                const batch = firebaseDb.batch();
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+                console.log(`[Sync] 清空云端 ${collection}`);
+            }
+            
+            // 上传本地数据
+            await Promise.all([
+                syncToCloud('orders', state.orders),
+                syncToCloud('customers', state.customers),
+                syncToCloud('expenses', state.expenses),
+                syncToCloud('suppliers', state.suppliers),
+                syncToCloud('trash', state.trash),
+                syncToCloud('todos', state.todos || [])
+            ]);
+            
+            console.log('[Sync] 本地覆盖云端完成');
+        }
+        
+        // 云端覆盖本地
+        async function syncCloudToLocal() {
+            if (!firebaseDb) return;
+            
+            console.log('[Sync] 云端覆盖本地...');
+            
+            // 加载所有云端数据
+            const collections = [
+                { name: 'orders', stateKey: 'orders', validator: isValidOrder },
+                { name: 'customers', stateKey: 'customers', validator: isValidCustomer },
+                { name: 'suppliers', stateKey: 'suppliers', validator: isValidSupplier },
+                { name: 'expenses', stateKey: 'expenses', validator: null },
+                { name: 'trash', stateKey: 'trash', validator: null },
+                { name: 'todos', stateKey: 'todos', validator: null }
+            ];
+            
+            for (const { name, stateKey, validator } of collections) {
+                const snapshot = await firebaseDb.collection(name).get();
+                const cloudData = [];
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    delete data._syncedAt;
+                    if (!validator || validator(data)) {
+                        cloudData.push(data);
+                    }
+                });
+                
+                state[stateKey] = cloudData;
+                localStorage.setItem(CONFIG.storagePrefix + stateKey, JSON.stringify(cloudData));
+                console.log(`[Sync] 从云端加载 ${name}: ${cloudData.length} 条`);
+            }
+            
+            // 刷新界面
+            updateSyncCounts();
+            updateDashboard();
+            renderOrdersKanban();
+            renderOrdersList();
+            renderCustomers();
+            renderSuppliers();
+            renderExpenses();
+            renderTrash();
+            renderTodos();
+            
+            console.log('[Sync] 云端覆盖本地完成');
         }
         
         // ==================== 数据导入导出 ====================
@@ -3317,10 +3454,29 @@
                 // 从订单列表移除（通过索引确保准确删除）
                 state.orders.splice(orderIndex, 1);
                 
-                // 保存数据
+                // 保存数据到本地
                 localStorage.setItem(CONFIG.storagePrefix + 'orders', JSON.stringify(state.orders));
+                localStorage.setItem(CONFIG.storagePrefix + 'trash', JSON.stringify(state.trash));
                 updateSyncCounts();
-                saveData('trash', state.trash);
+                
+                // 如果在线，立即同步删除操作到云端
+                if (state.isOnline && firebaseDb) {
+                    (async () => {
+                        try {
+                            // 删除云端订单
+                            await firebaseDb.collection('orders').doc(order.id).delete();
+                            console.log('[Delete] 云端订单已删除:', order.id);
+                            
+                            // 同步回收站
+                            await firebaseDb.collection('trash').doc(trashedOrder.id).set({
+                                ...trashedOrder,
+                                _syncedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        } catch (error) {
+                            console.error('[Delete] 云端删除失败:', error);
+                        }
+                    })();
+                }
                 
                 // 刷新界面
                 updateDashboard();
@@ -4779,6 +4935,7 @@
         window.reconnectFirebase = reconnectFirebase;
         window.emergencyDataRecovery = emergencyDataRecovery;
         window.restoreFromEmergencyBackup = restoreFromEmergencyBackup;
+        window.executeSyncStrategy = executeSyncStrategy;
     </script>
 </body>
 </html>
