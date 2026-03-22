@@ -805,6 +805,107 @@
         </div>
     </main>
     
+    <!-- 客户管理模态框 -->
+    <div id="customer-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <div class="bg-gradient-to-r from-primary to-blue-600 px-6 py-4 flex justify-between items-center">
+                <h3 id="customer-modal-title" class="text-lg font-bold text-white">录入客户</h3>
+                <button onclick="closeCustomerModal()" class="text-white/80 hover:text-white transition text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                <input type="hidden" id="customer-id">
+                
+                <!-- 基础信息 -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">基础信息</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">公司名称 <span class="text-danger">*</span></label>
+                            <input id="customer-name" type="text" placeholder="例如: MedTurk Ltd." class="input-field">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">联系人</label>
+                                <input id="customer-contact" type="text" placeholder="联系人姓名" class="input-field">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">国家/地区</label>
+                                <select id="customer-country" class="input-field">
+                                    <option value="China">🇨🇳 China 中国</option>
+                                    <option value="USA">🇺🇸 USA 美国</option>
+                                    <option value="UK">🇬🇧 UK 英国</option>
+                                    <option value="Germany">🇩🇪 Germany 德国</option>
+                                    <option value="Netherlands">🇳🇱 Netherlands 荷兰</option>
+                                    <option value="Turkey">🇹🇷 Turkey 土耳其</option>
+                                    <option value="Philippines">🇵🇭 Philippines 菲律宾</option>
+                                    <option value="UAE">🇦🇪 UAE 阿联酋</option>
+                                    <option value="Other">🌍 Other 其他</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 联系信息 -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">联系信息</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">WhatsApp</label>
+                            <input id="customer-whatsapp" type="text" placeholder="+90 5xx xxx xxxx" class="input-field">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">邮箱</label>
+                            <input id="customer-email" type="email" placeholder="example@company.com" class="input-field">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">详细地址</label>
+                        <textarea id="customer-address" rows="2" placeholder="客户详细地址..." class="input-field resize-none"></textarea>
+                    </div>
+                </div>
+                
+                <!-- 业务信息 -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">业务信息</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">客户等级</label>
+                            <select id="customer-level" class="input-field">
+                                <option value="A">A级 - 战略客户</option>
+                                <option value="B" selected>B级 - 重点客户</option>
+                                <option value="C">C级 - 普通客户</option>
+                                <option value="D">D级 - 潜在客户</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">预期金额</label>
+                            <input id="customer-amount" type="number" step="0.01" min="0" placeholder="预期订单金额" class="input-field">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">下一步行动</label>
+                        <input id="customer-next" type="text" placeholder="例如：发PI、催款、寄样品、视频会议..." class="input-field">
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">备注</label>
+                        <textarea id="customer-note" rows="2" placeholder="客户备注信息..." class="input-field resize-none"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
+                <button onclick="closeCustomerModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-3 rounded-lg transition">
+                    取消
+                </button>
+                <button onclick="saveCustomer()" class="flex-1 bg-gradient-to-r from-primary to-blue-600 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                    <i class="fas fa-save mr-2"></i>保存档案
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast 通知 -->
     <div id="toast" class="toast">
         <i id="toast-icon" class="fas fa-check-circle text-success text-xl"></i>
@@ -1374,32 +1475,97 @@
         }
         
         // ==================== 客户管理功能 ====================
+        let editingCustomerId = null;
+        
         function quickCreateCustomer() {
             showCustomerModal();
         }
         
         function showCustomerModal() {
-            const name = prompt('请输入客户名称:');
-            if (!name) return;
+            editingCustomerId = null;
+            document.getElementById('customer-modal-title').textContent = '录入新客户';
+            document.getElementById('customer-id').value = '';
             
-            const country = prompt('请输入国家/地区:');
-            const email = prompt('请输入邮箱:');
-            const phone = prompt('请输入电话:');
+            // 清空表单
+            document.getElementById('customer-name').value = '';
+            document.getElementById('customer-contact').value = '';
+            document.getElementById('customer-country').value = 'China';
+            document.getElementById('customer-whatsapp').value = '';
+            document.getElementById('customer-email').value = '';
+            document.getElementById('customer-address').value = '';
+            document.getElementById('customer-level').value = 'B';
+            document.getElementById('customer-amount').value = '';
+            document.getElementById('customer-next').value = '';
+            document.getElementById('customer-note').value = '';
             
-            const customer = {
-                id: generateId('CUST'),
+            document.getElementById('customer-modal').classList.remove('hidden');
+        }
+        
+        function showEditCustomerModal(id) {
+            const customer = state.customers.find(c => c.id === id);
+            if (!customer) return;
+            
+            editingCustomerId = id;
+            document.getElementById('customer-modal-title').textContent = '编辑客户';
+            document.getElementById('customer-id').value = id;
+            
+            // 填充表单
+            document.getElementById('customer-name').value = customer.name || '';
+            document.getElementById('customer-contact').value = customer.contact || '';
+            document.getElementById('customer-country').value = customer.country || 'China';
+            document.getElementById('customer-whatsapp').value = customer.whatsapp || '';
+            document.getElementById('customer-email').value = customer.email || '';
+            document.getElementById('customer-address').value = customer.address || '';
+            document.getElementById('customer-level').value = customer.level || 'B';
+            document.getElementById('customer-amount').value = customer.amount || '';
+            document.getElementById('customer-next').value = customer.next || '';
+            document.getElementById('customer-note').value = customer.note || '';
+            
+            document.getElementById('customer-modal').classList.remove('hidden');
+        }
+        
+        function closeCustomerModal() {
+            document.getElementById('customer-modal').classList.add('hidden');
+            editingCustomerId = null;
+        }
+        
+        function saveCustomer() {
+            const name = document.getElementById('customer-name').value.trim();
+            if (!name) {
+                showToast('请输入公司名称', 'warning');
+                return;
+            }
+            
+            const customerData = {
+                id: editingCustomerId || generateId('CUST'),
                 name: name,
-                country: country || '',
-                email: email || '',
-                phone: phone || '',
-                createdAt: new Date().toISOString()
+                contact: document.getElementById('customer-contact').value.trim(),
+                country: document.getElementById('customer-country').value,
+                whatsapp: document.getElementById('customer-whatsapp').value.trim(),
+                email: document.getElementById('customer-email').value.trim(),
+                address: document.getElementById('customer-address').value.trim(),
+                level: document.getElementById('customer-level').value,
+                amount: parseFloat(document.getElementById('customer-amount').value) || 0,
+                next: document.getElementById('customer-next').value.trim(),
+                note: document.getElementById('customer-note').value.trim(),
+                updatedAt: new Date().toISOString()
             };
             
-            state.customers.push(customer);
+            if (!editingCustomerId) {
+                customerData.createdAt = new Date().toISOString();
+                state.customers.push(customerData);
+                showToast('客户录入成功', 'success');
+            } else {
+                const index = state.customers.findIndex(c => c.id === editingCustomerId);
+                if (index !== -1) {
+                    state.customers[index] = { ...state.customers[index], ...customerData };
+                }
+                showToast('客户信息已更新', 'success');
+            }
+            
             saveData('customers', state.customers);
             renderCustomers();
-            updateDashboard();
-            showToast('客户录入成功', 'success');
+            closeCustomerModal();
         }
         
         function renderCustomers() {
@@ -1411,28 +1577,77 @@
                 return;
             }
             
+            const levelColors = {
+                'A': 'bg-red-100 text-red-700',
+                'B': 'bg-orange-100 text-orange-700',
+                'C': 'bg-blue-100 text-blue-700',
+                'D': 'bg-slate-100 text-slate-700'
+            };
+            
             container.innerHTML = state.customers.map(c => `
-                <div class="card p-4 hover:shadow-md transition-shadow">
-                    <div class="flex items-start justify-between mb-3">
+                <div class="card p-5 hover:shadow-lg transition-all cursor-pointer" onclick="showEditCustomerModal('${c.id}')">
+                    <div class="flex items-start justify-between mb-4">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white font-bold text-lg">
                                 ${c.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                                <h4 class="font-bold text-slate-800">${escapeHtml(c.name)}</h4>
-                                <p class="text-xs text-slate-500">${escapeHtml(c.country)}</p>
+                                <h4 class="font-bold text-slate-800 text-lg">${escapeHtml(c.name)}</h4>
+                                <p class="text-xs text-slate-500">${escapeHtml(c.contact || '暂无联系人')}</p>
                             </div>
                         </div>
-                        <button onclick="deleteCustomer('${c.id}')" class="text-slate-400 hover:text-danger transition">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 rounded text-xs font-medium ${levelColors[c.level] || levelColors['C']}">${c.level || 'C'}级</span>
+                            <button onclick="event.stopPropagation(); deleteCustomer('${c.id}')" class="text-slate-400 hover:text-danger transition p-1">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="space-y-1 text-sm text-slate-600">
-                        ${c.email ? `<div><i class="fas fa-envelope text-slate-400 w-4"></i> ${escapeHtml(c.email)}</div>` : ''}
-                        ${c.phone ? `<div><i class="fas fa-phone text-slate-400 w-4"></i> ${escapeHtml(c.phone)}</div>` : ''}
+                    
+                    <div class="space-y-2 text-sm text-slate-600 mb-4">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-globe text-slate-400 w-4"></i>
+                            <span>${getCountryFlag(c.country)} ${escapeHtml(c.country || '未知')}</span>
+                        </div>
+                        ${c.whatsapp ? `
+                        <div class="flex items-center gap-2">
+                            <i class="fab fa-whatsapp text-green-500 w-4"></i>
+                            <span>${escapeHtml(c.whatsapp)}</span>
+                        </div>` : ''}
+                        ${c.email ? `
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-envelope text-slate-400 w-4"></i>
+                            <span>${escapeHtml(c.email)}</span>
+                        </div>` : ''}
                     </div>
+                    
+                    ${c.amount > 0 ? `
+                    <div class="flex justify-between items-center py-2 border-t border-slate-100">
+                        <span class="text-xs text-slate-500">预期金额</span>
+                        <span class="font-bold text-primary">$${c.amount.toLocaleString()}</span>
+                    </div>` : ''}
+                    
+                    ${c.next ? `
+                    <div class="mt-3 p-2 bg-yellow-50 rounded-lg text-xs text-slate-600">
+                        <i class="fas fa-tasks text-yellow-500 mr-1"></i> 下一步: ${escapeHtml(c.next)}
+                    </div>` : ''}
                 </div>
             `).join('');
+        }
+        
+        function getCountryFlag(country) {
+            const flags = {
+                'China': '🇨🇳',
+                'USA': '🇺🇸',
+                'UK': '🇬🇧',
+                'Germany': '🇩🇪',
+                'Netherlands': '🇳🇱',
+                'Turkey': '🇹🇷',
+                'Philippines': '🇵🇭',
+                'UAE': '🇦🇪',
+                'Other': '🌍'
+            };
+            return flags[country] || '🌍';
         }
         
         function deleteCustomer(id) {
@@ -1706,6 +1921,9 @@
         window.editOrder = editOrder;
         window.deleteOrder = deleteOrder;
         window.showCustomerModal = showCustomerModal;
+        window.showEditCustomerModal = showEditCustomerModal;
+        window.closeCustomerModal = closeCustomerModal;
+        window.saveCustomer = saveCustomer;
         window.deleteCustomer = deleteCustomer;
         window.showSupplierModal = showSupplierModal;
         window.deleteSupplier = deleteSupplier;
