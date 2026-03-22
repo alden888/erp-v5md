@@ -7,10 +7,10 @@
 const WorkbenchAuth = (() => {
     'use strict';
 
-    // 配置常量（统一workbench_前缀）
+    // 配置常量（统一 v5_erp_ 前缀）
     const CONFIG = {
-        STORAGE_KEY: 'workbench_auth_session',
-        TOKEN_KEY: 'workbench_auth_token',
+        STORAGE_KEY: 'v5_erp_auth_session',
+        TOKEN_KEY: 'v5_erp_auth_token',
         SESSION_EXPIRY: 24 * 60 * 60 * 1000, // 24小时会话过期
         MAX_RETRY: 3,
         DEFAULT_ROLE: 'user'

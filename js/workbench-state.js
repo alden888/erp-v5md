@@ -57,15 +57,15 @@ const WorkbenchState = (() => {
     const listeners = new Map();
     let listenerIdCounter = 0;
 
-    // 存储键名配置（统一workbench_前缀）
+    // 存储键名配置（统一 v5_erp_ 前缀）
     const STORAGE_KEYS = {
-        SETTINGS: 'workbench_settings',
-        ORDERS: 'workbench_orders',
-        CUSTOMERS: 'workbench_customers',
-        SUPPLIERS: 'workbench_suppliers',
-        EXPENSES: 'workbench_expenses',
-        INCOMES: 'workbench_incomes',
-        TODAY_ACTIONS: 'workbench_today_actions'
+        SETTINGS: 'v5_erp_settings',
+        ORDERS: 'v5_erp_orders',
+        CUSTOMERS: 'v5_erp_customers',
+        SUPPLIERS: 'v5_erp_suppliers',
+        EXPENSES: 'v5_erp_expenses',
+        INCOMES: 'v5_erp_incomes',
+        TODAY_ACTIONS: 'v5_erp_today_actions'
     };
 
     // 私有变量 - 新增：存储定时器和事件句柄（用于清理）

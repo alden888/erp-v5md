@@ -48,14 +48,14 @@ const WorkbenchExpenses = (() => {
      */
     function loadExpenses() {
         try {
+            const storageKey = window.WorkbenchConfig?.STORAGE_KEYS?.EXPENSES || 'v5_erp_expenses';
             if (window.WorkbenchStorage) {
                 state.expenses = WorkbenchStorage.load('expenses') || [];
             } else {
-                const key = window.WorkbenchConfig?.STORAGE_KEYS?.EXPENSES || 'v5_erp_expenses';
-                const expensesJson = localStorage.getItem(key);
+                const expensesJson = localStorage.getItem(storageKey);
                 state.expenses = expensesJson ? JSON.parse(expensesJson) : [];
             }
-            console.log(`[Expenses] ✅ 已加载 ${state.expenses.length} 条支出记录`);
+            console.log(`[Expenses] ✅ 已加载 ${state.expenses.length} 条支出记录 (键: ${storageKey})`);
         } catch (error) {
             console.error('[Expenses] ❌ 加载支出数据失败:', error);
             state.expenses = [];
@@ -68,11 +68,11 @@ const WorkbenchExpenses = (() => {
      */
     function saveExpenses() {
         try {
+            const storageKey = window.WorkbenchConfig?.STORAGE_KEYS?.EXPENSES || 'v5_erp_expenses';
             if (window.WorkbenchStorage) {
                 WorkbenchStorage.save('expenses', state.expenses);
             } else {
-                const key = window.WorkbenchConfig?.STORAGE_KEYS?.EXPENSES || 'v5_erp_expenses';
-                localStorage.setItem(key, JSON.stringify(state.expenses));
+                localStorage.setItem(storageKey, JSON.stringify(state.expenses));
             }
             
             // 同步到WorkbenchState
@@ -80,7 +80,7 @@ const WorkbenchExpenses = (() => {
                 WorkbenchState.set('data.expenses', state.expenses, false);
             }
             
-            console.log(`[Expenses] ✅ 已保存 ${state.expenses.length} 条支出记录`);
+            console.log(`[Expenses] ✅ 已保存 ${state.expenses.length} 条支出记录 (键: ${storageKey})`);
             return true;
         } catch (error) {
             console.error('[Expenses] ❌ 保存支出数据失败:', error);

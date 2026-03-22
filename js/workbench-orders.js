@@ -176,10 +176,11 @@ const WorkbenchOrders = (() => {
             let orders = [];
 
             // 优先级: WorkbenchStorage > localStorage > 空数组
+            const storageKey = window.WorkbenchConfig?.STORAGE_KEYS?.ORDERS || 'v5_erp_orders';
             if (window.WorkbenchStorage) {
                 orders = WorkbenchStorage.load('orders') || [];
             } else {
-                const ordersJson = localStorage.getItem('workbench_orders');
+                const ordersJson = localStorage.getItem(storageKey);
                 orders = ordersJson ? JSON.parse(ordersJson) : [];
             }
 
@@ -229,10 +230,11 @@ const WorkbenchOrders = (() => {
     async function saveOrders() {
         try {
             // 1. 本地存储（优先WorkbenchStorage）
+            const storageKey = window.WorkbenchConfig?.STORAGE_KEYS?.ORDERS || 'v5_erp_orders';
             if (window.WorkbenchStorage) {
                 WorkbenchStorage.save('orders', state.orders);
             } else {
-                localStorage.setItem('workbench_orders', JSON.stringify(state.orders));
+                localStorage.setItem(storageKey, JSON.stringify(state.orders));
             }
             
             // 2. 同步到全局状态

@@ -9,7 +9,7 @@ const WorkbenchStorage = (() => {
 
     // 配置常量
     const CONFIG = {
-        PREFIX: 'workbench_',
+        PREFIX: 'v5_erp_',  // 🔥 修复：统一使用 v5_erp_ 前缀
         MAX_KEY_LENGTH: 100,
         EXPIRY_SUFFIX: '_expiry'
     };
@@ -40,6 +40,9 @@ const WorkbenchStorage = (() => {
                 return false;
             }
             
+            // 🔥 修复：迁移旧数据（从 workbench_ 到 v5_erp_）
+            migrateOldData();
+            
             // 清理过期数据
             cleanExpiredData();
             
@@ -48,6 +51,40 @@ const WorkbenchStorage = (() => {
         } catch (error) {
             console.error('[Storage] ❌ 初始化失败:', error);
             return false;
+        }
+    }
+
+    /**
+     * 🔥 修复：迁移旧数据（从 workbench_ 到 v5_erp_）
+     */
+    function migrateOldData() {
+        const oldPrefix = 'workbench_';
+        const newPrefix = CONFIG.PREFIX;
+        
+        try {
+            const keysToMigrate = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(oldPrefix)) {
+                    keysToMigrate.push(key);
+                }
+            }
+            
+            keysToMigrate.forEach(oldKey => {
+                const newKey = oldKey.replace(oldPrefix, newPrefix);
+                // 只有当新键不存在时才迁移
+                if (!localStorage.getItem(newKey)) {
+                    const value = localStorage.getItem(oldKey);
+                    localStorage.setItem(newKey, value);
+                    console.log(`[Storage] ✅ 数据迁移: ${oldKey} -> ${newKey}`);
+                }
+            });
+            
+            if (keysToMigrate.length > 0) {
+                console.log(`[Storage] 完成 ${keysToMigrate.length} 项数据迁移`);
+            }
+        } catch (error) {
+            console.error('[Storage] 数据迁移失败:', error);
         }
     }
 
@@ -450,6 +487,107 @@ const WorkbenchStorage = (() => {
         return { ...CONFIG };
     }
 
+    /**
+     * 🔥 备份所有数据到指定键
+     * @param {string} backupKey - 备份键名后缀
+     * @returns {boolean} 是否成功
+     */
+    function createBackup(backupKey = 'backup') {
+        try {
+            const allData = {};
+            const prefix = CONFIG.PREFIX;
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(prefix) && !key.includes('_backup_')) {
+                    const value = localStorage.getItem(key);
+                    allData[key] = value;
+                }
+            }
+            
+            const backupData = {
+                timestamp: Date.now(),
+                date: new Date().toISOString(),
+                data: allData
+            };
+            
+            const backupFullKey = `${prefix}_backup_${backupKey}`;
+            localStorage.setItem(backupFullKey, JSON.stringify(backupData));
+            
+            console.log(`[Storage] ✅ 备份创建成功: ${backupFullKey} (${Object.keys(allData).length} 项)`);
+            return true;
+        } catch (error) {
+            console.error('[Storage] ❌ 备份创建失败:', error);
+            return false;
+        }
+    }
+
+    /**
+     * 🔥 从备份恢复数据
+     * @param {string} backupKey - 备份键名后缀
+     * @returns {boolean} 是否成功
+     */
+    function restoreBackup(backupKey = 'backup') {
+        try {
+            const prefix = CONFIG.PREFIX;
+            const backupFullKey = `${prefix}_backup_${backupKey}`;
+            const backupJson = localStorage.getItem(backupFullKey);
+            
+            if (!backupJson) {
+                console.warn(`[Storage] ⚠️ 备份不存在: ${backupFullKey}`);
+                return false;
+            }
+            
+            const backup = JSON.parse(backupJson);
+            const data = backup.data;
+            
+            // 恢复数据
+            Object.entries(data).forEach(([key, value]) => {
+                localStorage.setItem(key, value);
+            });
+            
+            console.log(`[Storage] ✅ 备份恢复成功: ${backupKey} (${Object.keys(data).length} 项)`);
+            return true;
+        } catch (error) {
+            console.error('[Storage] ❌ 备份恢复失败:', error);
+            return false;
+        }
+    }
+
+    /**
+     * 🔥 获取所有备份列表
+     * @returns {Array} 备份列表
+     */
+    function listBackups() {
+        try {
+            const backups = [];
+            const prefix = CONFIG.PREFIX;
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(`${prefix}_backup_`)) {
+                    const value = localStorage.getItem(key);
+                    try {
+                        const backup = JSON.parse(value);
+                        backups.push({
+                            key: key.replace(`${prefix}_backup_`, ''),
+                            fullKey: key,
+                            date: backup.date,
+                            timestamp: backup.timestamp
+                        });
+                    } catch (e) {
+                        // 忽略无效的备份
+                    }
+                }
+            }
+            
+            return backups.sort((a, b) => b.timestamp - a.timestamp);
+        } catch (error) {
+            console.error('[Storage] ❌ 获取备份列表失败:', error);
+            return [];
+        }
+    }
+
     // 公共API
     const api = {
         // 初始化
@@ -477,6 +615,11 @@ const WorkbenchStorage = (() => {
         getStats,
         getConfig,
         isLocalStorageAvailable,
+        
+        // 🔥 备份恢复
+        createBackup,
+        restoreBackup,
+        listBackups,
         
         // 常量
         CONFIG,
