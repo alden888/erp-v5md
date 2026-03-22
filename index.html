@@ -550,26 +550,33 @@
                     </div>
                     
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header flex justify-between items-center">
                             <span class="font-bold text-slate-800"><i class="fas fa-sync text-success mr-2"></i>云同步状态</span>
+                            <span id="sync-badge" class="text-[10px] px-2 py-0.5 bg-slate-200 text-slate-600 rounded-full">未连接</span>
                         </div>
                         <div class="p-4">
                             <div class="space-y-3 text-sm">
-                                <div class="flex justify-between">
-                                    <span class="text-slate-500">订单数据</span>
+                                <div class="flex justify-between items-center p-2 bg-slate-50 rounded">
+                                    <span class="text-slate-500"><i class="fas fa-file-invoice mr-1"></i> 订单</span>
                                     <span id="sync-orders-count" class="font-medium">0 条</span>
                                 </div>
-                                <div class="flex justify-between">
-                                    <span class="text-slate-500">客户数据</span>
+                                <div class="flex justify-between items-center p-2 bg-slate-50 rounded">
+                                    <span class="text-slate-500"><i class="fas fa-users mr-1"></i> 客户</span>
                                     <span id="sync-customers-count" class="font-medium">0 条</span>
                                 </div>
-                                <div class="flex justify-between">
-                                    <span class="text-slate-500">支出记录</span>
+                                <div class="flex justify-between items-center p-2 bg-slate-50 rounded">
+                                    <span class="text-slate-500"><i class="fas fa-receipt mr-1"></i> 支出</span>
                                     <span id="sync-expenses-count" class="font-medium">0 条</span>
                                 </div>
-                                <button onclick="forceSync()" class="w-full mt-3 btn-success">
-                                    <i class="fas fa-sync-alt"></i> 立即同步
-                                </button>
+                                <div id="sync-error-msg" class="hidden text-xs text-red-600 bg-red-50 p-2 rounded"></div>
+                                <div class="flex gap-2 mt-3">
+                                    <button onclick="forceSync()" class="flex-1 btn-success text-sm">
+                                        <i class="fas fa-sync-alt"></i> 同步
+                                    </button>
+                                    <button onclick="reconnectFirebase()" id="reconnect-btn" class="hidden flex-1 bg-slate-600 hover:bg-slate-700 text-white text-sm font-semibold py-2 px-3 rounded-lg transition">
+                                        <i class="fas fa-plug"></i> 重连
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2178,6 +2185,9 @@
             console.log('[Data] 本地数据加载完成:', state);
         }
         
+        // 同步防抖计时器
+        let syncDebounceTimer = null;
+        
         function saveData(key, data) {
             state[key] = data;
             localStorage.setItem(CONFIG.storagePrefix + key, JSON.stringify(data));
@@ -2185,9 +2195,12 @@
             // 更新同步计数
             updateSyncCounts();
             
-            // 如果是 Firebase 在线状态，同步到云端
+            // 防抖同步到云端（延迟 2 秒，避免频繁同步）
             if (state.isOnline && !state.isSyncing) {
-                syncToCloud(key, data);
+                clearTimeout(syncDebounceTimer);
+                syncDebounceTimer = setTimeout(() => {
+                    syncToCloud(key, data);
+                }, 2000);
             }
         }
         
@@ -2346,9 +2359,53 @@
             document.getElementById('sync-orders-count').textContent = (state.orders || []).length + ' 条';
             document.getElementById('sync-customers-count').textContent = (state.customers || []).length + ' 条';
             document.getElementById('sync-expenses-count').textContent = (state.expenses || []).length + ' 条';
+            
+            // 更新同步徽章
+            const badge = document.getElementById('sync-badge');
+            const reconnectBtn = document.getElementById('reconnect-btn');
+            
+            if (badge) {
+                if (state.isOnline) {
+                    badge.textContent = '在线';
+                    badge.className = 'text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded-full';
+                    if (reconnectBtn) reconnectBtn.classList.add('hidden');
+                } else {
+                    badge.textContent = '离线';
+                    badge.className = 'text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded-full';
+                    if (reconnectBtn) reconnectBtn.classList.remove('hidden');
+                }
+            }
+        }
+        
+        async function reconnectFirebase() {
+            showToast('正在尝试重新连接...', 'info');
+            
+            try {
+                // 如果已经有实例，先清理
+                if (firebaseAuth) {
+                    await firebaseAuth.signOut().catch(() => {});
+                }
+                
+                // 重新初始化
+                await initFirebase();
+                
+                if (state.isOnline) {
+                    showToast('重新连接成功', 'success');
+                    // 立即同步数据
+                    await loadFromCloud();
+                } else {
+                    showToast('连接失败，请检查网络', 'error');
+                }
+            } catch (error) {
+                console.error('[Firebase] 重连失败:', error);
+                showToast('重连失败: ' + error.message, 'error');
+            }
         }
         
         // ==================== Firebase 集成 ====================
+        let firebaseDb = null;
+        let firebaseAuth = null;
+        
         async function initFirebase() {
             try {
                 if (typeof firebase === 'undefined') {
@@ -2357,17 +2414,38 @@
                     return;
                 }
                 
-                firebase.initializeApp(CONFIG.firebase);
+                // 初始化 Firebase
+                const app = firebase.initializeApp(CONFIG.firebase);
+                firebaseDb = firebase.firestore();
+                firebaseAuth = firebase.auth();
+                
                 console.log('[Firebase] 初始化成功');
                 
-                // 检查连接状态
-                const db = firebase.firestore();
-                await db.collection('_heartbeat').doc('ping').set({
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                // 启用离线持久化
+                firebaseDb.enablePersistence({
+                    synchronizeTabs: true
+                }).catch((err) => {
+                    console.warn('[Firebase] 持久化启用失败:', err.code);
                 });
                 
-                state.isOnline = true;
-                updateSyncStatus('online');
+                // 匿名登录
+                await firebaseAuth.signInAnonymously();
+                console.log('[Firebase] 匿名登录成功');
+                
+                // 监听认证状态
+                firebaseAuth.onAuthStateChanged((user) => {
+                    if (user) {
+                        console.log('[Firebase] 用户已登录:', user.uid);
+                        state.isOnline = true;
+                        updateSyncStatus('online');
+                        // 加载云端数据
+                        loadFromCloud();
+                    } else {
+                        console.warn('[Firebase] 用户未登录');
+                        state.isOnline = false;
+                        updateSyncStatus('offline');
+                    }
+                });
                 
                 // 启动自动同步
                 startAutoSync();
@@ -2382,66 +2460,193 @@
         function updateSyncStatus(status) {
             const indicator = document.getElementById('sync-status');
             const lastSync = document.getElementById('last-sync-time');
+            const badge = document.getElementById('sync-badge');
+            const reconnectBtn = document.getElementById('reconnect-btn');
             
-            indicator.className = 'sync-indicator ' + status;
-            
-            switch(status) {
-                case 'online':
-                    indicator.innerHTML = '<i class="fas fa-cloud"></i><span>在线同步</span>';
-                    break;
-                case 'syncing':
-                    indicator.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i><span>同步中...</span>';
-                    break;
-                default:
-                    indicator.innerHTML = '<i class="fas fa-cloud"></i><span>离线模式</span>';
+            if (indicator) {
+                indicator.className = 'sync-indicator ' + status;
+                
+                switch(status) {
+                    case 'online':
+                        indicator.innerHTML = '<i class="fas fa-cloud"></i><span>在线同步</span>';
+                        break;
+                    case 'syncing':
+                        indicator.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i><span>同步中...</span>';
+                        break;
+                    default:
+                        indicator.innerHTML = '<i class="fas fa-cloud-slash"></i><span>离线模式</span>';
+                }
             }
             
             if (status === 'online') {
                 state.lastSync = new Date();
-                lastSync.textContent = state.lastSync.toLocaleTimeString('zh-CN');
+                if (lastSync) lastSync.textContent = state.lastSync.toLocaleTimeString('zh-CN');
+            }
+            
+            // 更新徽章
+            if (badge) {
+                if (status === 'online') {
+                    badge.textContent = '在线';
+                    badge.className = 'text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded-full';
+                    if (reconnectBtn) reconnectBtn.classList.add('hidden');
+                } else {
+                    badge.textContent = '离线';
+                    badge.className = 'text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded-full';
+                    if (reconnectBtn) reconnectBtn.classList.remove('hidden');
+                }
+            }
+        }
+        
+        async function loadFromCloud() {
+            if (!firebaseDb) return;
+            
+            try {
+                console.log('[Firebase] 从云端加载数据...');
+                
+                // 加载订单
+                const ordersSnapshot = await firebaseDb.collection('orders').get();
+                if (!ordersSnapshot.empty) {
+                    const cloudOrders = [];
+                    ordersSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        delete data._syncedAt; // 删除同步标记
+                        cloudOrders.push(data);
+                    });
+                    
+                    // 合并本地和云端数据（以云端为准，但保留本地特有的）
+                    const localIds = new Set(state.orders.map(o => o.id));
+                    const cloudIds = new Set(cloudOrders.map(o => o.id));
+                    
+                    // 保留本地有但云端没有的
+                    const localOnly = state.orders.filter(o => !cloudIds.has(o.id));
+                    state.orders = [...cloudOrders, ...localOnly];
+                    
+                    // 排序：最新的在前
+                    state.orders.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+                    
+                    saveData('orders', state.orders);
+                    console.log('[Firebase] 订单同步完成:', state.orders.length);
+                }
+                
+                // 加载客户
+                const customersSnapshot = await firebaseDb.collection('customers').get();
+                if (!customersSnapshot.empty) {
+                    const cloudCustomers = [];
+                    customersSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        delete data._syncedAt;
+                        cloudCustomers.push(data);
+                    });
+                    
+                    const localIds = new Set(state.customers.map(c => c.id));
+                    const cloudIds = new Set(cloudCustomers.map(c => c.id));
+                    const localOnly = state.customers.filter(c => !cloudIds.has(c.id));
+                    state.customers = [...cloudCustomers, ...localOnly];
+                    
+                    saveData('customers', state.customers);
+                    console.log('[Firebase] 客户同步完成:', state.customers.length);
+                }
+                
+                // 刷新界面
+                updateDashboard();
+                renderOrdersKanban();
+                renderOrdersList();
+                renderCustomers();
+                
+                showToast('云端数据已同步', 'success');
+                
+            } catch (error) {
+                console.error('[Firebase] 加载云端数据失败:', error);
             }
         }
         
         async function syncToCloud(collection, data) {
-            if (!state.isOnline || state.isSyncing) return;
+            if (!firebaseDb || !state.isOnline) {
+                console.warn('[Sync] 无法同步：未连接');
+                return;
+            }
+            
+            if (state.isSyncing) {
+                console.warn('[Sync] 正在同步中，跳过');
+                return;
+            }
             
             try {
                 state.isSyncing = true;
                 updateSyncStatus('syncing');
                 
-                const db = firebase.firestore();
-                const batch = db.batch();
+                // Firestore 批处理限制为 500 个操作
+                const BATCH_SIZE = 450;
+                const batches = [];
                 
-                // 批量同步数据
-                data.forEach((item, index) => {
-                    const docRef = db.collection(collection).doc(item.id || `item_${index}`);
-                    batch.set(docRef, {
-                        ...item,
-                        _syncedAt: firebase.firestore.FieldValue.serverTimestamp()
+                for (let i = 0; i < data.length; i += BATCH_SIZE) {
+                    const batchData = data.slice(i, i + BATCH_SIZE);
+                    const batch = firebaseDb.batch();
+                    
+                    batchData.forEach(item => {
+                        const docRef = firebaseDb.collection(collection).doc(item.id);
+                        batch.set(docRef, {
+                            ...item,
+                            _syncedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
                     });
-                });
+                    
+                    batches.push(batch.commit());
+                }
                 
-                await batch.commit();
+                // 等待所有批处理完成
+                await Promise.all(batches);
                 
                 state.lastSync = new Date();
                 updateSyncStatus('online');
-                console.log(`[Sync] ${collection} 同步成功`);
+                console.log(`[Sync] ${collection} 同步成功，共 ${data.length} 条`);
                 
             } catch (error) {
                 console.error('[Sync] 同步失败:', error);
                 updateSyncStatus('offline');
+                
+                // 如果是权限错误，尝试重新登录
+                if (error.code === 'permission-denied') {
+                    console.log('[Sync] 权限错误，尝试重新登录...');
+                    try {
+                        await firebaseAuth.signInAnonymously();
+                    } catch (authError) {
+                        console.error('[Sync] 重新登录失败:', authError);
+                    }
+                }
             } finally {
                 state.isSyncing = false;
             }
         }
         
         function startAutoSync() {
-            // 每 5 分钟自动同步
+            // 每 3 分钟自动同步一次
             setInterval(() => {
                 if (state.isOnline && !state.isSyncing) {
-                    forceSync();
+                    console.log('[Sync] 自动同步开始...');
+                    syncAllData();
                 }
-            }, 5 * 60 * 1000);
+            }, 3 * 60 * 1000);
+        }
+        
+        async function syncAllData() {
+            if (!state.isOnline) return;
+            
+            try {
+                await Promise.all([
+                    syncToCloud('orders', state.orders),
+                    syncToCloud('customers', state.customers),
+                    syncToCloud('expenses', state.expenses),
+                    syncToCloud('suppliers', state.suppliers),
+                    syncToCloud('trash', state.trash),
+                    syncToCloud('todos', state.todos || [])
+                ]);
+                
+                console.log('[Sync] 全部数据同步完成');
+                
+            } catch (error) {
+                console.error('[Sync] 自动同步失败:', error);
+            }
         }
         
         async function forceSync() {
@@ -2453,10 +2658,7 @@
             document.getElementById('loading-overlay').classList.remove('hidden');
             
             try {
-                await syncToCloud('orders', state.orders);
-                await syncToCloud('customers', state.customers);
-                await syncToCloud('expenses', state.expenses);
-                
+                await syncAllData();
                 showToast('数据同步成功', 'success');
             } catch (error) {
                 showToast('同步失败: ' + error.message, 'error');
@@ -4357,6 +4559,7 @@
         window.completeTodo = completeTodo;
         window.deleteTodo = deleteTodo;
         window.renderTodos = renderTodos;
+        window.reconnectFirebase = reconnectFirebase;
     </script>
 </body>
 </html>
