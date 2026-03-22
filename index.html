@@ -349,6 +349,57 @@
 </head>
 <body class="bg-slate-50 text-slate-700 font-sans antialiased">
     
+    <!-- 登录界面 -->
+    <div id="login-screen" class="fixed inset-0 z-50 bg-gradient-to-br from-slate-900 via-slate-800 to-primary flex items-center justify-center hidden">
+        <div class="w-full max-w-md p-8">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-white rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
+                    <i class="fas fa-shield-alt text-primary text-4xl"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-white mb-2">V5 Medical ERP</h1>
+                <p class="text-slate-400">企业级客户资源管理系统</p>
+            </div>
+            
+            <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+                <h2 class="text-xl font-bold text-white mb-6 text-center">安全登录</h2>
+                
+                <form id="login-form" onsubmit="handleLogin(event)">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-slate-300 mb-2">邮箱 / 用户名</label>
+                            <input type="text" id="login-email" class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:border-primary transition" placeholder="请输入邮箱" value="admin@v5medical.com">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-300 mb-2">密码</label>
+                            <div class="relative">
+                                <input type="password" id="login-password" class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:border-primary transition" placeholder="请输入密码">
+                                <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition">
+                                    <i class="fas fa-eye" id="password-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-2 text-right">
+                        <a href="#" onclick="showResetPassword()" class="text-sm text-slate-400 hover:text-white transition">忘记密码？</a>
+                    </div>
+                    
+                    <button type="submit" id="login-btn" class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 rounded-lg mt-6 transition flex items-center justify-center gap-2">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>登录系统</span>
+                    </button>
+                </form>
+                
+                <div class="mt-6 pt-6 border-t border-white/10 text-center">
+                    <p class="text-sm text-slate-400">
+                        <i class="fas fa-lock mr-1"></i>
+                        SSL加密保护 | 私有部署
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- 移动端菜单按钮 -->
     <button id="mobile-menu-btn" class="md:hidden fixed top-4 left-4 z-50 bg-primary text-white p-3 rounded-full shadow-lg">
         <i class="fas fa-bars"></i>
@@ -474,10 +525,23 @@
                 <!-- 用户头像 -->
                 <div class="flex items-center gap-3">
                     <div class="text-right hidden md:block">
-                        <div class="text-sm font-medium text-slate-700">Admin</div>
-                        <div class="text-xs text-slate-500">管理员</div>
+                        <div class="text-sm font-medium text-slate-700" id="user-name">Admin</div>
+                        <div class="text-xs text-slate-500" id="user-role">管理员</div>
                     </div>
-                    <img src="https://ui-avatars.com/api/?name=Admin&background=1e40af&color=fff" alt="User" class="w-9 h-9 rounded-full border-2 border-white shadow-sm">
+                    <div class="relative group">
+                        <img src="https://ui-avatars.com/api/?name=Admin&background=1e40af&color=fff" alt="User" class="w-9 h-9 rounded-full border-2 border-white shadow-sm cursor-pointer">
+                        <!-- 下拉菜单 -->
+                        <div class="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-2 hidden group-hover:block z-50">
+                            <div class="px-4 py-2 border-b border-slate-100">
+                                <div class="text-sm font-medium text-slate-800" id="dropdown-user-name">Admin</div>
+                                <div class="text-xs text-slate-500" id="dropdown-user-email">admin@v5medical.com</div>
+                            </div>
+                            <button onclick="logout()" class="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition flex items-center gap-2">
+                                <i class="fas fa-sign-out-alt"></i>
+                                退出登录
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </header>
@@ -2132,6 +2196,12 @@
             // 开始时钟更新
             setInterval(updateWorldClock, 1000);
             
+            // 恢复上次登录的邮箱
+            const lastUser = localStorage.getItem(CONFIG.storagePrefix + 'last_user');
+            if (lastUser) {
+                document.getElementById('login-email').value = lastUser;
+            }
+            
             console.log('[ERP Pro] 系统初始化完成');
         });
         
@@ -2495,6 +2565,134 @@
             }
         }
         
+        // ==================== 认证登录功能 ====================
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const loginBtn = document.getElementById('login-btn');
+            
+            if (!email || !password) {
+                showToast('请输入邮箱和密码', 'warning');
+                return;
+            }
+            
+            // 显示加载状态
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登录中...';
+            
+            try {
+                const userCredential = await firebaseAuth.signInWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                
+                console.log('[Auth] 登录成功:', user.email);
+                showToast('登录成功，欢迎回来', 'success');
+                
+                // 保存登录状态到本地存储
+                localStorage.setItem(CONFIG.storagePrefix + 'last_user', email);
+                
+            } catch (error) {
+                console.error('[Auth] 登录失败:', error);
+                
+                let errorMessage = '登录失败';
+                switch (error.code) {
+                    case 'auth/user-not-found':
+                        errorMessage = '用户不存在';
+                        break;
+                    case 'auth/wrong-password':
+                        errorMessage = '密码错误';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = '邮箱格式不正确';
+                        break;
+                    case 'auth/too-many-requests':
+                        errorMessage = '登录尝试过多，请稍后重试';
+                        break;
+                    default:
+                        errorMessage = error.message;
+                }
+                
+                showToast(errorMessage, 'error');
+                
+                // 恢复按钮状态
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> 登录系统';
+            }
+        }
+        
+        async function logout() {
+            if (!confirm('确定要退出登录吗？')) {
+                return;
+            }
+            
+            try {
+                await firebaseAuth.signOut();
+                console.log('[Auth] 已退出登录');
+                showToast('已安全退出', 'success');
+                
+                // 清空敏感数据
+                state.orders = [];
+                state.customers = [];
+                state.suppliers = [];
+                state.expenses = [];
+                
+                // 刷新页面
+                setTimeout(() => {
+                    location.reload();
+                }, 500);
+                
+            } catch (error) {
+                console.error('[Auth] 退出失败:', error);
+                showToast('退出失败: ' + error.message, 'error');
+            }
+        }
+        
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('login-password');
+            const eyeIcon = document.getElementById('password-eye');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.classList.remove('fa-eye');
+                eyeIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.classList.remove('fa-eye-slash');
+                eyeIcon.classList.add('fa-eye');
+            }
+        }
+        
+        function updateUserInfo(user) {
+            const email = user.email || 'Admin';
+            const name = email.split('@')[0];
+            
+            document.getElementById('user-name').textContent = name;
+            document.getElementById('dropdown-user-name').textContent = name;
+            document.getElementById('dropdown-user-email').textContent = email;
+            
+            // 更新头像
+            const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1e40af&color=fff`;
+            document.querySelector('.rounded-full.shadow-sm[src*="ui-avatars"]').src = avatarUrl;
+        }
+        
+        async function showResetPassword() {
+            const email = document.getElementById('login-email').value.trim();
+            
+            if (!email) {
+                showToast('请先输入邮箱地址', 'warning');
+                return;
+            }
+            
+            try {
+                await firebaseAuth.sendPasswordResetEmail(email);
+                showToast('密码重置邮件已发送，请查收邮件箱', 'success');
+            } catch (error) {
+                console.error('[Auth] 重置密码失败:', error);
+                showToast('重置密码失败: ' + error.message, 'error');
+            }
+        }
+        
         // ==================== Firebase 集成 ====================
         let firebaseDb = null;
         let firebaseAuth = null;
@@ -2521,22 +2719,23 @@
                     console.warn('[Firebase] 持久化启用失败:', err.code);
                 });
                 
-                // 匿名登录
-                await firebaseAuth.signInAnonymously();
-                console.log('[Firebase] 匿名登录成功');
-                
                 // 监听认证状态
                 firebaseAuth.onAuthStateChanged((user) => {
-                    if (user) {
+                    if (user && !user.isAnonymous) {
                         console.log('[Firebase] 用户已登录:', user.uid);
                         state.isOnline = true;
                         updateSyncStatus('online');
+                        updateUserInfo(user);
+                        // 隐藏登录界面，显示主应用
+                        document.getElementById('login-screen').classList.add('hidden');
                         // 加载云端数据
                         loadFromCloud();
                     } else {
-                        console.warn('[Firebase] 用户未登录');
+                        console.warn('[Firebase] 用户未登录，显示登录界面');
                         state.isOnline = false;
                         updateSyncStatus('offline');
+                        // 显示登录界面
+                        document.getElementById('login-screen').classList.remove('hidden');
                     }
                 });
                 
@@ -5264,6 +5463,10 @@
         window.deleteTodo = deleteTodo;
         window.renderTodos = renderTodos;
         window.reconnectFirebase = reconnectFirebase;
+        window.handleLogin = handleLogin;
+        window.logout = logout;
+        window.togglePasswordVisibility = togglePasswordVisibility;
+        window.showResetPassword = showResetPassword;
         window.emergencyDataRecovery = emergencyDataRecovery;
         window.restoreFromEmergencyBackup = restoreFromEmergencyBackup;
         window.executeSyncStrategy = executeSyncStrategy;
