@@ -1111,6 +1111,16 @@
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">形式发票单号 (PI Number)</label>
+                                <input id="order-pi-number" type="text" placeholder="例如：V5-2024-001" class="input-field">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">内部订单号</label>
+                                <input id="order-number-display" type="text" class="input-field bg-slate-100" readonly placeholder="保存后自动生成">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
                                 <label class="block text-xs font-semibold text-slate-600 mb-1">客户名称 <span class="text-danger">*</span></label>
                                 <select id="order-customer-select" class="input-field">
                                     <option value="">选择客户</option>
@@ -1456,7 +1466,7 @@
             let pendingCount = 0;
             
             orders.forEach(order => {
-                const amountRMB = (order.total || 0) * currentRate;
+                const amountRMB = (order.amount || 0) * currentRate;
                 if (order.status === 'paid') {
                     totalSalesRMB += amountRMB;
                 } else {
@@ -1488,7 +1498,7 @@
             document.getElementById('sidebar-progress').style.width = percent + '%';
             
             // 更新订单表格
-            updateOrdersTable();
+            renderOrdersList();
             
             // 更新同步计数
             updateSyncCounts();
@@ -1501,66 +1511,6 @@
             return Math.round(num).toLocaleString();
         }
         
-        function updateOrdersTable() {
-            const tbody = document.getElementById('orders-table-body');
-            const orders = state.orders || [];
-            
-            if (orders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-slate-400 py-8">暂无订单数据</td></tr>';
-                return;
-            }
-            
-            tbody.innerHTML = orders.slice().reverse().map(order => `
-                <tr>
-                    <td class="font-mono text-xs">${order.id || '-'}</td>
-                    <td>${order.customer || '-'}</td>
-                    <td class="font-medium">$${(order.total || 0).toLocaleString()}</td>
-                    <td>
-                        <span class="px-2 py-1 rounded-full text-xs ${getStatusClass(order.status)}">
-                            ${getStatusText(order.status)}
-                        </span>
-                    </td>
-                    <td class="text-slate-500 text-xs">${formatDate(order.createTime)}</td>
-                    <td>
-                        <button onclick="editOrder('${order.id}')" class="text-primary hover:text-blue-700 mr-2">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="deleteOrder('${order.id}')" class="text-danger hover:text-red-700">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-            
-            // 更新订单徽章
-            const badge = document.getElementById('order-badge');
-            if (pendingCount > 0) {
-                badge.textContent = pendingCount;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
-            }
-        }
-        
-        function getStatusClass(status) {
-            const classes = {
-                'paid': 'bg-green-100 text-green-700',
-                'pending': 'bg-yellow-100 text-yellow-700',
-                'new': 'bg-blue-100 text-blue-700',
-                'cancelled': 'bg-red-100 text-red-700'
-            };
-            return classes[status] || 'bg-slate-100 text-slate-700';
-        }
-        
-        function getStatusText(status) {
-            const texts = {
-                'paid': '已回款',
-                'pending': '待回款',
-                'new': '新建',
-                'cancelled': '已取消'
-            };
-            return texts[status] || status;
-        }
         
         function formatDate(dateStr) {
             if (!dateStr) return '-';
@@ -1771,6 +1721,8 @@
             
             // 清空表单
             document.getElementById('order-title').value = '';
+            document.getElementById('order-pi-number').value = '';
+            document.getElementById('order-number-display').value = '';
             document.getElementById('order-customer-select').value = '';
             document.getElementById('order-customer-input').value = '';
             document.getElementById('order-amount').value = '';
@@ -1853,8 +1805,24 @@
             
             // 填充表单
             document.getElementById('order-title').value = order.title || '';
-            document.getElementById('order-customer-select').value = order.customer || '';
-            document.getElementById('order-customer-input').value = order.customer || '';
+            document.getElementById('order-pi-number').value = order.piNumber || '';
+            document.getElementById('order-number-display').value = order.id || '';
+            
+            // 客户选择逻辑：先加载客户列表，然后尝试匹配选择器
+            loadCustomerOptions();
+            const customerSelect = document.getElementById('order-customer-select');
+            const customerInput = document.getElementById('order-customer-input');
+            
+            // 检查客户是否在选择列表中
+            const customerExists = Array.from(customerSelect.options).some(opt => opt.value === order.customer);
+            if (customerExists) {
+                customerSelect.value = order.customer;
+                customerInput.value = ''; // 清空输入框
+            } else {
+                customerSelect.value = '';
+                customerInput.value = order.customer || '';
+            }
+            
             document.getElementById('order-amount').value = order.amount || '';
             document.getElementById('order-currency').value = order.currency || 'USD';
             document.getElementById('order-status').value = order.status || 'inquiry';
@@ -1901,9 +1869,6 @@
                     </div>
                 `;
             }
-            
-            // 加载客户列表
-            loadCustomerOptions();
             
             document.getElementById('order-modal').classList.remove('hidden');
         }
@@ -1978,10 +1943,21 @@
             
             const currency = document.getElementById('order-currency').value;
             const paymentMethod = document.getElementById('order-payment-method').value;
+            const piNumber = document.getElementById('order-pi-number').value.trim();
+            
+            // 如果有 PI 单号，使用它作为 ID；否则生成新 ID
+            let orderId = editingOrderId;
+            if (!editingOrderId) {
+                orderId = piNumber ? `ORDER_${piNumber}` : generateId('ORDER');
+            } else if (piNumber && !editingOrderId.includes(piNumber)) {
+                // 如果编辑时添加了 PI 单号，更新 ID
+                orderId = `ORDER_${piNumber}`;
+            }
             
             const orderData = {
-                id: editingOrderId || generateId('ORDER'),
+                id: orderId,
                 title: title,
+                piNumber: piNumber,
                 customer: customer,
                 amount: amount,
                 currency: currency,
@@ -1999,9 +1975,16 @@
                 state.orders.push(orderData);
                 showToast('订单创建成功', 'success');
             } else {
-                const index = state.orders.findIndex(o => o.id === editingOrderId);
-                if (index !== -1) {
-                    state.orders[index] = { ...state.orders[index], ...orderData };
+                // 如果 ID 变更了（如添加了 PI 单号），删除旧订单并添加新订单
+                if (orderId !== editingOrderId) {
+                    state.orders = state.orders.filter(o => o.id !== editingOrderId);
+                    orderData.createdAt = new Date().toISOString();
+                    state.orders.push(orderData);
+                } else {
+                    const index = state.orders.findIndex(o => o.id === editingOrderId);
+                    if (index !== -1) {
+                        state.orders[index] = { ...state.orders[index], ...orderData };
+                    }
                 }
                 showToast('订单信息已更新', 'success');
             }
@@ -2207,8 +2190,8 @@
                     <td><span class="px-2 py-1 rounded text-xs ${statusColors[order.status] || 'bg-slate-100'}">${statusNames[order.status] || order.status}</span></td>
                     <td class="text-slate-500 text-xs">${formatDate(order.createdAt)}</td>
                     <td>
-                        <button onclick="editOrder('${order.id}')" class="text-primary hover:text-blue-700 mr-2"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteOrder('${order.id}')" class="text-danger hover:text-red-700"><i class="fas fa-trash"></i></button>
+                        <button onclick="editOrder('${order.id}')" class="text-primary hover:text-blue-700 mr-4 px-2 py-1 rounded hover:bg-blue-50 transition-colors" title="编辑"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteOrder('${order.id}')" class="text-danger hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 transition-colors ml-2" title="删除"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
             `;}).join('');
