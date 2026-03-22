@@ -56,21 +56,57 @@
         
         /* 侧边栏样式 */
         .sidebar {
-            @apply fixed left-0 top-0 bottom-0 w-64 bg-sidebar text-slate-300 z-40 transition-transform duration-300 shadow-2xl;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 256px;
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            color: #cbd5e1;
+            z-index: 40;
+            transition: transform 0.3s ease;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+            overflow-y: auto;
+        }
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
         }
         .sidebar-nav-item {
-            @apply flex items-center px-6 py-3 text-sm font-medium hover:bg-white/5 hover:text-white transition-colors border-l-4 border-transparent cursor-pointer;
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #cbd5e1;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .sidebar-nav-item:hover {
+            background: rgba(255,255,255,0.05);
+            color: #fff;
         }
         .sidebar-nav-item.active {
-            @apply bg-blue-900/30 text-blue-400 border-blue-500;
+            background: rgba(30, 64, 175, 0.2);
+            color: #60a5fa;
+            border-left-color: #3b82f6;
         }
         .sidebar-nav-item i {
-            @apply w-5 mr-3 text-center;
+            width: 20px;
+            margin-right: 12px;
+            text-align: center;
         }
         
         /* 主内容区 */
         .main-content {
-            @apply ml-64 min-h-screen bg-slate-50 transition-all duration-300;
+            margin-left: 256px;
+            min-height: 100vh;
+            background: #f8fafc;
+            transition: margin-left 0.3s ease;
         }
         @media (max-width: 768px) {
             .sidebar { transform: translateX(-100%); }
@@ -78,96 +114,236 @@
             .main-content { margin-left: 0; }
         }
         
+        /* 页面内容区 */
+        .page-container {
+            padding: 24px;
+            max-width: 1400px;
+        }
+        
         /* 卡片样式 */
         .card {
-            @apply bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-shadow hover:shadow-md;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            transition: box-shadow 0.2s ease;
+        }
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .card-header {
-            @apply bg-slate-50 border-b border-slate-100 px-5 py-4 flex items-center justify-between;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
         
         /* KPI 卡片 */
         .kpi-card {
-            @apply bg-white p-5 rounded-xl border border-slate-100 shadow-sm relative overflow-hidden transition-all hover:shadow-md;
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        .kpi-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
         }
         .kpi-icon {
-            @apply absolute right-4 top-4 text-4xl opacity-10;
+            position: absolute;
+            right: 16px;
+            top: 16px;
+            font-size: 40px;
+            opacity: 0.1;
         }
         
         /* 输入框样式 */
         .input-field {
-            @apply w-full px-3 py-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition text-sm;
+            width: 100%;
+            padding: 8px 12px;
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
         
         /* 按钮样式 */
         .btn-primary {
-            @apply bg-primary hover:bg-blue-800 text-white font-semibold py-2 px-4 rounded-lg transition shadow-sm flex items-center justify-center gap-2;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #1e40af;
+            color: #fff;
+            font-weight: 600;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-primary:hover {
+            background: #1e3a8a;
         }
         .btn-success {
-            @apply bg-success hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition shadow-sm flex items-center justify-center gap-2;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #10b981;
+            color: #fff;
+            font-weight: 600;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-success:hover {
+            background: #059669;
         }
         .btn-danger {
-            @apply bg-danger hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition shadow-sm flex items-center justify-center gap-2;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #ef4444;
+            color: #fff;
+            font-weight: 600;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-danger:hover {
+            background: #dc2626;
         }
         
         /* Toast 通知 */
         .toast {
-            @apply fixed bottom-4 right-4 z-50 bg-white shadow-lg rounded-lg border border-slate-200 p-4 flex items-center gap-3 transition-all duration-300 transform translate-y-20 opacity-0;
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            z-index: 50;
+            background: #fff;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transform: translateY(80px);
+            opacity: 0;
+            transition: all 0.3s ease;
         }
         .toast.show {
-            @apply translate-y-0 opacity-100;
+            transform: translateY(0);
+            opacity: 1;
         }
         
         /* Tab 内容 */
         .tab-content {
-            @apply hidden animate-fade-in;
+            display: none;
+            animation: fadeIn 0.3s ease;
         }
         .tab-content.active {
-            @apply block;
+            display: block;
         }
         
         /* 世界时钟卡片 */
         .clock-card {
-            @apply text-center p-3 rounded-xl border transition-all duration-300;
+            text-align: center;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            transition: all 0.3s ease;
         }
         .clock-card.active {
-            @apply bg-green-50 border-green-200 shadow-sm;
+            background: #f0fdf4;
+            border-color: #86efac;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
         .clock-card.inactive {
-            @apply bg-slate-50 border-slate-200 opacity-70;
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            opacity: 0.8;
         }
         
         /* 表格样式 */
         .data-table {
-            @apply w-full text-sm text-left;
+            width: 100%;
+            font-size: 14px;
+            text-align: left;
+            border-collapse: collapse;
         }
         .data-table th {
-            @apply bg-slate-50 text-xs text-slate-500 uppercase font-semibold px-4 py-3;
+            background: #f8fafc;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #64748b;
+            font-weight: 600;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
         }
         .data-table td {
-            @apply px-4 py-3 border-b border-slate-100;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
         }
         .data-table tr:hover {
-            @apply bg-slate-50;
+            background: #f8fafc;
         }
         
         /* 加载动画 */
         .spinner {
-            @apply w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin;
+            width: 32px;
+            height: 32px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #1e40af;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
         
         /* 同步状态指示器 */
         .sync-indicator {
-            @apply flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium transition-all;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s ease;
         }
         .sync-indicator.online {
-            @apply bg-green-100 text-green-700;
+            background: #dcfce7;
+            color: #166534;
         }
         .sync-indicator.offline {
-            @apply bg-amber-100 text-amber-700;
+            background: #fef3c7;
+            color: #92400e;
         }
         .sync-indicator.syncing {
-            @apply bg-blue-100 text-blue-700;
+            background: #dbeafe;
+            color: #1e40af;
         }
     </style>
 </head>
@@ -303,7 +479,7 @@
         </header>
         
         <!-- 页面内容 -->
-        <div class="p-6">
+        <div class="page-container">
             <!-- 仪表盘 -->
             <div id="tab-dashboard" class="tab-content active">
                 <!-- 世界时钟 -->
