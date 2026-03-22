@@ -486,61 +486,57 @@
         <div class="page-container">
             <!-- 仪表盘 -->
             <div id="tab-dashboard" class="tab-content active">
-                <!-- 主内容区 + 右侧边栏 -->
-                <div class="flex flex-col lg:flex-row gap-6">
-                    <!-- 左侧主内容区 -->
-                    <div class="flex-1 min-w-0">
-                        <!-- 世界时钟 -->
-                        <div class="mb-8">
-                            <div class="flex items-center gap-2 mb-4">
-                                <span class="w-1 h-5 bg-primary rounded-full"></span>
-                                <h3 class="font-bold text-slate-700">全球商机时钟</h3>
-                            </div>
-                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3" id="world-clock-container">
-                                <!-- 时钟卡片由 JS 生成 -->
-                            </div>
-                        </div>
-                        
-                        <!-- KPI 卡片 -->
-                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    <div class="kpi-card border-l-4 border-l-primary">
-                        <i class="fas fa-trophy kpi-icon text-primary"></i>
-                        <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">年度达成率</div>
-                        <div class="mt-2 flex items-baseline gap-2">
-                            <span class="text-3xl font-black text-slate-800" id="kpi-percent">0.0</span>
-                            <span class="text-sm font-bold text-slate-500">%</span>
-                        </div>
-                        <div class="mt-2 w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                            <div id="kpi-progress" class="bg-primary h-full rounded-full transition-all duration-500" style="width: 0%"></div>
-                        </div>
+                <!-- 第1行：世界时钟 -->
+                <div class="mb-8">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="w-1 h-5 bg-primary rounded-full"></span>
+                        <h3 class="font-bold text-slate-700">全球商机时钟</h3>
                     </div>
-                    
-                    <div class="kpi-card border-l-4 border-l-success">
-                        <i class="fas fa-coins kpi-icon text-success"></i>
-                        <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">已回款金额 (RMB)</div>
-                        <div class="mt-2 text-3xl font-black text-success" id="kpi-sales">¥0</div>
-                        <div class="text-[10px] text-slate-400 mt-1">折合约 $<span id="kpi-sales-usd">0</span> USD</div>
-                    </div>
-                    
-                    <div class="kpi-card border-l-4 border-l-danger">
-                        <i class="fas fa-mountain kpi-icon text-danger"></i>
-                        <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">距离目标还差</div>
-                        <div class="mt-2 text-3xl font-black text-danger" id="kpi-gap">¥0</div>
-                        <div class="text-[10px] text-slate-400 mt-1">需每日进账 ¥<span id="kpi-daily-need">0</span></div>
-                    </div>
-                    
-                    <div class="kpi-card border-l-4 border-l-gold">
-                        <i class="fas fa-hourglass-half kpi-icon text-gold"></i>
-                        <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">待回款 (Pipeline)</div>
-                        <div class="mt-2 text-3xl font-black text-gold" id="kpi-pipeline">¥0</div>
-                        <div class="text-[10px] text-slate-400 mt-1"><span id="kpi-pending-count">0</span> 个订单跟进中</div>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" id="world-clock-container">
+                        <!-- 时钟卡片由 JS 生成 -->
                     </div>
                 </div>
                 
-                <!-- 主内容区 + 右侧边栏 -->
+                <!-- 第2行：主内容区 + 右侧边栏 -->
                 <div class="flex flex-col lg:flex-row gap-6">
                     <!-- 左侧主内容区 -->
-                    <div class="flex-1 min-w-0">
+                    <div class="flex-1 min-w-0 order-2 lg:order-1">
+                        <!-- KPI 卡片 -->
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <div class="kpi-card border-l-4 border-l-primary">
+                                <i class="fas fa-trophy kpi-icon text-primary"></i>
+                                <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">年度达成率</div>
+                                <div class="mt-2 flex items-baseline gap-2">
+                                    <span class="text-3xl font-black text-slate-800" id="kpi-percent">0.0</span>
+                                    <span class="text-sm font-bold text-slate-500">%</span>
+                                </div>
+                                <div class="mt-2 w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                    <div id="kpi-progress" class="bg-primary h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="kpi-card border-l-4 border-l-success">
+                                <i class="fas fa-coins kpi-icon text-success"></i>
+                                <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">已回款金额 (RMB)</div>
+                                <div class="mt-2 text-3xl font-black text-success" id="kpi-sales">¥0</div>
+                                <div class="text-[10px] text-slate-400 mt-1">折合约 $<span id="kpi-sales-usd">0</span> USD</div>
+                            </div>
+                            
+                            <div class="kpi-card border-l-4 border-l-danger">
+                                <i class="fas fa-mountain kpi-icon text-danger"></i>
+                                <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">距离目标还差</div>
+                                <div class="mt-2 text-3xl font-black text-danger" id="kpi-gap">¥0</div>
+                                <div class="text-[10px] text-slate-400 mt-1">需每日进账 ¥<span id="kpi-daily-need">0</span></div>
+                            </div>
+                            
+                            <div class="kpi-card border-l-4 border-l-gold">
+                                <i class="fas fa-hourglass-half kpi-icon text-gold"></i>
+                                <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">待回款 (Pipeline)</div>
+                                <div class="mt-2 text-3xl font-black text-gold" id="kpi-pipeline">¥0</div>
+                                <div class="text-[10px] text-slate-400 mt-1"><span id="kpi-pending-count">0</span> 个订单跟进中</div>
+                            </div>
+                        </div>
+                        
                         <!-- 快捷操作 -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                             <!-- 快速创建 -->
@@ -573,10 +569,107 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- 外部工具链接 -->
+                        <div class="mt-8">
+                            <div class="flex items-center gap-2 mb-4">
+                                <span class="w-1 h-5 bg-primary rounded-full"></span>
+                                <h3 class="font-bold text-slate-700">外部工具链接</h3>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                <!-- Notion -->
+                                <a href="https://www.notion.so/V5-Medical-31575f07e2b1808aafe2ea809fddc715" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-indigo-300 transition text-center">
+                                    <div class="w-12 h-12 bg-slate-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-indigo-50 transition">
+                                        <i class="fas fa-book text-slate-600 text-xl group-hover:text-indigo-600"></i>
+                                    </div>
+                                    <div class="font-medium text-slate-700 text-sm">Notion</div>
+                                    <div class="text-xs text-slate-400 mt-1">知识库</div>
+                                </a>
+                                
+                                <!-- Telegram -->
+                                <a href="https://t.me/openclaw_bot" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-blue-300 transition text-center">
+                                    <div class="w-12 h-12 bg-slate-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-blue-50 transition">
+                                        <i class="fab fa-telegram text-slate-600 text-xl group-hover:text-blue-500"></i>
+                                    </div>
+                                    <div class="font-medium text-slate-700 text-sm">Telegram</div>
+                                    <div class="text-xs text-slate-400 mt-1">AI Bot</div>
+                                </a>
+                                
+                                <!-- Discord -->
+                                <a href="https://discord.com/channels/1473272341420183746/1480647041842413759" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-indigo-300 transition text-center">
+                                    <div class="w-12 h-12 bg-slate-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-indigo-50 transition">
+                                        <i class="fab fa-discord text-slate-600 text-xl group-hover:text-indigo-500"></i>
+                                    </div>
+                                    <div class="font-medium text-slate-700 text-sm">Discord</div>
+                                    <div class="text-xs text-slate-400 mt-1">社区</div>
+                                </a>
+                                
+                                <!-- 飞书 -->
+                                <a href="https://vvohooin.feishu.cn/drive/home/" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-blue-300 transition text-center">
+                                    <div class="w-12 h-12 bg-slate-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-blue-50 transition">
+                                        <i class="fas fa-cloud text-slate-600 text-xl group-hover:text-blue-500"></i>
+                                    </div>
+                                    <div class="font-medium text-slate-700 text-sm">飞书</div>
+                                    <div class="text-xs text-slate-400 mt-1">云文档</div>
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- 社交媒体矩阵 -->
+                        <div class="mt-8">
+                            <div class="flex items-center gap-2 mb-4">
+                                <span class="w-1 h-5 bg-pink-500 rounded-full"></span>
+                                <h3 class="font-bold text-slate-700">社交媒体矩阵</h3>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                <!-- LinkedIn -->
+                                <a href="https://www.linkedin.com/in/v5medical" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-blue-300 transition text-center">
+                                    <div class="w-12 h-12 bg-blue-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-blue-50 transition">
+                                        <i class="fab fa-linkedin text-blue-600 text-xl"></i>
+                                    </div>
+                                    <span class="text-sm font-medium text-slate-700">LinkedIn</span>
+                                </a>
+                                <!-- YouTube -->
+                                <a href="https://www.youtube.com/@V5Medical" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-red-300 transition text-center">
+                                    <div class="w-12 h-12 bg-red-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-red-50 transition">
+                                        <i class="fab fa-youtube text-red-600 text-xl"></i>
+                                    </div>
+                                    <span class="text-sm font-medium text-slate-700">YouTube</span>
+                                </a>
+                                <!-- Facebook -->
+                                <a href="https://www.facebook.com/V5MedicalGlobal" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-blue-500 transition text-center">
+                                    <div class="w-12 h-12 bg-blue-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-blue-50 transition">
+                                        <i class="fab fa-facebook text-blue-600 text-xl"></i>
+                                    </div>
+                                    <span class="text-sm font-medium text-slate-700">Facebook</span>
+                                </a>
+                                <!-- Instagram -->
+                                <a href="https://www.instagram.com/v5medical" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-pink-300 transition text-center">
+                                    <div class="w-12 h-12 bg-pink-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-pink-50 transition">
+                                        <i class="fab fa-instagram text-pink-600 text-xl"></i>
+                                    </div>
+                                    <span class="text-sm font-medium text-slate-700">Instagram</span>
+                                </a>
+                                <!-- TikTok -->
+                                <a href="https://www.tiktok.com/@v5medical" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-cyan-300 transition text-center">
+                                    <div class="w-12 h-12 bg-cyan-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-cyan-50 transition">
+                                        <i class="fab fa-tiktok text-cyan-600 text-xl"></i>
+                                    </div>
+                                    <span class="text-sm font-medium text-slate-700">TikTok</span>
+                                </a>
+                                <!-- X (Twitter) -->
+                                <a href="https://twitter.com/V5Medical" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-slate-400 transition text-center">
+                                    <div class="w-12 h-12 bg-slate-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-slate-200 transition">
+                                        <i class="fab fa-x-twitter text-slate-800 text-xl"></i>
+                                    </div>
+                                    <span class="text-sm font-medium text-slate-700">X / Twitter</span>
+                                </a>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- 右侧边栏：日历、云同步、备忘 -->
-                    <div class="w-full lg:w-80 flex-shrink-0 space-y-4">
+                    <div class="w-full lg:w-72 flex-shrink-0 order-1 lg:order-2 space-y-4">
                         <!-- 月日历 -->
                         <div class="card">
                             <div class="card-header flex justify-between items-center">
@@ -650,239 +743,9 @@
                         </div>
                     </div>
                     
-                    <!-- 左侧主内容区继续：外部工具链接 -->
-                    <div class="mt-8">
-                    <div class="flex items-center gap-2 mb-4">
-                        <span class="w-1 h-5 bg-primary rounded-full"></span>
-                        <h3 class="font-bold text-slate-700">外部工具链接</h3>
-                    </div>
-                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                        <!-- Notion -->
-                        <a href="https://www.notion.so/V5-Medical-31575f07e2b1808aafe2ea809fddc715" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-indigo-300 transition text-center">
-                            <div class="w-12 h-12 bg-slate-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-indigo-50 transition">
-                                <i class="fas fa-book text-slate-600 text-xl group-hover:text-indigo-600"></i>
-                            </div>
-                            <div class="font-medium text-slate-700 text-sm">Notion</div>
-                            <div class="text-xs text-slate-400 mt-1">知识库</div>
-                        </a>
-                        
-                        <!-- Telegram -->
-                        <a href="https://t.me/openclaw_bot" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-blue-300 transition text-center">
-                            <div class="w-12 h-12 bg-slate-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-blue-50 transition">
-                                <i class="fab fa-telegram text-slate-600 text-xl group-hover:text-blue-500"></i>
-                            </div>
-                            <div class="font-medium text-slate-700 text-sm">Telegram</div>
-                            <div class="text-xs text-slate-400 mt-1">AI Bot</div>
-                        </a>
-                        
-                        <!-- Discord -->
-                        <a href="https://discord.com/channels/1473272341420183746/1480647041842413759" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-indigo-300 transition text-center">
-                            <div class="w-12 h-12 bg-slate-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-indigo-50 transition">
-                                <i class="fab fa-discord text-slate-600 text-xl group-hover:text-indigo-500"></i>
-                            </div>
-                            <div class="font-medium text-slate-700 text-sm">Discord</div>
-                            <div class="text-xs text-slate-400 mt-1">社区</div>
-                        </a>
-                        
-                        <!-- 飞书 -->
-                        <a href="https://vvohooin.feishu.cn/drive/home/" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-blue-300 transition text-center">
-                            <div class="w-12 h-12 bg-slate-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-blue-50 transition">
-                                <i class="fas fa-cloud text-slate-600 text-xl group-hover:text-blue-500"></i>
-                            </div>
-                            <div class="font-medium text-slate-700 text-sm">飞书</div>
-                            <div class="text-xs text-slate-400 mt-1">云文档</div>
-                        </a>
-                    </div>
-                </div>
+                </div><!-- /主内容区 + 右侧边栏 -->
                 
-                <!-- 社媒矩阵 -->
-                <div class="mt-8">
-                    <div class="flex items-center gap-2 mb-4">
-                        <span class="w-1 h-5 bg-primary rounded-full"></span>
-                        <h3 class="font-bold text-slate-700">社媒矩阵</h3>
-                    </div>
-                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                        <!-- LinkedIn -->
-                        <a href="https://linkedin.com/company/v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-blue-300 transition">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                    <i class="fab fa-linkedin text-blue-600 text-lg"></i>
-                                </div>
-                                <div>
-                                    <div class="font-medium text-slate-700 text-sm">LinkedIn</div>
-                                    <div class="text-xs text-amber-500">⭐⭐⭐⭐⭐</div>
-                                    <div class="text-xs text-slate-400">最高B2B</div>
-                                </div>
-                            </div>
-                        </a>
-                        
-                        <!-- YouTube -->
-                        <a href="https://www.youtube.com/@v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-red-300 transition">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                                    <i class="fab fa-youtube text-red-600 text-lg"></i>
-                                </div>
-                                <div>
-                                    <div class="font-medium text-slate-700 text-sm">YouTube</div>
-                                    <div class="text-xs text-amber-500">⭐⭐⭐⭐</div>
-                                    <div class="text-xs text-slate-400">高信任度</div>
-                                </div>
-                            </div>
-                        </a>
-                        
-                        <!-- Facebook -->
-                        <a href="https://facebook.com/v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-blue-300 transition">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                    <i class="fab fa-facebook text-blue-600 text-lg"></i>
-                                </div>
-                                <div>
-                                    <div class="font-medium text-slate-700 text-sm">Facebook</div>
-                                    <div class="text-xs text-amber-500">⭐⭐⭐</div>
-                                    <div class="text-xs text-slate-400">B2B推广</div>
-                                </div>
-                            </div>
-                        </a>
-                        
-                        <!-- Instagram -->
-                        <a href="https://www.instagram.com/v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-pink-300 transition">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center">
-                                    <i class="fab fa-instagram text-pink-600 text-lg"></i>
-                                </div>
-                                <div>
-                                    <div class="font-medium text-slate-700 text-sm">Instagram</div>
-                                    <div class="text-xs text-amber-500">⭐⭐</div>
-                                    <div class="text-xs text-slate-400">视觉展示</div>
-                                </div>
-                            </div>
-                        </a>
-                        
-                        <!-- TikTok -->
-                        <a href="https://www.tiktok.com/@v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-slate-300 transition">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-                                    <i class="fab fa-tiktok text-slate-800 text-lg"></i>
-                                </div>
-                                <div>
-                                    <div class="font-medium text-slate-700 text-sm">TikTok</div>
-                                    <div class="text-xs text-amber-500">⭐</div>
-                                    <div class="text-xs text-slate-400">短视频</div>
-                                </div>
-                            </div>
-                        </a>
-                        
-                        <!-- X (Twitter) -->
-                        <a href="https://twitter.com/v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-slate-300 transition">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-                                    <i class="fab fa-x-twitter text-slate-800 text-lg"></i>
-                                </div>
-                                <div>
-                                    <div class="font-medium text-slate-700 text-sm">X</div>
-                                    <div class="text-xs text-amber-500">⭐</div>
-                                    <div class="text-xs text-slate-400">资讯</div>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <!-- 左侧主内容区继续：社媒矩阵 -->
-                    <div class="mt-8">
-                        <div class="flex items-center gap-2 mb-4">
-                            <span class="w-1 h-5 bg-primary rounded-full"></span>
-                            <h3 class="font-bold text-slate-700">社媒矩阵</h3>
-                        </div>
-                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                            <!-- LinkedIn -->
-                            <a href="https://linkedin.com/company/v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-blue-300 transition">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                        <i class="fab fa-linkedin text-blue-600 text-lg"></i>
-                                    </div>
-                                    <div>
-                                        <div class="font-medium text-slate-700 text-sm">LinkedIn</div>
-                                        <div class="text-xs text-amber-500">⭐⭐⭐⭐⭐</div>
-                                        <div class="text-xs text-slate-400">最高B2B</div>
-                                    </div>
-                                </div>
-                            </a>
-                            
-                            <!-- YouTube -->
-                            <a href="https://www.youtube.com/@v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-red-300 transition">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                                        <i class="fab fa-youtube text-red-600 text-lg"></i>
-                                    </div>
-                                    <div>
-                                        <div class="font-medium text-slate-700 text-sm">YouTube</div>
-                                        <div class="text-xs text-amber-500">⭐⭐⭐⭐</div>
-                                        <div class="text-xs text-slate-400">高信任度</div>
-                                    </div>
-                                </div>
-                            </a>
-                            
-                            <!-- Facebook -->
-                            <a href="https://facebook.com/v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-blue-300 transition">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                        <i class="fab fa-facebook text-blue-600 text-lg"></i>
-                                    </div>
-                                    <div>
-                                        <div class="font-medium text-slate-700 text-sm">Facebook</div>
-                                        <div class="text-xs text-amber-500">⭐⭐⭐</div>
-                                        <div class="text-xs text-slate-400">B2B推广</div>
-                                    </div>
-                                </div>
-                            </a>
-                            
-                            <!-- Instagram -->
-                            <a href="https://www.instagram.com/v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-pink-300 transition">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center">
-                                        <i class="fab fa-instagram text-pink-600 text-lg"></i>
-                                    </div>
-                                    <div>
-                                        <div class="font-medium text-slate-700 text-sm">Instagram</div>
-                                        <div class="text-xs text-amber-500">⭐⭐</div>
-                                        <div class="text-xs text-slate-400">视觉展示</div>
-                                    </div>
-                                </div>
-                            </a>
-                            
-                            <!-- TikTok -->
-                            <a href="https://www.tiktok.com/@v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-slate-300 transition">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-                                        <i class="fab fa-tiktok text-slate-800 text-lg"></i>
-                                    </div>
-                                    <div>
-                                        <div class="font-medium text-slate-700 text-sm">TikTok</div>
-                                        <div class="text-xs text-amber-500">⭐</div>
-                                        <div class="text-xs text-slate-400">短视频</div>
-                                    </div>
-                                </div>
-                            </a>
-                            
-                            <!-- X (Twitter) -->
-                            <a href="https://twitter.com/v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-slate-300 transition">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-                                        <i class="fab fa-x-twitter text-slate-800 text-lg"></i>
-                                    </div>
-                                    <div>
-                                        <div class="font-medium text-slate-700 text-sm">X</div>
-                                        <div class="text-xs text-amber-500">⭐</div>
-                                        <div class="text-xs text-slate-400">资讯</div>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                    </div>
-                    
-                </div><!-- /左侧主内容区 -->
-                
-            </div><!-- /主内容区 + 右侧边栏 -->
+            </div><!-- /tab-dashboard -->
             
             <!-- 订单管理 -->
             <div id="tab-orders" class="tab-content">
@@ -5379,5 +5242,6 @@
         window.saveMemo = saveMemo;
         window.deleteMemo = deleteMemo;
     </script>
+    </div><!-- /page-container -->
 </body>
 </html>
