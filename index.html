@@ -3015,8 +3015,14 @@
             
             for (const { name, stateKey, validator } of collections) {
                 const snapshot = await firebaseDb.collection(name).get();
-                const cloudData = [];
                 
+                // 如果云端没有数据，保留本地数据不变
+                if (snapshot.empty) {
+                    console.log(`[Sync] 云端 ${name} 为空，保留本地数据: ${state[stateKey].length} 条`);
+                    continue;
+                }
+                
+                const cloudData = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     delete data._syncedAt;
