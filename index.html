@@ -577,6 +577,17 @@
                                         <i class="fas fa-plug"></i> 重连
                                     </button>
                                 </div>
+                                <div class="border-t border-slate-200 pt-3 mt-3">
+                                    <div class="text-xs text-slate-500 mb-2">数据修复工具</div>
+                                    <div class="flex gap-2">
+                                        <button onclick="emergencyDataRecovery()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold py-2 px-2 rounded transition">
+                                            <i class="fas fa-broom"></i> 清理数据
+                                        </button>
+                                        <button onclick="restoreFromEmergencyBackup()" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white text-xs font-semibold py-2 px-2 rounded transition">
+                                            <i class="fas fa-history"></i> 恢复备份
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2497,54 +2508,133 @@
             }
         }
         
+        // 数据验证函数
+        function isValidOrder(order) {
+            return order && 
+                   order.id && 
+                   typeof order.id === 'string' && 
+                   order.id.startsWith('ORDER') &&
+                   order.title && 
+                   typeof order.title === 'string' &&
+                   order.title.trim() !== '';
+        }
+        
+        function isValidCustomer(customer) {
+            return customer && 
+                   customer.id && 
+                   typeof customer.id === 'string' && 
+                   customer.id.startsWith('CUST') &&
+                   customer.name && 
+                   typeof customer.name === 'string' &&
+                   customer.name.trim() !== '';
+        }
+        
+        function isValidSupplier(supplier) {
+            return supplier && 
+                   supplier.id && 
+                   typeof supplier.id === 'string' && 
+                   supplier.id.startsWith('SUP') &&
+                   supplier.name && 
+                   typeof supplier.name === 'string' &&
+                   supplier.name.trim() !== '';
+        }
+        
         async function loadFromCloud() {
             if (!firebaseDb) return;
             
             try {
                 console.log('[Firebase] 从云端加载数据...');
                 
-                // 加载订单
+                // 加载订单 - 带验证
                 const ordersSnapshot = await firebaseDb.collection('orders').get();
                 if (!ordersSnapshot.empty) {
                     const cloudOrders = [];
                     ordersSnapshot.forEach(doc => {
                         const data = doc.data();
-                        delete data._syncedAt; // 删除同步标记
-                        cloudOrders.push(data);
+                        delete data._syncedAt;
+                        // 验证数据有效性
+                        if (isValidOrder(data)) {
+                            cloudOrders.push(data);
+                        } else {
+                            console.warn('[Firebase] 跳过无效订单:', doc.id, data);
+                        }
                     });
                     
-                    // 合并本地和云端数据（以云端为准，但保留本地特有的）
-                    const localIds = new Set(state.orders.map(o => o.id));
-                    const cloudIds = new Set(cloudOrders.map(o => o.id));
+                    console.log('[Firebase] 云端有效订单:', cloudOrders.length);
                     
-                    // 保留本地有但云端没有的
-                    const localOnly = state.orders.filter(o => !cloudIds.has(o.id));
+                    // 合并本地和云端数据
+                    const cloudIds = new Set(cloudOrders.map(o => o.id));
+                    const localOnly = state.orders.filter(o => o.id && !cloudIds.has(o.id));
                     state.orders = [...cloudOrders, ...localOnly];
+                    
+                    // 清理无效订单
+                    const validOrders = state.orders.filter(isValidOrder);
+                    if (validOrders.length !== state.orders.length) {
+                        console.warn('[Firebase] 清理无效订单:', state.orders.length - validOrders.length);
+                        state.orders = validOrders;
+                    }
                     
                     // 排序：最新的在前
                     state.orders.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
                     
-                    saveData('orders', state.orders);
+                    // 直接保存到localStorage，避免触发云端同步
+                    localStorage.setItem(CONFIG.storagePrefix + 'orders', JSON.stringify(state.orders));
+                    updateSyncCounts();
                     console.log('[Firebase] 订单同步完成:', state.orders.length);
                 }
                 
-                // 加载客户
+                // 加载客户 - 带验证
                 const customersSnapshot = await firebaseDb.collection('customers').get();
                 if (!customersSnapshot.empty) {
                     const cloudCustomers = [];
                     customersSnapshot.forEach(doc => {
                         const data = doc.data();
                         delete data._syncedAt;
-                        cloudCustomers.push(data);
+                        if (isValidCustomer(data)) {
+                            cloudCustomers.push(data);
+                        } else {
+                            console.warn('[Firebase] 跳过无效客户:', doc.id, data);
+                        }
                     });
                     
-                    const localIds = new Set(state.customers.map(c => c.id));
+                    console.log('[Firebase] 云端有效客户:', cloudCustomers.length);
+                    
                     const cloudIds = new Set(cloudCustomers.map(c => c.id));
-                    const localOnly = state.customers.filter(c => !cloudIds.has(c.id));
+                    const localOnly = state.customers.filter(c => c.id && !cloudIds.has(c.id));
                     state.customers = [...cloudCustomers, ...localOnly];
                     
-                    saveData('customers', state.customers);
+                    // 清理无效客户
+                    const validCustomers = state.customers.filter(isValidCustomer);
+                    if (validCustomers.length !== state.customers.length) {
+                        state.customers = validCustomers;
+                    }
+                    
+                    localStorage.setItem(CONFIG.storagePrefix + 'customers', JSON.stringify(state.customers));
+                    updateSyncCounts();
                     console.log('[Firebase] 客户同步完成:', state.customers.length);
+                }
+                
+                // 加载供应商 - 带验证
+                const suppliersSnapshot = await firebaseDb.collection('suppliers').get();
+                if (!suppliersSnapshot.empty) {
+                    const cloudSuppliers = [];
+                    suppliersSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        delete data._syncedAt;
+                        if (isValidSupplier(data)) {
+                            cloudSuppliers.push(data);
+                        }
+                    });
+                    
+                    const cloudIds = new Set(cloudSuppliers.map(s => s.id));
+                    const localOnly = state.suppliers.filter(s => s.id && !cloudIds.has(s.id));
+                    state.suppliers = [...cloudSuppliers, ...localOnly];
+                    
+                    const validSuppliers = state.suppliers.filter(isValidSupplier);
+                    state.suppliers = validSuppliers;
+                    
+                    localStorage.setItem(CONFIG.storagePrefix + 'suppliers', JSON.stringify(state.suppliers));
+                    console.log('[Firebase] 供应商同步完成:', state.suppliers.length);
                 }
                 
                 // 刷新界面
@@ -2552,11 +2642,121 @@
                 renderOrdersKanban();
                 renderOrdersList();
                 renderCustomers();
+                renderSuppliers();
                 
                 showToast('云端数据已同步', 'success');
                 
             } catch (error) {
                 console.error('[Firebase] 加载云端数据失败:', error);
+                showToast('同步失败，使用本地数据', 'warning');
+            }
+        }
+        
+        // ==================== 紧急数据恢复 ====================
+        function emergencyDataRecovery() {
+            if (!confirm('确定要执行数据清理吗？这将：\n1. 删除所有无效订单\n2. 清理重复数据\n3. 重建本地索引\n\n建议在操作前导出备份。')) {
+                return;
+            }
+            
+            try {
+                console.log('[Recovery] 开始数据恢复...');
+                
+                // 备份当前数据
+                const backup = {
+                    orders: [...state.orders],
+                    customers: [...state.customers],
+                    suppliers: [...state.suppliers],
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem(CONFIG.storagePrefix + 'emergency_backup', JSON.stringify(backup));
+                
+                // 清理订单
+                const validOrders = state.orders.filter(isValidOrder);
+                const uniqueOrders = [];
+                const seenOrderIds = new Set();
+                validOrders.forEach(order => {
+                    if (!seenOrderIds.has(order.id)) {
+                        seenOrderIds.add(order.id);
+                        uniqueOrders.push(order);
+                    }
+                });
+                state.orders = uniqueOrders;
+                localStorage.setItem(CONFIG.storagePrefix + 'orders', JSON.stringify(state.orders));
+                
+                // 清理客户
+                const validCustomers = state.customers.filter(isValidCustomer);
+                const uniqueCustomers = [];
+                const seenCustomerIds = new Set();
+                validCustomers.forEach(customer => {
+                    if (!seenCustomerIds.has(customer.id)) {
+                        seenCustomerIds.add(customer.id);
+                        uniqueCustomers.push(customer);
+                    }
+                });
+                state.customers = uniqueCustomers;
+                localStorage.setItem(CONFIG.storagePrefix + 'customers', JSON.stringify(state.customers));
+                
+                // 清理供应商
+                const validSuppliers = state.suppliers.filter(isValidSupplier);
+                const uniqueSuppliers = [];
+                const seenSupplierIds = new Set();
+                validSuppliers.forEach(supplier => {
+                    if (!seenSupplierIds.has(supplier.id)) {
+                        seenSupplierIds.add(supplier.id);
+                        uniqueSuppliers.push(supplier);
+                    }
+                });
+                state.suppliers = uniqueSuppliers;
+                localStorage.setItem(CONFIG.storagePrefix + 'suppliers', JSON.stringify(state.suppliers));
+                
+                // 刷新界面
+                updateDashboard();
+                renderOrdersKanban();
+                renderOrdersList();
+                renderCustomers();
+                renderSuppliers();
+                updateSyncCounts();
+                
+                console.log('[Recovery] 数据恢复完成');
+                showToast(`数据清理完成！订单:${state.orders.length} 客户:${state.customers.length} 供应商:${state.suppliers.length}`, 'success');
+                
+            } catch (error) {
+                console.error('[Recovery] 数据恢复失败:', error);
+                showToast('数据恢复失败: ' + error.message, 'error');
+            }
+        }
+        
+        function restoreFromEmergencyBackup() {
+            const backupData = localStorage.getItem(CONFIG.storagePrefix + 'emergency_backup');
+            if (!backupData) {
+                showToast('没有找到紧急备份', 'warning');
+                return;
+            }
+            
+            if (!confirm('确定要从紧急备份恢复数据吗？当前数据将被覆盖。')) {
+                return;
+            }
+            
+            try {
+                const backup = JSON.parse(backupData);
+                state.orders = backup.orders || [];
+                state.customers = backup.customers || [];
+                state.suppliers = backup.suppliers || [];
+                
+                localStorage.setItem(CONFIG.storagePrefix + 'orders', JSON.stringify(state.orders));
+                localStorage.setItem(CONFIG.storagePrefix + 'customers', JSON.stringify(state.customers));
+                localStorage.setItem(CONFIG.storagePrefix + 'suppliers', JSON.stringify(state.suppliers));
+                
+                updateDashboard();
+                renderOrdersKanban();
+                renderOrdersList();
+                renderCustomers();
+                renderSuppliers();
+                updateSyncCounts();
+                
+                showToast('已从紧急备份恢复数据', 'success');
+            } catch (error) {
+                showToast('恢复失败: ' + error.message, 'error');
             }
         }
         
@@ -3088,26 +3288,38 @@
         }
         
         function deleteOrder(id) {
-            const order = state.orders.find(o => o.id === id);
-            if (!order) {
+            // 查找订单，支持通过 id 或索引查找
+            let orderIndex = state.orders.findIndex(o => o.id === id);
+            let order = state.orders[orderIndex];
+            
+            // 如果找不到，可能是无效订单，直接通过索引删除
+            if (!order && typeof id === 'number') {
+                orderIndex = id;
+                order = state.orders[orderIndex];
+            }
+            
+            if (orderIndex === -1 || !order) {
                 showToast('订单不存在', 'error');
                 return;
             }
             
-            if (confirm(`确定要将订单 "${order.title}" 移入回收站吗？\n\n删除的订单可以在回收站中恢复。`)) {
+            const orderTitle = order.title || '未命名订单';
+            
+            if (confirm(`确定要将订单 "${orderTitle}" 移入回收站吗？\n\n删除的订单可以在回收站中恢复。`)) {
                 // 添加到回收站
                 const trashedOrder = {
                     ...order,
                     _deletedAt: new Date().toISOString(),
-                    _originalId: order.id
+                    _originalId: order.id || `index_${orderIndex}`
                 };
                 state.trash.push(trashedOrder);
                 
-                // 从订单列表移除
-                state.orders = state.orders.filter(o => o.id !== id);
+                // 从订单列表移除（通过索引确保准确删除）
+                state.orders.splice(orderIndex, 1);
                 
                 // 保存数据
-                saveData('orders', state.orders);
+                localStorage.setItem(CONFIG.storagePrefix + 'orders', JSON.stringify(state.orders));
+                updateSyncCounts();
                 saveData('trash', state.trash);
                 
                 // 刷新界面
@@ -3259,7 +3471,9 @@
         }
         
         function renderOrdersKanban() {
-            console.log('[renderOrdersKanban] 开始渲染，订单总数:', state.orders?.length || 0);
+            // 过滤有效订单
+            const validOrders = (state.orders || []).filter(isValidOrder);
+            console.log('[renderOrdersKanban] 开始渲染，有效订单数:', validOrders.length, '总数:', state.orders?.length || 0);
             
             const containers = {
                 inquiry: document.getElementById('kanban-inquiry'),
@@ -3282,7 +3496,7 @@
             
             // 按状态分组
             const grouped = { inquiry: [], pi: [], production: [], shipped: [], paid: [] };
-            (state.orders || []).forEach(order => {
+            validOrders.forEach(order => {
                 const status = order.status || 'inquiry';
                 if (grouped[status]) grouped[status].push(order);
             });
@@ -3362,6 +3576,9 @@
             
             const filterStatus = document.getElementById('order-filter-status')?.value || 'all';
             let orders = state.orders || [];
+            
+            // 过滤无效订单
+            orders = orders.filter(isValidOrder);
             
             if (filterStatus !== 'all') {
                 orders = orders.filter(o => o.status === filterStatus);
@@ -4560,6 +4777,8 @@
         window.deleteTodo = deleteTodo;
         window.renderTodos = renderTodos;
         window.reconnectFirebase = reconnectFirebase;
+        window.emergencyDataRecovery = emergencyDataRecovery;
+        window.restoreFromEmergencyBackup = restoreFromEmergencyBackup;
     </script>
 </body>
 </html>
