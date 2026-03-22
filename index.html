@@ -533,8 +533,9 @@
                     </div>
                 </div>
                 
-                <!-- 快捷操作 -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- 快捷操作 + 右侧日历备忘 -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- 左侧：快速创建 -->
                     <div class="card">
                         <div class="card-header">
                             <span class="font-bold text-slate-800"><i class="fas fa-plus-circle text-primary mr-2"></i>快速创建</span>
@@ -549,60 +550,7 @@
                         </div>
                     </div>
                     
-                    <div class="card">
-                        <div class="card-header flex justify-between items-center">
-                            <span class="font-bold text-slate-800"><i class="fas fa-sync text-success mr-2"></i>云同步状态</span>
-                            <span id="sync-badge" class="text-[10px] px-2 py-0.5 bg-slate-200 text-slate-600 rounded-full">未连接</span>
-                        </div>
-                        <div class="p-4">
-                            <div class="space-y-3 text-sm">
-                                <div class="flex justify-between items-center p-2 bg-slate-50 rounded">
-                                    <span class="text-slate-500"><i class="fas fa-file-invoice mr-1"></i> 订单</span>
-                                    <span id="sync-orders-count" class="font-medium">0 条</span>
-                                </div>
-                                <div class="flex justify-between items-center p-2 bg-slate-50 rounded">
-                                    <span class="text-slate-500"><i class="fas fa-users mr-1"></i> 客户</span>
-                                    <span id="sync-customers-count" class="font-medium">0 条</span>
-                                </div>
-                                <div class="flex justify-between items-center p-2 bg-slate-50 rounded">
-                                    <span class="text-slate-500"><i class="fas fa-receipt mr-1"></i> 支出</span>
-                                    <span id="sync-expenses-count" class="font-medium">0 条</span>
-                                </div>
-                                <div id="sync-error-msg" class="hidden text-xs text-red-600 bg-red-50 p-2 rounded"></div>
-                                <!-- 同步策略选择 -->
-                                <div class="bg-blue-50 rounded-lg p-3">
-                                    <div class="text-xs text-slate-600 mb-2 font-medium">同步策略</div>
-                                    <select id="sync-strategy" class="input-field text-xs py-1.5 mb-2">
-                                        <option value="auto">🔄 自动双向同步</option>
-                                        <option value="local_to_cloud">⬆️ 本地覆盖云端</option>
-                                        <option value="cloud_to_local">⬇️ 云端覆盖本地</option>
-                                        <option value="manual">✋ 手动模式（不同步）</option>
-                                    </select>
-                                    <div class="flex gap-2">
-                                        <button onclick="executeSyncStrategy()" class="flex-1 btn-success text-sm">
-                                            <i class="fas fa-play"></i> 执行
-                                        </button>
-                                        <button onclick="reconnectFirebase()" id="reconnect-btn" class="hidden flex-1 bg-slate-600 hover:bg-slate-700 text-white text-sm font-semibold py-2 px-2 rounded transition">
-                                            <i class="fas fa-plug"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <div class="border-t border-slate-200 pt-3">
-                                    <div class="text-xs text-slate-500 mb-2">数据修复工具</div>
-                                    <div class="flex gap-2">
-                                        <button onclick="emergencyDataRecovery()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold py-2 px-2 rounded transition">
-                                            <i class="fas fa-broom"></i> 清理
-                                        </button>
-                                        <button onclick="restoreFromEmergencyBackup()" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white text-xs font-semibold py-2 px-2 rounded transition">
-                                            <i class="fas fa-history"></i> 恢复
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
+                    <!-- 中间：待办提醒 -->
                     <div class="card">
                         <div class="card-header flex justify-between items-center">
                             <span class="font-bold text-slate-800"><i class="fas fa-bell text-warning mr-2"></i>待办提醒</span>
@@ -613,6 +561,81 @@
                         <div class="p-4">
                             <div id="todo-list" class="space-y-2 text-sm max-h-40 overflow-y-auto">
                                 <p class="text-slate-400 text-center py-4">暂无待办事项</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 右侧：月日历 + 云同步 + 备忘 -->
+                    <div class="space-y-4">
+                        <!-- 月日历 -->
+                        <div class="card">
+                            <div class="card-header flex justify-between items-center">
+                                <span class="font-bold text-slate-800"><i class="fas fa-calendar-alt text-primary mr-2"></i>日历</span>
+                                <div class="flex gap-1">
+                                    <button onclick="changeMonth(-1)" class="text-slate-400 hover:text-primary p-1"><i class="fas fa-chevron-left"></i></button>
+                                    <span id="calendar-month-year" class="text-sm font-medium text-slate-600 min-w-[80px] text-center"></span>
+                                    <button onclick="changeMonth(1)" class="text-slate-400 hover:text-primary p-1"><i class="fas fa-chevron-right"></i></button>
+                                </div>
+                            </div>
+                            <div class="p-3">
+                                <div class="grid grid-cols-7 gap-1 text-center text-xs text-slate-400 mb-2">
+                                    <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                                </div>
+                                <div id="calendar-days" class="grid grid-cols-7 gap-1 text-center text-sm">
+                                    <!-- 日历日期由JS生成 -->
+                                </div>
+                                <div id="calendar-events" class="mt-3 pt-3 border-t border-slate-100 text-xs space-y-1 max-h-24 overflow-y-auto">
+                                    <p class="text-slate-400 text-center">选择日期查看事件</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 云同步状态 -->
+                        <div class="card">
+                            <div class="card-header flex justify-between items-center py-3">
+                                <span class="font-bold text-slate-800 text-sm"><i class="fas fa-sync text-success mr-2"></i>云同步</span>
+                                <span id="sync-badge" class="text-[10px] px-2 py-0.5 bg-slate-200 text-slate-600 rounded-full">未连接</span>
+                            </div>
+                            <div class="p-3">
+                                <div class="space-y-2 text-xs">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-slate-500">订单</span>
+                                        <span id="sync-orders-count" class="font-medium">0</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-slate-500">客户</span>
+                                        <span id="sync-customers-count" class="font-medium">0</span>
+                                    </div>
+                                    <select id="sync-strategy" class="input-field text-xs py-1 mt-2">
+                                        <option value="auto">🔄 自动同步</option>
+                                        <option value="local_to_cloud">⬆️ 本地→云端</option>
+                                        <option value="cloud_to_local">⬇️ 云端→本地</option>
+                                        <option value="manual">✋ 手动</option>
+                                    </select>
+                                    <div class="flex gap-1 mt-2">
+                                        <button onclick="executeSyncStrategy()" class="flex-1 bg-success hover:bg-green-600 text-white text-xs py-1.5 rounded transition">
+                                            <i class="fas fa-play"></i> 执行
+                                        </button>
+                                        <button onclick="emergencyDataRecovery()" class="bg-amber-500 hover:bg-amber-600 text-white text-xs py-1.5 px-2 rounded transition" title="清理数据">
+                                            <i class="fas fa-broom"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 备忘便签 -->
+                        <div class="card">
+                            <div class="card-header flex justify-between items-center py-3">
+                                <span class="font-bold text-slate-800 text-sm"><i class="fas fa-sticky-note text-warning mr-2"></i>备忘便签</span>
+                                <button onclick="showMemoModal()" class="text-xs bg-warning hover:bg-yellow-600 text-white px-2 py-0.5 rounded transition">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <div class="p-3">
+                                <div id="memo-list" class="space-y-2 max-h-48 overflow-y-auto">
+                                    <p class="text-slate-400 text-center text-xs py-4">点击+添加备忘</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2006,6 +2029,50 @@
         </div>
     </div>
 
+    <!-- 备忘便签弹窗 -->
+    <div id="memo-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-hidden">
+            <div class="bg-gradient-to-r from-amber-400 to-yellow-500 px-6 py-4 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white">添加备忘便签</h3>
+                <button onclick="closeMemoModal()" class="text-white/80 hover:text-white transition text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">备忘内容 <span class="text-danger">*</span></label>
+                        <textarea id="memo-content" rows="3" placeholder="记录重要事项..." class="input-field resize-none"></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">日期</label>
+                            <input id="memo-date" type="date" class="input-field">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">颜色</label>
+                            <select id="memo-color" class="input-field">
+                                <option value="yellow">🟡 黄色</option>
+                                <option value="pink">🩷 粉色</option>
+                                <option value="blue">🔵 蓝色</option>
+                                <option value="green">🟢 绿色</option>
+                                <option value="purple">🟣 紫色</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
+                <button onclick="closeMemoModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-3 rounded-lg transition">
+                    取消
+                </button>
+                <button onclick="saveMemo()" class="flex-1 bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                    <i class="fas fa-save mr-2"></i>添加
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast 通知 -->
     <div id="toast" class="toast">
         <i id="toast-icon" class="fas fa-check-circle text-success text-xl"></i>
@@ -2049,6 +2116,7 @@
             suppliers: [],
             trash: [], // 回收站
             todos: [], // 待办事项
+            memos: [], // 备忘便签
             isOnline: false,
             isSyncing: false,
             lastSync: null
@@ -2081,6 +2149,8 @@
             renderOrdersList();
             renderTrash();
             renderTodos();
+            renderMemos();
+            renderCalendar();
             
             // 加载汇率设置
             const savedRate = localStorage.getItem(CONFIG.storagePrefix + 'usd_rate');
@@ -2190,7 +2260,7 @@
         
         // ==================== 数据管理 ====================
         function loadAllData() {
-            const keys = ['orders', 'customers', 'expenses', 'suppliers', 'trash', 'todos'];
+            const keys = ['orders', 'customers', 'expenses', 'suppliers', 'trash', 'todos', 'memos'];
             keys.forEach(key => {
                 const data = localStorage.getItem(CONFIG.storagePrefix + key);
                 if (data) {
@@ -2865,7 +2935,8 @@
                     syncToCloud('expenses', state.expenses),
                     syncToCloud('suppliers', state.suppliers),
                     syncToCloud('trash', state.trash),
-                    syncToCloud('todos', state.todos || [])
+                    syncToCloud('todos', state.todos || []),
+                    syncToCloud('memos', state.memos || [])
                 ]);
                 
                 console.log('[Sync] 全部数据同步完成');
@@ -2951,7 +3022,8 @@
                 syncToCloud('expenses', state.expenses),
                 syncToCloud('suppliers', state.suppliers),
                 syncToCloud('trash', state.trash),
-                syncToCloud('todos', state.todos || [])
+                syncToCloud('todos', state.todos || []),
+                syncToCloud('memos', state.memos || [])
             ]);
             
             console.log('[Sync] 本地覆盖云端完成');
@@ -2970,7 +3042,8 @@
                 { name: 'suppliers', stateKey: 'suppliers', validator: isValidSupplier },
                 { name: 'expenses', stateKey: 'expenses', validator: null },
                 { name: 'trash', stateKey: 'trash', validator: null },
-                { name: 'todos', stateKey: 'todos', validator: null }
+                { name: 'todos', stateKey: 'todos', validator: null },
+                { name: 'memos', stateKey: 'memos', validator: null }
             ];
             
             for (const { name, stateKey, validator } of collections) {
@@ -3000,6 +3073,8 @@
             renderExpenses();
             renderTrash();
             renderTodos();
+            renderMemos();
+            renderCalendar();
             
             console.log('[Sync] 云端覆盖本地完成');
         }
@@ -4654,6 +4729,263 @@
             }
         }
         
+        // ==================== 日历功能 ====================
+        let currentCalendarDate = new Date();
+        let selectedCalendarDate = null;
+        
+        function renderCalendar() {
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+            
+            // 更新标题
+            const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
+            const monthYearEl = document.getElementById('calendar-month-year');
+            if (monthYearEl) {
+                monthYearEl.textContent = `${year}年${monthNames[month]}`;
+            }
+            
+            const container = document.getElementById('calendar-days');
+            if (!container) return;
+            
+            // 获取当月第一天和最后一天
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startingDay = firstDay.getDay(); // 0 = 周日
+            
+            // 获取今天日期
+            const today = new Date();
+            const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+            const todayDate = today.getDate();
+            
+            // 收集当月有事件的日期
+            const eventsByDate = getEventsByDate(year, month);
+            
+            let html = '';
+            
+            // 空白占位
+            for (let i = 0; i < startingDay; i++) {
+                html += '<div></div>';
+            }
+            
+            // 日期
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const isToday = isCurrentMonth && day === todayDate;
+                const hasEvents = eventsByDate.has(day);
+                const isSelected = selectedCalendarDate === dateStr;
+                
+                let classes = 'h-7 w-7 mx-auto flex items-center justify-center rounded-full cursor-pointer text-xs transition ';
+                if (isToday) {
+                    classes += 'bg-primary text-white font-bold ';
+                } else if (isSelected) {
+                    classes += 'bg-blue-100 text-primary font-medium border border-primary ';
+                } else if (hasEvents) {
+                    classes += 'bg-amber-100 text-amber-700 font-medium hover:bg-amber-200 ';
+                } else {
+                    classes += 'text-slate-700 hover:bg-slate-100 ';
+                }
+                
+                html += `<div class="${classes}" onclick="selectCalendarDate('${dateStr}', ${day})">${day}</div>`;
+            }
+            
+            container.innerHTML = html;
+            
+            // 显示选中日期的事件
+            if (selectedCalendarDate) {
+                showCalendarEvents(selectedCalendarDate);
+            }
+        }
+        
+        function getEventsByDate(year, month) {
+            const events = new Set();
+            const datePrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+            
+            // 检查订单
+            (state.orders || []).forEach(order => {
+                if (order.shipDate && order.shipDate.startsWith(datePrefix)) {
+                    const day = parseInt(order.shipDate.split('-')[2]);
+                    events.add(day);
+                }
+                if (order.createdAt && order.createdAt.startsWith(datePrefix)) {
+                    const day = parseInt(order.createdAt.split('T')[0].split('-')[2]);
+                    events.add(day);
+                }
+            });
+            
+            // 检查待办
+            (state.todos || []).forEach(todo => {
+                if (todo.due && todo.due.startsWith(datePrefix)) {
+                    const day = parseInt(todo.due.split('-')[2]);
+                    events.add(day);
+                }
+            });
+            
+            // 检查备忘
+            (state.memos || []).forEach(memo => {
+                if (memo.date && memo.date.startsWith(datePrefix)) {
+                    const day = parseInt(memo.date.split('-')[2]);
+                    events.add(day);
+                }
+            });
+            
+            return events;
+        }
+        
+        function changeMonth(delta) {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + delta);
+            renderCalendar();
+        }
+        
+        function selectCalendarDate(dateStr, day) {
+            selectedCalendarDate = dateStr;
+            renderCalendar();
+            showCalendarEvents(dateStr);
+        }
+        
+        function showCalendarEvents(dateStr) {
+            const container = document.getElementById('calendar-events');
+            if (!container) return;
+            
+            const events = [];
+            
+            // 查找订单
+            (state.orders || []).forEach(order => {
+                if (order.shipDate === dateStr) {
+                    events.push({
+                        type: 'ship',
+                        icon: 'fa-ship',
+                        color: 'text-blue-600',
+                        text: `发货: ${order.title || '订单'}`,
+                        time: order.shipDate
+                    });
+                }
+            });
+            
+            // 查找待办
+            (state.todos || []).forEach(todo => {
+                if (todo.due === dateStr && !todo.completed) {
+                    events.push({
+                        type: 'todo',
+                        icon: 'fa-bell',
+                        color: todo.priority === 'high' ? 'text-red-600' : 'text-warning',
+                        text: todo.content,
+                        time: todo.due
+                    });
+                }
+            });
+            
+            // 查找备忘
+            (state.memos || []).forEach(memo => {
+                if (memo.date === dateStr) {
+                    events.push({
+                        type: 'memo',
+                        icon: 'fa-sticky-note',
+                        color: 'text-amber-600',
+                        text: memo.content.substring(0, 20) + (memo.content.length > 20 ? '...' : ''),
+                        time: memo.time || ''
+                    });
+                }
+            });
+            
+            if (events.length === 0) {
+                container.innerHTML = `<p class="text-slate-400 text-center py-2">${dateStr} 无事件</p>`;
+                return;
+            }
+            
+            container.innerHTML = events.map(e => `
+                <div class="flex items-center gap-2 p-1.5 bg-slate-50 rounded">
+                    <i class="fas ${e.icon} ${e.color} text-xs"></i>
+                    <span class="flex-1 truncate text-slate-700">${escapeHtml(e.text)}</span>
+                </div>
+            `).join('');
+        }
+        
+        // ==================== 备忘便签功能 ====================
+        function showMemoModal(date = null) {
+            document.getElementById('memo-content').value = '';
+            document.getElementById('memo-date').value = date || new Date().toISOString().split('T')[0];
+            document.getElementById('memo-color').value = 'yellow';
+            document.getElementById('memo-modal').classList.remove('hidden');
+        }
+        
+        function closeMemoModal() {
+            document.getElementById('memo-modal').classList.add('hidden');
+        }
+        
+        function saveMemo() {
+            const content = document.getElementById('memo-content').value.trim();
+            const date = document.getElementById('memo-date').value;
+            const color = document.getElementById('memo-color').value;
+            
+            if (!content) {
+                showToast('请输入备忘内容', 'warning');
+                return;
+            }
+            
+            const memo = {
+                id: generateId('MEMO'),
+                content: content,
+                date: date,
+                color: color,
+                time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+                createdAt: new Date().toISOString()
+            };
+            
+            if (!state.memos) state.memos = [];
+            state.memos.push(memo);
+            saveData('memos', state.memos);
+            
+            renderMemos();
+            renderCalendar(); // 刷新日历显示
+            closeMemoModal();
+            showToast('备忘已添加', 'success');
+        }
+        
+        function renderMemos() {
+            const container = document.getElementById('memo-list');
+            if (!container) return;
+            
+            const memos = state.memos || [];
+            
+            // 按日期倒序，最新的在前
+            memos.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            
+            if (memos.length === 0) {
+                container.innerHTML = '<p class="text-slate-400 text-center text-xs py-4">点击+添加备忘</p>';
+                return;
+            }
+            
+            const colorClasses = {
+                yellow: 'bg-yellow-100 border-yellow-300 text-yellow-900',
+                pink: 'bg-pink-100 border-pink-300 text-pink-900',
+                blue: 'bg-blue-100 border-blue-300 text-blue-900',
+                green: 'bg-green-100 border-green-300 text-green-900',
+                purple: 'bg-purple-100 border-purple-300 text-purple-900'
+            };
+            
+            container.innerHTML = memos.slice(0, 10).map(memo => `
+                <div class="p-2 rounded border ${colorClasses[memo.color] || colorClasses.yellow} text-xs relative group">
+                    <div class="flex justify-between items-start gap-1">
+                        <span class="font-medium flex-1">${escapeHtml(memo.content)}</span>
+                        <button onclick="deleteMemo('${memo.id}')" class="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="text-[10px] opacity-60 mt-1">${memo.date} ${memo.time || ''}</div>
+                </div>
+            `).join('');
+        }
+        
+        function deleteMemo(id) {
+            if (!state.memos) return;
+            state.memos = state.memos.filter(m => m.id !== id);
+            saveData('memos', state.memos);
+            renderMemos();
+            renderCalendar();
+            showToast('备忘已删除', 'success');
+        }
+        
         // ==================== 产品利润率计算器 ====================
         function calculateProfit() {
             const cost = parseFloat(document.getElementById('profit-cost')?.value) || 0;
@@ -4936,6 +5268,12 @@
         window.emergencyDataRecovery = emergencyDataRecovery;
         window.restoreFromEmergencyBackup = restoreFromEmergencyBackup;
         window.executeSyncStrategy = executeSyncStrategy;
+        window.changeMonth = changeMonth;
+        window.selectCalendarDate = selectCalendarDate;
+        window.showMemoModal = showMemoModal;
+        window.closeMemoModal = closeMemoModal;
+        window.saveMemo = saveMemo;
+        window.deleteMemo = deleteMemo;
     </script>
 </body>
 </html>
