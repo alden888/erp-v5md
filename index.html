@@ -906,6 +906,118 @@
         </div>
     </div>
 
+    <!-- 供应商管理模态框 -->
+    <div id="supplier-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex justify-between items-center">
+                <h3 id="supplier-modal-title" class="text-lg font-bold text-white">新增供应商</h3>
+                <button onclick="closeSupplierModal()" class="text-white/80 hover:text-white transition text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                <input type="hidden" id="supplier-id">
+                
+                <!-- 基础信息 -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">基础信息</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">供应商名称 <span class="text-danger">*</span></label>
+                            <input id="supplier-name" type="text" placeholder="例如: 苏州医疗器械厂" class="input-field">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">主营产品</label>
+                                <input id="supplier-product" type="text" placeholder="例如：手术缝合线" class="input-field">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">产品类别</label>
+                                <select id="supplier-category" class="input-field">
+                                    <option value="suture">缝合线类</option>
+                                    <option value="gauze">纱布敷料类</option>
+                                    <option value="instrument">手术器械类</option>
+                                    <option value="pack">手术包类</option>
+                                    <option value="dental">口腔类</option>
+                                    <option value="injection">注射输液类</option>
+                                    <option value="protective">防护类</option>
+                                    <option value="other">其他</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 联系信息 -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">联系信息</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">联系人</label>
+                            <input id="supplier-contact" type="text" placeholder="联系人姓名" class="input-field">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">电话/WhatsApp</label>
+                            <input id="supplier-phone" type="text" placeholder="+86 138 xxxx xxxx" class="input-field">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">邮箱</label>
+                        <input id="supplier-email" type="email" placeholder="supplier@company.com" class="input-field">
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">地址</label>
+                        <textarea id="supplier-address" rows="2" placeholder="供应商详细地址..." class="input-field resize-none"></textarea>
+                    </div>
+                </div>
+                
+                <!-- 商务信息 -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">商务信息</h4>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">价格水平</label>
+                            <select id="supplier-price-level" class="input-field">
+                                <option value="high">偏高</option>
+                                <option value="medium" selected>中等</option>
+                                <option value="low">偏低</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">MOQ (最小起订量)</label>
+                            <input id="supplier-moq" type="text" placeholder="例如：1000pcs" class="input-field">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">交期</label>
+                            <input id="supplier-lead-time" type="text" placeholder="例如：15-20天" class="input-field">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">合作状态</label>
+                        <select id="supplier-status" class="input-field">
+                            <option value="cooperating" selected>合作中</option>
+                            <option value="potential">潜在供应商</option>
+                            <option value="paused">暂停合作</option>
+                            <option value="blacklist">黑名单</option>
+                        </select>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">备注</label>
+                        <textarea id="supplier-note" rows="2" placeholder="供应商备注信息..." class="input-field resize-none"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
+                <button onclick="closeSupplierModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-3 rounded-lg transition">
+                    取消
+                </button>
+                <button onclick="saveSupplier()" class="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                    <i class="fas fa-save mr-2"></i>保存供应商
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast 通知 -->
     <div id="toast" class="toast">
         <i id="toast-icon" class="fas fa-check-circle text-success text-xl"></i>
@@ -1660,25 +1772,99 @@
         }
         
         // ==================== 供应商管理功能 ====================
+        let editingSupplierId = null;
+        
         function showSupplierModal() {
-            const name = prompt('请输入供应商名称:');
-            if (!name) return;
+            editingSupplierId = null;
+            document.getElementById('supplier-modal-title').textContent = '新增供应商';
+            document.getElementById('supplier-id').value = '';
             
-            const product = prompt('主要产品:');
-            const contact = prompt('联系方式:');
+            // 清空表单
+            document.getElementById('supplier-name').value = '';
+            document.getElementById('supplier-product').value = '';
+            document.getElementById('supplier-category').value = 'suture';
+            document.getElementById('supplier-contact').value = '';
+            document.getElementById('supplier-phone').value = '';
+            document.getElementById('supplier-email').value = '';
+            document.getElementById('supplier-address').value = '';
+            document.getElementById('supplier-price-level').value = 'medium';
+            document.getElementById('supplier-moq').value = '';
+            document.getElementById('supplier-lead-time').value = '';
+            document.getElementById('supplier-status').value = 'cooperating';
+            document.getElementById('supplier-note').value = '';
             
-            const supplier = {
-                id: generateId('SUPP'),
+            document.getElementById('supplier-modal').classList.remove('hidden');
+        }
+        
+        function showEditSupplierModal(id) {
+            const supplier = state.suppliers.find(s => s.id === id);
+            if (!supplier) return;
+            
+            editingSupplierId = id;
+            document.getElementById('supplier-modal-title').textContent = '编辑供应商';
+            document.getElementById('supplier-id').value = id;
+            
+            // 填充表单
+            document.getElementById('supplier-name').value = supplier.name || '';
+            document.getElementById('supplier-product').value = supplier.product || '';
+            document.getElementById('supplier-category').value = supplier.category || 'suture';
+            document.getElementById('supplier-contact').value = supplier.contact || '';
+            document.getElementById('supplier-phone').value = supplier.phone || '';
+            document.getElementById('supplier-email').value = supplier.email || '';
+            document.getElementById('supplier-address').value = supplier.address || '';
+            document.getElementById('supplier-price-level').value = supplier.priceLevel || 'medium';
+            document.getElementById('supplier-moq').value = supplier.moq || '';
+            document.getElementById('supplier-lead-time').value = supplier.leadTime || '';
+            document.getElementById('supplier-status').value = supplier.status || 'cooperating';
+            document.getElementById('supplier-note').value = supplier.note || '';
+            
+            document.getElementById('supplier-modal').classList.remove('hidden');
+        }
+        
+        function closeSupplierModal() {
+            document.getElementById('supplier-modal').classList.add('hidden');
+            editingSupplierId = null;
+        }
+        
+        function saveSupplier() {
+            const name = document.getElementById('supplier-name').value.trim();
+            if (!name) {
+                showToast('请输入供应商名称', 'warning');
+                return;
+            }
+            
+            const supplierData = {
+                id: editingSupplierId || generateId('SUPP'),
                 name: name,
-                product: product || '',
-                contact: contact || '',
-                createdAt: new Date().toISOString()
+                product: document.getElementById('supplier-product').value.trim(),
+                category: document.getElementById('supplier-category').value,
+                contact: document.getElementById('supplier-contact').value.trim(),
+                phone: document.getElementById('supplier-phone').value.trim(),
+                email: document.getElementById('supplier-email').value.trim(),
+                address: document.getElementById('supplier-address').value.trim(),
+                priceLevel: document.getElementById('supplier-price-level').value,
+                moq: document.getElementById('supplier-moq').value.trim(),
+                leadTime: document.getElementById('supplier-lead-time').value.trim(),
+                status: document.getElementById('supplier-status').value,
+                note: document.getElementById('supplier-note').value.trim(),
+                updatedAt: new Date().toISOString()
             };
             
-            state.suppliers.push(supplier);
+            if (!editingSupplierId) {
+                supplierData.createdAt = new Date().toISOString();
+                state.suppliers.push(supplierData);
+                showToast('供应商添加成功', 'success');
+            } else {
+                const index = state.suppliers.findIndex(s => s.id === editingSupplierId);
+                if (index !== -1) {
+                    state.suppliers[index] = { ...state.suppliers[index], ...supplierData };
+                }
+                showToast('供应商信息已更新', 'success');
+            }
+            
             saveData('suppliers', state.suppliers);
             renderSuppliers();
-            showToast('供应商添加成功', 'success');
+            closeSupplierModal();
         }
         
         function renderSuppliers() {
@@ -1690,23 +1876,79 @@
                 return;
             }
             
+            const categoryNames = {
+                'suture': '缝合线',
+                'gauze': '纱布敷料',
+                'instrument': '手术器械',
+                'pack': '手术包',
+                'dental': '口腔',
+                'injection': '注射输液',
+                'protective': '防护',
+                'other': '其他'
+            };
+            
+            const statusColors = {
+                'cooperating': 'bg-green-100 text-green-700',
+                'potential': 'bg-blue-100 text-blue-700',
+                'paused': 'bg-yellow-100 text-yellow-700',
+                'blacklist': 'bg-red-100 text-red-700'
+            };
+            
+            const statusNames = {
+                'cooperating': '合作中',
+                'potential': '潜在',
+                'paused': '暂停',
+                'blacklist': '黑名单'
+            };
+            
             container.innerHTML = state.suppliers.map(s => `
-                <div class="card p-4 hover:shadow-md transition-shadow">
-                    <div class="flex items-start justify-between mb-3">
+                <div class="card p-5 hover:shadow-lg transition-all cursor-pointer" onclick="showEditSupplierModal('${s.id}')">
+                    <div class="flex items-start justify-between mb-4">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
-                                <i class="fas fa-truck"></i>
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                                <i class="fas fa-industry"></i>
                             </div>
                             <div>
-                                <h4 class="font-bold text-slate-800">${escapeHtml(s.name)}</h4>
-                                <p class="text-xs text-slate-500">${escapeHtml(s.product)}</p>
+                                <h4 class="font-bold text-slate-800 text-lg">${escapeHtml(s.name)}</h4>
+                                <p class="text-xs text-slate-500">${escapeHtml(s.contact || '暂无联系人')}</p>
                             </div>
                         </div>
-                        <button onclick="deleteSupplier('${s.id}')" class="text-slate-400 hover:text-danger transition">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 rounded text-xs font-medium ${statusColors[s.status] || statusColors['cooperating']}">${statusNames[s.status] || '合作中'}</span>
+                            <button onclick="event.stopPropagation(); deleteSupplier('${s.id}')" class="text-slate-400 hover:text-danger transition p-1">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
                     </div>
-                    ${s.contact ? `<div class="text-sm text-slate-600"><i class="fas fa-phone text-slate-400 w-4"></i> ${escapeHtml(s.contact)}</div>` : ''}
+                    
+                    <div class="space-y-2 text-sm text-slate-600 mb-4">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-box text-slate-400 w-4"></i>
+                            <span>${escapeHtml(s.product || '未填写产品')}</span>
+                            <span class="text-xs px-2 py-0.5 bg-slate-100 rounded">${categoryNames[s.category] || '其他'}</span>
+                        </div>
+                        ${s.phone ? `
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-phone text-slate-400 w-4"></i>
+                            <span>${escapeHtml(s.phone)}</span>
+                        </div>` : ''}
+                        ${s.email ? `
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-envelope text-slate-400 w-4"></i>
+                            <span>${escapeHtml(s.email)}</span>
+                        </div>` : ''}
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-2 pt-3 border-t border-slate-100">
+                        ${s.moq ? `<span class="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded">MOQ: ${escapeHtml(s.moq)}</span>` : ''}
+                        ${s.leadTime ? `<span class="text-xs px-2 py-1 bg-purple-50 text-purple-600 rounded">交期: ${escapeHtml(s.leadTime)}</span>` : ''}
+                        ${s.priceLevel ? `<span class="text-xs px-2 py-1 bg-orange-50 text-orange-600 rounded">价格: ${s.priceLevel === 'high' ? '偏高' : s.priceLevel === 'low' ? '偏低' : '中等'}</span>` : ''}
+                    </div>
+                    
+                    ${s.note ? `
+                    <div class="mt-3 p-2 bg-slate-50 rounded-lg text-xs text-slate-600">
+                        <i class="fas fa-sticky-note text-slate-400 mr-1"></i> ${escapeHtml(s.note)}
+                    </div>` : ''}
                 </div>
             `).join('');
         }
@@ -1926,6 +2168,9 @@
         window.saveCustomer = saveCustomer;
         window.deleteCustomer = deleteCustomer;
         window.showSupplierModal = showSupplierModal;
+        window.showEditSupplierModal = showEditSupplierModal;
+        window.closeSupplierModal = closeSupplierModal;
+        window.saveSupplier = saveSupplier;
         window.deleteSupplier = deleteSupplier;
         window.showExpenseModal = showExpenseModal;
         window.deleteExpense = deleteExpense;
