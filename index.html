@@ -406,6 +406,10 @@
                     <i class="fas fa-file-invoice-dollar"></i> 订单管理
                     <span id="order-badge" class="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full hidden">0</span>
                 </a>
+                <a class="sidebar-nav-item" data-tab="trash">
+                    <i class="fas fa-trash-alt"></i> 回收站
+                    <span id="trash-badge" class="ml-auto bg-slate-500 text-white text-[10px] px-1.5 py-0.5 rounded-full hidden">0</span>
+                </a>
                 <a class="sidebar-nav-item" data-tab="customers">
                     <i class="fas fa-users"></i> 客户管理
                 </a>
@@ -677,6 +681,40 @@
                             </thead>
                             <tbody id="orders-table-body">
                                 <!-- 由 JS 填充 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 回收站 -->
+            <div id="tab-trash" class="tab-content">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-bold text-slate-800">
+                        <i class="fas fa-trash-alt text-slate-500 mr-2"></i>回收站
+                        <span class="text-sm font-normal text-slate-500 ml-2" id="trash-count">(0)</span>
+                    </h3>
+                    <div class="flex gap-2">
+                        <button onclick="emptyTrash()" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition">
+                            <i class="fas fa-trash"></i> 清空回收站
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">订单号</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">标题</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">客户</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">金额</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">删除时间</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trash-table-body">
+                                <tr><td colspan="6" class="text-center text-slate-400 py-8">回收站为空</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1193,13 +1231,33 @@
                 <!-- 产品信息 -->
                 <div class="mb-6">
                     <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">产品信息</h4>
+                    <div class="grid grid-cols-12 gap-2 mb-2 text-xs text-slate-500">
+                        <div class="col-span-5">产品名称</div>
+                        <div class="col-span-2">数量</div>
+                        <div class="col-span-2">单位</div>
+                        <div class="col-span-3">单价</div>
+                    </div>
                     <div id="order-products-list" class="space-y-3">
                         <div class="product-item grid grid-cols-12 gap-2">
-                            <div class="col-span-6">
+                            <div class="col-span-5">
                                 <input type="text" placeholder="产品名称" class="input-field order-product-name">
                             </div>
-                            <div class="col-span-3">
+                            <div class="col-span-2">
                                 <input type="number" placeholder="数量" class="input-field order-product-qty">
+                            </div>
+                            <div class="col-span-2">
+                                <select class="input-field order-product-unit">
+                                    <option value="个">个</option>
+                                    <option value="盒">盒</option>
+                                    <option value="箱">箱</option>
+                                    <option value="Kg">Kg</option>
+                                    <option value="吨">吨</option>
+                                    <option value="米">米</option>
+                                    <option value="套">套</option>
+                                    <option value="件">件</option>
+                                    <option value="批">批</option>
+                                    <option value="其他">其他</option>
+                                </select>
                             </div>
                             <div class="col-span-3">
                                 <input type="number" placeholder="单价" class="input-field order-product-price">
@@ -1287,6 +1345,7 @@
             customers: [],
             expenses: [],
             suppliers: [],
+            trash: [], // 回收站
             isOnline: false,
             isSyncing: false,
             lastSync: null
@@ -1317,6 +1376,7 @@
             renderExpenses();
             renderOrdersKanban();
             renderOrdersList();
+            renderTrash();
             
             // 加载汇率设置
             const savedRate = localStorage.getItem(CONFIG.storagePrefix + 'usd_rate');
@@ -1426,7 +1486,7 @@
         
         // ==================== 数据管理 ====================
         function loadAllData() {
-            const keys = ['orders', 'customers', 'expenses', 'suppliers'];
+            const keys = ['orders', 'customers', 'expenses', 'suppliers', 'trash'];
             keys.forEach(key => {
                 const data = localStorage.getItem(CONFIG.storagePrefix + key);
                 if (data) {
@@ -1740,11 +1800,25 @@
             // 重置产品列表
             document.getElementById('order-products-list').innerHTML = `
                 <div class="product-item grid grid-cols-12 gap-2">
-                    <div class="col-span-6">
+                    <div class="col-span-5">
                         <input type="text" placeholder="产品名称" class="input-field order-product-name">
                     </div>
-                    <div class="col-span-3">
+                    <div class="col-span-2">
                         <input type="number" placeholder="数量" class="input-field order-product-qty">
+                    </div>
+                    <div class="col-span-2">
+                        <select class="input-field order-product-unit">
+                            <option value="个">个</option>
+                            <option value="盒">盒</option>
+                            <option value="箱">箱</option>
+                            <option value="Kg">Kg</option>
+                            <option value="吨">吨</option>
+                            <option value="米">米</option>
+                            <option value="套">套</option>
+                            <option value="件">件</option>
+                            <option value="批">批</option>
+                            <option value="其他">其他</option>
+                        </select>
                     </div>
                     <div class="col-span-3">
                         <input type="number" placeholder="单价" class="input-field order-product-price">
@@ -1842,11 +1916,25 @@
             if (order.products && order.products.length > 0) {
                 productsList.innerHTML = order.products.map((p, index) => `
                     <div class="product-item grid grid-cols-12 gap-2 ${index > 0 ? 'mt-2' : ''}">
-                        <div class="col-span-6">
+                        <div class="col-span-5">
                             <input type="text" placeholder="产品名称" class="input-field order-product-name" value="${escapeHtml(p.name)}">
                         </div>
-                        <div class="col-span-3">
+                        <div class="col-span-2">
                             <input type="number" placeholder="数量" class="input-field order-product-qty" value="${p.qty || 0}">
+                        </div>
+                        <div class="col-span-2">
+                            <select class="input-field order-product-unit">
+                                <option value="个" ${p.unit === '个' ? 'selected' : ''}>个</option>
+                                <option value="盒" ${p.unit === '盒' ? 'selected' : ''}>盒</option>
+                                <option value="箱" ${p.unit === '箱' ? 'selected' : ''}>箱</option>
+                                <option value="Kg" ${p.unit === 'Kg' ? 'selected' : ''}>Kg</option>
+                                <option value="吨" ${p.unit === '吨' ? 'selected' : ''}>吨</option>
+                                <option value="米" ${p.unit === '米' ? 'selected' : ''}>米</option>
+                                <option value="套" ${p.unit === '套' ? 'selected' : ''}>套</option>
+                                <option value="件" ${p.unit === '件' ? 'selected' : ''}>件</option>
+                                <option value="批" ${p.unit === '批' ? 'selected' : ''}>批</option>
+                                <option value="其他" ${p.unit === '其他' ? 'selected' : ''}>其他</option>
+                            </select>
                         </div>
                         <div class="col-span-3">
                             <input type="number" placeholder="单价" class="input-field order-product-price" value="${p.price || 0}">
@@ -1857,11 +1945,25 @@
                 // 空产品列表时显示一行空白输入
                 productsList.innerHTML = `
                     <div class="product-item grid grid-cols-12 gap-2">
-                        <div class="col-span-6">
+                        <div class="col-span-5">
                             <input type="text" placeholder="产品名称" class="input-field order-product-name">
                         </div>
-                        <div class="col-span-3">
+                        <div class="col-span-2">
                             <input type="number" placeholder="数量" class="input-field order-product-qty">
+                        </div>
+                        <div class="col-span-2">
+                            <select class="input-field order-product-unit">
+                                <option value="个">个</option>
+                                <option value="盒">盒</option>
+                                <option value="箱">箱</option>
+                                <option value="Kg">Kg</option>
+                                <option value="吨">吨</option>
+                                <option value="米">米</option>
+                                <option value="套">套</option>
+                                <option value="件">件</option>
+                                <option value="批">批</option>
+                                <option value="其他">其他</option>
+                            </select>
                         </div>
                         <div class="col-span-3">
                             <input type="number" placeholder="单价" class="input-field order-product-price">
@@ -1894,11 +1996,25 @@
             const row = document.createElement('div');
             row.className = 'product-item grid grid-cols-12 gap-2 mt-2';
             row.innerHTML = `
-                <div class="col-span-6">
+                <div class="col-span-5">
                     <input type="text" placeholder="产品名称" class="input-field order-product-name">
                 </div>
-                <div class="col-span-3">
+                <div class="col-span-2">
                     <input type="number" placeholder="数量" class="input-field order-product-qty">
+                </div>
+                <div class="col-span-2">
+                    <select class="input-field order-product-unit">
+                        <option value="个">个</option>
+                        <option value="盒">盒</option>
+                        <option value="箱">箱</option>
+                        <option value="Kg">Kg</option>
+                        <option value="吨">吨</option>
+                        <option value="米">米</option>
+                        <option value="套">套</option>
+                        <option value="件">件</option>
+                        <option value="批">批</option>
+                        <option value="其他">其他</option>
+                    </select>
                 </div>
                 <div class="col-span-3">
                     <input type="number" placeholder="单价" class="input-field order-product-price">
@@ -1934,9 +2050,10 @@
             document.querySelectorAll('.product-item').forEach(item => {
                 const name = item.querySelector('.order-product-name').value.trim();
                 const qty = parseInt(item.querySelector('.order-product-qty').value) || 0;
+                const unit = item.querySelector('.order-product-unit')?.value || '个';
                 const price = parseFloat(item.querySelector('.order-product-price').value) || 0;
                 if (name) {
-                    products.push({ name, qty, price });
+                    products.push({ name, qty, unit, price });
                 }
             });
             console.log('[saveOrder] 收集到产品数量:', products.length, products);
@@ -2005,14 +2122,148 @@
         }
         
         function deleteOrder(id) {
-            if (confirm('确定要删除此订单吗？')) {
+            const order = state.orders.find(o => o.id === id);
+            if (!order) {
+                showToast('订单不存在', 'error');
+                return;
+            }
+            
+            if (confirm(`确定要将订单 "${order.title}" 移入回收站吗？\n\n删除的订单可以在回收站中恢复。`)) {
+                // 添加到回收站
+                const trashedOrder = {
+                    ...order,
+                    _deletedAt: new Date().toISOString(),
+                    _originalId: order.id
+                };
+                state.trash.push(trashedOrder);
+                
+                // 从订单列表移除
                 state.orders = state.orders.filter(o => o.id !== id);
+                
+                // 保存数据
                 saveData('orders', state.orders);
+                saveData('trash', state.trash);
+                
+                // 刷新界面
                 updateDashboard();
                 renderOrdersKanban();
                 renderOrdersList();
-                showToast('订单已删除', 'success');
+                renderTrash();
+                
+                showToast('订单已移入回收站', 'success');
             }
+        }
+        
+        function restoreOrder(id) {
+            const trashedOrder = state.trash.find(o => o.id === id);
+            if (!trashedOrder) {
+                showToast('订单不存在', 'error');
+                return;
+            }
+            
+            // 检查是否已存在相同ID的订单
+            const existingOrder = state.orders.find(o => o.id === id);
+            if (existingOrder) {
+                // 生成新ID
+                trashedOrder.id = generateId('ORDER');
+                trashedOrder.title = trashedOrder.title + ' (恢复)';
+            }
+            
+            // 从回收站移除
+            state.trash = state.trash.filter(o => o.id !== id);
+            
+            // 恢复订单
+            delete trashedOrder._deletedAt;
+            delete trashedOrder._originalId;
+            state.orders.push(trashedOrder);
+            
+            // 保存数据
+            saveData('orders', state.orders);
+            saveData('trash', state.trash);
+            
+            // 刷新界面
+            updateDashboard();
+            renderOrdersKanban();
+            renderOrdersList();
+            renderTrash();
+            
+            showToast('订单已恢复', 'success');
+        }
+        
+        function permanentlyDeleteOrder(id) {
+            if (confirm('确定要永久删除此订单吗？此操作不可恢复！')) {
+                state.trash = state.trash.filter(o => o.id !== id);
+                saveData('trash', state.trash);
+                renderTrash();
+                showToast('订单已永久删除', 'success');
+            }
+        }
+        
+        function emptyTrash() {
+            if (state.trash.length === 0) {
+                showToast('回收站为空', 'warning');
+                return;
+            }
+            
+            if (confirm(`确定要清空回收站吗？这将永久删除 ${state.trash.length} 个订单，不可恢复！`)) {
+                state.trash = [];
+                saveData('trash', state.trash);
+                renderTrash();
+                showToast('回收站已清空', 'success');
+            }
+        }
+        
+        function renderTrash() {
+            const tbody = document.getElementById('trash-table-body');
+            const countBadge = document.getElementById('trash-count');
+            const navBadge = document.getElementById('trash-badge');
+            
+            if (!tbody) return;
+            
+            const trashCount = state.trash?.length || 0;
+            countBadge.textContent = `(${trashCount})`;
+            
+            if (navBadge) {
+                if (trashCount > 0) {
+                    navBadge.textContent = trashCount;
+                    navBadge.classList.remove('hidden');
+                } else {
+                    navBadge.classList.add('hidden');
+                }
+            }
+            
+            if (trashCount === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-slate-400 py-8">回收站为空</td></tr>';
+                return;
+            }
+            
+            const currencySymbols = {
+                'USD': '$',
+                'CNY': '¥',
+                'EUR': '€',
+                'GBP': '£'
+            };
+            
+            tbody.innerHTML = state.trash.slice().reverse().map(order => {
+                const currency = order.currency || 'USD';
+                const symbol = currencySymbols[currency] || '$';
+                return `
+                <tr>
+                    <td class="font-mono text-xs">${order.id?.split('_')[1] || order.id}</td>
+                    <td>${escapeHtml(order.title)}</td>
+                    <td>${escapeHtml(order.customer)}</td>
+                    <td class="font-medium">${symbol}${order.amount?.toLocaleString() || 0} <span class="text-slate-400 text-xs">${currency}</span></td>
+                    <td class="text-slate-500 text-xs">${formatDate(order._deletedAt)}</td>
+                    <td>
+                        <button onclick="restoreOrder('${escapeHtml(order.id)}')" class="text-success hover:text-green-700 mr-3 px-2 py-1 rounded hover:bg-green-50 transition-colors" title="恢复">
+                            <i class="fas fa-undo"></i> 恢复
+                        </button>
+                        <button onclick="permanentlyDeleteOrder('${escapeHtml(order.id)}')" class="text-danger hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 transition-colors" title="永久删除">
+                            <i class="fas fa-trash"></i> 删除
+                        </button>
+                    </td>
+                </tr>
+            `;}).join('');
         }
         
         function updateOrderStatus(id, direction) {
@@ -2779,6 +3030,9 @@
         window.deleteOrder = deleteOrder;
         window.updateOrderStatus = updateOrderStatus;
         window.renderOrdersList = renderOrdersList;
+        window.restoreOrder = restoreOrder;
+        window.permanentlyDeleteOrder = permanentlyDeleteOrder;
+        window.emptyTrash = emptyTrash;
         window.showCustomerModal = showCustomerModal;
         window.showEditCustomerModal = showEditCustomerModal;
         window.closeCustomerModal = closeCustomerModal;
