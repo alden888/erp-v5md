@@ -1,98 +1,225 @@
-# ERP-v5md 工作台状态与Firebase集成说明
-## 概述
-本文档主要介绍 ERP-v5md 项目中工作台状态管理（`workbench-state.js`）和 Firebase 集成（`workbench-firebase.js`）相关核心函数，以及其在项目中的作用和使用方式。
+# V5 Medical ERP Pro
 
-## 核心文件说明
-### 1. workbench-state.js
-该文件提供了工作台状态默认值的获取能力，用于统一管理各类业务数据和系统设置的默认值。
+> 专业的医疗器械企业管理系统 - 订单、客户、财务一体化解决方案
 
-#### 核心函数：`getDefaultValue(path)`
-- **功能**：根据指定的状态路径，返回对应的默认值；若路径无匹配项，返回 `null`。
-- **参数**：
-  | 参数名 | 类型   | 说明           |
-  |--------|--------|----------------|
-  | path   | string | 状态路径（如 `data.orders`、`settings.target`） |
-- **返回值**：`*` - 匹配路径的默认值，无匹配则返回 `null`。
-- **支持的状态路径及默认值**：
+[![Version](https://img.shields.io/badge/Version-2.0.0-blue)]()
+[![Firebase](https://img.shields.io/badge/Firebase-Cloud%20Sync-orange)]()
+[![License](https://img.shields.io/badge/License-Private-red)]()
 
-| 状态路径                | 默认值          | 说明                     |
-|-------------------------|-----------------|--------------------------|
-| `data.orders`           | `[]`            | 订单数据列表             |
-| `data.customers`        | `[]`            | 客户数据列表             |
-| `data.suppliers`        | `[]`            | 供应商数据列表           |
-| `data.expenses`         | `[]`            | 支出数据列表             |
-| `data.incomes`          | `[]`            | 收入数据列表             |
-| `data.todayActions`     | `[]`            | 今日操作列表             |
-| `settings.target`       | `5000000`       | 目标金额（默认500万）|
-| `settings.exchangeRate` | `7.25`          | 汇率（默认7.25）|
-| `settings.feishuWebhook`| `''`            | 飞书Webhook地址（默认空） |
-| `settings.firebaseEnabled` | `false`      | Firebase启用状态（默认关闭） |
-| `settings.survivalModeEnabled` | `true`    | 生存模式启用状态（默认开启） |
+---
 
-- **使用示例**：
-```javascript
-// 获取默认订单列表
-const defaultOrders = getDefaultValue('data.orders');
-console.log(defaultOrders); // 输出：[]
+## 🎉 V2.0 重大更新
 
-// 获取默认目标金额
-const defaultTarget = getDefaultValue('settings.target');
-console.log(defaultTarget); // 输出：5000000
+**ERP Pro V2.0** 已发布！基于 V1.0 经典设计全面升级，带来更专业、更便捷、更可靠的企业管理体验。
 
-// 获取不存在的路径值
-const nonExistValue = getDefaultValue('data.none');
-console.log(nonExistValue); // 输出：null
+### ✨ 新特性
+
+- 🎨 **全新界面** - 浅色专业主题，KPI 卡片式仪表盘
+- ☁️ **云同步** - Firebase Firestore 实时数据同步
+- 💾 **数据管理** - JSON 导入导出，本地+云端双备份
+- 🌍 **世界时钟** - 全球 6 个主要城市商机时间
+- 📱 **响应式设计** - 完美适配桌面和移动设备
+
+---
+
+## 📂 文件说明
+
+| 文件 | 说明 |
+|------|------|
+| `index.html` | **主入口** - ERP Pro V2.0 版本 |
+| `index-v2.html` | V2.0 版本副本 |
+| `index-old.html` | V14.7 SURVIVAL 原版备份 |
+| `js/*.js` | 模块化后端组件 |
+
+---
+
+## 🚀 快速开始
+
+### 在线访问
+```
+https://你的域名.com/erp-v5md/
 ```
 
-### 2. workbench-firebase.js
-该文件提供了从存储键名映射 Firebase 集合名称的能力，用于统一管理键名与集合名的对应关系。
+### 本地开发
+```bash
+git clone https://github.com/alden888/erp-v5md.git
+cd erp-v5md
 
-#### 核心函数：`getCollectionNameFromKey(key)`
-- **功能**：根据传入的存储键名，匹配并返回对应的 Firebase 集合名称；无匹配时返回 `misc`。
-- **参数**：
-  | 参数名 | 类型   | 说明           |
-  |--------|--------|----------------|
-  | key    | string | 存储键名（如 `orders`、`settings.target`） |
-- **返回值**：`string` - 对应的 Firebase 集合名称。
-- **键名与集合名映射规则**：
+# 使用 Python 启动本地服务器
+python3 -m http.server 8000
 
-| 键名包含关键词 | 对应集合名称          | 说明               |
-|----------------|-----------------------|--------------------|
-| `orders`       | `COLLECTIONS.ORDERS`  | 订单集合           |
-| `suppliers`    | `COLLECTIONS.SUPPLIERS` | 供应商集合       |
-| `customers`    | `COLLECTIONS.CUSTOMERS` | 客户集合         |
-| `expenses`     | `COLLECTIONS.EXPENSES` | 支出集合         |
-| `today_actions`| `COLLECTIONS.TODAY_ACTIONS` | 今日操作集合 |
-| `settings`     | `COLLECTIONS.SETTINGS` | 系统设置集合     |
-| 其他关键词     | `misc`                | 其他杂项数据集合   |
-
-- **使用示例**：
-```javascript
-// 匹配订单集合
-const orderCollection = getCollectionNameFromKey('data.orders');
-console.log(orderCollection); // 输出：COLLECTIONS.ORDERS
-
-// 匹配设置集合
-const settingsCollection = getCollectionNameFromKey('settings.feishuWebhook');
-console.log(settingsCollection); // 输出：COLLECTIONS.SETTINGS
-
-// 匹配今日操作集合
-const todayActionsCollection = getCollectionNameFromKey('today_actions_2024');
-console.log(todayActionsCollection); // 输出：COLLECTIONS.TODAY_ACTIONS
-
-// 匹配杂项集合
-const miscCollection = getCollectionNameFromKey('data.incomes');
-console.log(miscCollection); // 输出：misc
+# 访问 http://localhost:8000
 ```
 
-## 整体使用场景
-1. **状态初始化**：在工作台初始化时，通过 `getDefaultValue` 获取各类数据/设置的默认值，保证状态的初始一致性。
-2. **Firebase 数据读写**：在读写 Firebase 数据时，通过 `getCollectionNameFromKey` 将业务键名转换为集合名称，统一数据存储路径。
-3. **扩展说明**：
-   - 新增状态默认值时，需在 `workbench-state.js` 的 `defaults` 对象中补充键值对。
-   - 新增 Firebase 集合映射规则时，需在 `workbench-firebase.js` 的 `getCollectionNameFromKey` 函数中补充判断逻辑。
+---
 
-## 注意事项
-1. `getDefaultValue` 仅返回预定义的默认值，未定义的路径一律返回 `null`，使用时需做好空值判断。
-2. `getCollectionNameFromKey` 基于“键名包含关键词”匹配，需避免键名中包含非预期的关键词导致映射错误。
-3. `COLLECTIONS` 为项目中 Firebase 集合名称的常量定义，需确保其已提前声明且值正确。
+## 📊 功能模块
+
+### 1. 战报仪表盘
+- 年度达成率实时显示
+- 已回款金额（RMB/USD）
+- 距离目标差额
+- 待回款 Pipeline
+- 每日需进账计算
+
+### 2. 订单管理
+- 订单列表（状态、筛选）
+- 订单创建/编辑/删除
+- 多币种支持
+- PI 生成工具
+
+### 3. 客户管理
+- 客户信息维护
+- 跟进记录
+- 分级管理
+
+### 4. 供应商管理
+- 供应商档案
+- 采购记录
+- 价格追踪
+
+### 5. 财务中心
+- 收支明细
+- 财务报表
+- 汇率换算
+
+### 6. 支出管理
+- 日常支出记录
+- 分类统计
+- 预算控制
+
+### 7. 报价工具
+- FOB 价格计算
+- 退税计算
+- 利润率分析
+
+---
+
+## ☁️ 云同步配置
+
+### Firebase 设置
+
+1. 创建 Firebase 项目：https://console.firebase.google.com
+2. 启用 Firestore 数据库
+3. 复制配置到代码中：
+
+```javascript
+const firebaseConfig = {
+    apiKey: "your-api-key",
+    authDomain: "your-project.firebaseapp.com",
+    projectId: "your-project",
+    storageBucket: "your-project.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "your-app-id"
+};
+```
+
+4. 设置 Firestore 安全规则：
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+```
+
+---
+
+## 💾 数据备份与恢复
+
+### 导出数据
+1. 点击侧边栏 "数据安全" → "导出备份"
+2. 下载 JSON 格式备份文件
+3. 备份包含：订单、客户、供应商、支出、设置
+
+### 导入数据
+1. 点击侧边栏 "数据安全" → "导入恢复"
+2. 选择之前导出的 JSON 文件
+3. 系统自动合并数据
+
+### 自动同步
+- 在线时自动同步到 Firebase
+- 离线时保存到本地，恢复后自动同步
+- 每 5 分钟自动检查同步
+
+---
+
+## 🔧 核心技术
+
+### 前端技术栈
+- **Tailwind CSS** - 实用优先的 CSS 框架
+- **Font Awesome** - 图标库
+- **Chart.js** - 数据可视化
+- **原生 JavaScript** - 无框架依赖
+
+### 后端服务
+- **Firebase Firestore** - NoSQL 云数据库
+- **Firebase Auth** - 用户认证（预留）
+- **LocalStorage** - 本地数据持久化
+
+---
+
+## 📋 系统需求
+
+- 现代浏览器（Chrome、Firefox、Safari、Edge）
+- 支持 localStorage
+- 网络连接（用于云同步）
+
+---
+
+## 🛡️ 数据安全
+
+1. **本地存储加密** - 敏感数据建议启用加密
+2. **Firebase 安全规则** - 控制数据访问权限
+3. **定期备份** - 建议每周导出备份
+4. **HTTPS 传输** - 生产环境强制 HTTPS
+
+---
+
+## 🐛 故障排除
+
+### 数据无法保存
+1. 检查浏览器 localStorage 是否开启
+2. 清除浏览器缓存后重试
+3. 检查控制台错误信息
+
+### 云同步失败
+1. 检查网络连接
+2. 验证 Firebase 配置是否正确
+3. 查看 Firestore 安全规则
+
+### 页面显示异常
+1. 强制刷新页面（Ctrl+F5）
+2. 检查浏览器控制台错误
+3. 尝试隐身模式访问
+
+---
+
+## 📝 更新日志
+
+### v2.0.0 (2025-03-23)
+- ✨ 全新 UI 设计（基于 V1.0 优化）
+- ☁️ Firebase 云同步功能
+- 💾 数据导入导出功能
+- 🌍 世界时钟功能
+- 📱 响应式布局优化
+
+### v1.x (历史版本)
+- 原始 V14.7 SURVIVAL 版本功能
+- 本地存储管理
+- 基础订单/客户/财务管理
+
+---
+
+## 🤝 技术支持
+
+- 项目地址：https://github.com/alden888/erp-v5md
+- 问题反馈：https://github.com/alden888/erp-v5md/issues
+
+---
+
+**© 2025 V5 Medical. All Rights Reserved.**
