@@ -1247,10 +1247,17 @@
                     
                     <!-- 汇率换算器 -->
                     <div class="card border-t-4 border-t-indigo-500">
-                        <div class="card-header">
+                        <div class="card-header flex justify-between items-center">
                             <span class="font-bold text-slate-800"><i class="fas fa-exchange-alt text-indigo-500 mr-2"></i>汇率换算器</span>
+                            <a href="https://www.boc.cn/sourcedb/whpj/" target="_blank" class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1 rounded-full transition">
+                                <i class="fas fa-external-link-alt mr-1"></i>查中行牌价
+                            </a>
                         </div>
                         <div class="p-5 space-y-4">
+                            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                以下为参考汇率，实际汇率请以<a href="https://www.boc.cn/sourcedb/whpj/" target="_blank" class="underline font-medium">中国银行外汇牌价</a>为准
+                            </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">持有货币</label>
@@ -1282,7 +1289,7 @@
                             <div class="p-4 bg-indigo-50 rounded-lg text-center">
                                 <div class="text-sm text-slate-500 mb-1">换算结果</div>
                                 <div class="text-3xl font-bold text-indigo-600" id="fx-result">-</div>
-                                <div class="text-xs text-slate-400 mt-1" id="fx-rate">汇率: 1 USD = 7.25 CNY</div>
+                                <div class="text-xs text-slate-400 mt-1" id="fx-rate">参考汇率: 1 USD = 7.25 CNY</div>
                             </div>
                         </div>
                     </div>
@@ -3927,7 +3934,7 @@
             const rate = rates[to] / rates[from];
             
             document.getElementById('fx-result').textContent = result.toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' ' + to;
-            document.getElementById('fx-rate').textContent = `汇率: 1 ${from} = ${rate.toFixed(4)} ${to}`;
+            document.getElementById('fx-rate').textContent = `参考汇率: 1 ${from} = ${rate.toFixed(4)} ${to}`;
         }
         
         // ==================== 工具函数 ====================
