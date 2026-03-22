@@ -1867,6 +1867,41 @@
             updatePaymentMethods();
             document.getElementById('order-payment-method').value = order.paymentMethod || 'stripe_usd';
             
+            // 加载产品列表
+            const productsList = document.getElementById('order-products-list');
+            console.log('[showEditOrderModal] 加载订单产品:', order.id, '产品数量:', order.products?.length || 0, order.products);
+            
+            if (order.products && order.products.length > 0) {
+                productsList.innerHTML = order.products.map((p, index) => `
+                    <div class="product-item grid grid-cols-12 gap-2 ${index > 0 ? 'mt-2' : ''}">
+                        <div class="col-span-6">
+                            <input type="text" placeholder="产品名称" class="input-field order-product-name" value="${escapeHtml(p.name)}">
+                        </div>
+                        <div class="col-span-3">
+                            <input type="number" placeholder="数量" class="input-field order-product-qty" value="${p.qty || 0}">
+                        </div>
+                        <div class="col-span-3">
+                            <input type="number" placeholder="单价" class="input-field order-product-price" value="${p.price || 0}">
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                // 空产品列表时显示一行空白输入
+                productsList.innerHTML = `
+                    <div class="product-item grid grid-cols-12 gap-2">
+                        <div class="col-span-6">
+                            <input type="text" placeholder="产品名称" class="input-field order-product-name">
+                        </div>
+                        <div class="col-span-3">
+                            <input type="number" placeholder="数量" class="input-field order-product-qty">
+                        </div>
+                        <div class="col-span-3">
+                            <input type="number" placeholder="单价" class="input-field order-product-price">
+                        </div>
+                    </div>
+                `;
+            }
+            
             // 加载客户列表
             loadCustomerOptions();
             
@@ -1939,6 +1974,7 @@
                     products.push({ name, qty, price });
                 }
             });
+            console.log('[saveOrder] 收集到产品数量:', products.length, products);
             
             const currency = document.getElementById('order-currency').value;
             const paymentMethod = document.getElementById('order-payment-method').value;
@@ -1971,9 +2007,13 @@
             }
             
             saveData('orders', state.orders);
+            console.log('[saveOrder] 订单已保存，当前订单总数:', state.orders.length);
+            
+            // 强制刷新看板和列表
             updateDashboard();
             renderOrdersKanban();
             renderOrdersList();
+            
             closeOrderModal();
         }
         
@@ -2019,6 +2059,8 @@
         }
         
         function renderOrdersKanban() {
+            console.log('[renderOrdersKanban] 开始渲染，订单总数:', state.orders?.length || 0);
+            
             const containers = {
                 inquiry: document.getElementById('kanban-inquiry'),
                 pi: document.getElementById('kanban-pi'),
@@ -2036,11 +2078,11 @@
             };
             
             // 清空容器
-            Object.values(containers).forEach(c => c.innerHTML = '');
+            Object.values(containers).forEach(c => { if (c) c.innerHTML = ''; });
             
             // 按状态分组
             const grouped = { inquiry: [], pi: [], production: [], shipped: [], paid: [] };
-            state.orders.forEach(order => {
+            (state.orders || []).forEach(order => {
                 const status = order.status || 'inquiry';
                 if (grouped[status]) grouped[status].push(order);
             });
@@ -2057,6 +2099,14 @@
                         containers[status].innerHTML = list.map(order => renderOrderCard(order)).join('');
                     }
                 }
+            });
+            
+            console.log('[renderOrdersKanban] 渲染完成，各状态数量:', {
+                inquiry: grouped.inquiry.length,
+                pi: grouped.pi.length,
+                production: grouped.production.length,
+                shipped: grouped.shipped.length,
+                paid: grouped.paid.length
             });
         }
         
