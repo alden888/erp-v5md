@@ -1,0 +1,2402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>战时指挥台 V14.7 SURVIVAL · Firebase同步版</title>
+    
+    <!-- 预连接优化 -->
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css" crossorigin>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+    <script>
+        // 生产环境日志控制
+        const isDev = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
+        const log = isDev ? console.log.bind(console) : () => {};
+        
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: { 1: '#0a0a0a', 2: '#141414', 3: '#1e1e1e', 4: '#282828' },
+                        accent: { red: '#dc2626', orange: '#ea580c', yellow: '#ca8a04', green: '#16a34a', blue: '#2563eb', purple: '#9333ea' },
+                        column: '#0d1117'
+                    },
+                    fontFamily: {
+                        sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out forwards',
+                        'slide-in': 'slideIn 0.3s ease-out forwards',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'spin-slow': 'spin 2s linear infinite'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* ==================== 基础样式 ==================== */
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Space Grotesk', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #141414 50%, #0d1117 100%);
+            color: #e5e7eb;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: rgba(220,38,38,0.4); border-radius: 3px; transition: background 0.2s; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(220,38,38,0.6); }
+
+        /* 动画定义 */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        
+        .loading-spinner {
+            border: 3px solid rgba(220, 38, 38, 0.1);
+            border-top-color: #dc2626;
+            border-radius: 50%;
+            width: 48px; height: 48px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* Tab 切换 */
+        .tab-content { display: none; height: calc(100vh - 64px); overflow-y: auto; }
+        .tab-content.active { display: block; animation: fadeIn 0.25s ease-out; }
+        
+        /* 看板专用布局 */
+        #tab-kanban.active { display: flex; flex-direction: column; overflow: hidden; }
+        .kanban-board { flex: 1; display: flex; gap: 1rem; overflow-x: auto; overflow-y: hidden; padding: 1rem 1.5rem; scroll-behavior: smooth; }
+        .kanban-column { flex: 0 0 300px; display: flex; flex-direction: column; max-height: 100%; background: rgba(13,17,23,0.9); backdrop-filter: blur(12px); border-radius: 0.75rem; border: 1px solid rgba(75,85,99,0.3); }
+        .kanban-column-header { padding: 1rem; border-bottom: 1px solid rgba(75,85,99,0.2); }
+        .kanban-cards { flex: 1; overflow-y: auto; padding: 0.75rem; min-height: 100px; }
+        
+        /* 看板卡片 */
+        .kanban-card {
+            background: rgba(20,20,20,0.95);
+            border: 1px solid rgba(75,85,99,0.3);
+            border-radius: 0.5rem;
+            padding: 0.875rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .kanban-card:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        /* 玻璃态 */
+        .glass {
+            background: rgba(20,20,20,0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(75,85,99,0.3);
+        }
+
+        /* 生存模式遮罩 */
+        .survival-lock { display: flex; }
+        .survival-lock.hidden { display: none; }
+
+        /* 移动导航 */
+        .mobile-nav {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #0a0a0a 0%, #141414 100%);
+            z-index: 100;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        .mobile-nav.active { transform: translateX(0); }
+
+        /* 导航高亮 */
+        .nav-tab.active { color: white; background: rgba(255,255,255,0.1); }
+
+        /* Toast 样式 */
+        .toast {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.25rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .toast.success { background: linear-gradient(135deg, #16a34a, #15803d); color: white; }
+        .toast.error { background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; }
+        .toast.warning { background: linear-gradient(135deg, #ca8a04, #a16207); color: white; }
+        .toast.info { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; }
+
+        /* 模态框 */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .modal-overlay.hidden { display: none; }
+        .modal-content {
+            background: linear-gradient(135deg, #1e1e1e, #141414);
+            border: 1px solid rgba(75,85,99,0.5);
+            border-radius: 1rem;
+            width: 100%;
+            max-width: 480px;
+            padding: 1.5rem;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        /* 同步状态指示器 */
+        .sync-indicator { transition: all 0.3s ease; }
+        .sync-indicator.syncing { animation: pulse 1s infinite; }
+        .sync-indicator.online { color: #22c55e; }
+        .sync-indicator.offline { color: #ef4444; }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .kanban-column { flex: 0 0 260px; }
+            .kanban-board { padding: 0.75rem; gap: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- ==================== 生存模式遮罩 ==================== -->
+    <div id="survival-curtain" class="survival-lock fixed inset-0 z-[999] bg-black/95 backdrop-blur-md flex items-center justify-center">
+        <div class="w-full max-w-md mx-4 text-center">
+            <div class="text-6xl mb-6">⚔️</div>
+            <h1 class="text-3xl font-black text-white mb-2">
+                <span class="text-red-500">V5</span> COMMANDER
+            </h1>
+            <p class="text-gray-400 mb-8 text-sm">输入今日三件事，解锁战场</p>
+            
+            <div class="space-y-3 mb-6">
+                <input id="action-1" type="text" placeholder="🎯 最重要的事" oninput="app.survival.checkInputs()"
+                    class="w-full bg-dark-2 border border-dark-4 rounded-lg p-4 text-white placeholder-gray-600 focus:border-red-500 focus:outline-none transition text-center">
+                <input id="action-2" type="text" placeholder="📋 第二件事" oninput="app.survival.checkInputs()"
+                    class="w-full bg-dark-2 border border-dark-4 rounded-lg p-4 text-white placeholder-gray-600 focus:border-red-500 focus:outline-none transition text-center">
+                <input id="action-3" type="text" placeholder="✅ 第三件事" oninput="app.survival.checkInputs()"
+                    class="w-full bg-dark-2 border border-dark-4 rounded-lg p-4 text-white placeholder-gray-600 focus:border-red-500 focus:outline-none transition text-center">
+            </div>
+
+            <button id="battle-start-btn" disabled onclick="app.survival.unlock()"
+                class="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 disabled:from-gray-700 disabled:to-gray-600 disabled:cursor-not-allowed text-white font-bold py-4 rounded-lg transition shadow-xl text-lg">
+                开启今日战斗
+            </button>
+
+            <button onclick="app.survival.emergency()" class="mt-4 text-gray-600 hover:text-gray-400 text-sm transition">
+                紧急进入 (10分钟)
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== 顶部导航 ==================== -->
+    <header class="fixed top-0 left-0 right-0 h-16 bg-dark-1/95 backdrop-blur-md border-b border-dark-4/50 z-50 px-4 md:px-6 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <div class="font-black text-lg tracking-tight text-white">
+                <span class="text-red-500">V5</span> COMMANDER
+            </div>
+            <div id="emergency-warning" class="hidden px-2.5 py-1 bg-red-900/40 border border-red-500/30 rounded text-red-400 text-[10px] font-bold animate-pulse-slow">
+                ⚠️ EMERGENCY <span id="emergency-timer">10:00</span>
+            </div>
+        </div>
+
+        <nav class="hidden md:flex items-center gap-1">
+            <button onclick="app.switchTab('dashboard')" class="nav-tab active px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition rounded-md" data-tab="dashboard">
+                <i class="fas fa-chart-pie mr-2"></i>仪表盘
+            </button>
+            <button onclick="app.switchTab('kanban')" class="nav-tab px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition rounded-md" data-tab="kanban">
+                <i class="fas fa-columns mr-2"></i>订单战场
+            </button>
+            <button onclick="app.switchTab('crm')" class="nav-tab px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition rounded-md" data-tab="crm">
+                <i class="fas fa-address-book mr-2"></i>客户
+            </button>
+            <button onclick="app.switchTab('suppliers')" class="nav-tab px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition rounded-md" data-tab="suppliers">
+                <i class="fas fa-industry mr-2"></i>供应商
+            </button>
+            <button onclick="app.switchTab('expenses')" class="nav-tab px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition rounded-md" data-tab="expenses">
+                <i class="fas fa-wallet mr-2"></i>支出
+            </button>
+            <button onclick="app.switchTab('tools')" class="nav-tab px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition rounded-md" data-tab="tools">
+                <i class="fas fa-toolbox mr-2"></i>工具箱
+            </button>
+        </nav>
+
+        <div class="flex items-center gap-3">
+            <button class="md:hidden text-gray-400 hover:text-white p-2 transition" onclick="document.querySelector('.mobile-nav').classList.add('active')">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+            <div class="hidden md:flex items-center gap-3">
+                <!-- 同步状态指示器 -->
+                <button onclick="app.firebase.showStatus()" id="sync-status" class="sync-indicator text-xs text-gray-500 flex items-center gap-1.5 hover:text-gray-300 transition cursor-pointer" title="点击查看同步状态">
+                    <i id="sync-icon" class="fas fa-circle text-[8px]"></i>
+                    <span id="sync-text">本地</span>
+                </button>
+                <button onclick="app.openSettings()" class="text-gray-500 hover:text-white p-2 transition" title="设置">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <button onclick="app.logout()" class="text-gray-500 hover:text-red-400 p-2 transition" title="退出系统">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== 移动端导航 ==================== -->
+    <div class="mobile-nav flex flex-col p-6">
+        <div class="flex justify-end mb-8">
+            <button onclick="document.querySelector('.mobile-nav').classList.remove('active')" class="text-gray-400 hover:text-white text-2xl transition">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="flex flex-col gap-2">
+            <button onclick="app.switchTab('dashboard'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition">
+                <i class="fas fa-chart-pie mr-3 w-6"></i>仪表盘
+            </button>
+            <button onclick="app.switchTab('kanban'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition">
+                <i class="fas fa-columns mr-3 w-6"></i>订单战场
+            </button>
+            <button onclick="app.switchTab('crm'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition">
+                <i class="fas fa-address-book mr-3 w-6"></i>客户档案
+            </button>
+            <button onclick="app.switchTab('suppliers'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition">
+                <i class="fas fa-industry mr-3 w-6"></i>供应商
+            </button>
+            <button onclick="app.switchTab('expenses'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition">
+                <i class="fas fa-wallet mr-3 w-6"></i>运营支出
+            </button>
+            <button onclick="app.switchTab('tools'); document.querySelector('.mobile-nav').classList.remove('active')" class="text-left text-lg text-gray-300 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition">
+                <i class="fas fa-toolbox mr-3 w-6"></i>外贸工具箱
+            </button>
+        </div>
+        <div class="mt-auto pt-6 border-t border-dark-4 space-y-2">
+            <button onclick="app.openSettings(); document.querySelector('.mobile-nav').classList.remove('active')" class="w-full text-left text-gray-400 hover:text-white py-3 px-4 rounded-lg hover:bg-dark-3 transition">
+                <i class="fas fa-cog mr-3 w-6"></i>系统设置
+            </button>
+            <button onclick="app.logout()" class="w-full text-left text-gray-500 hover:text-red-400 py-3 px-4 rounded-lg hover:bg-dark-3 transition">
+                <i class="fas fa-power-off mr-3 w-6"></i>退出系统
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== 主内容区 ==================== -->
+    <main class="pt-16 h-full">
+        
+        <!-- 仪表盘 Tab -->
+        <div id="tab-dashboard" class="tab-content active">
+            <div class="container mx-auto p-6">
+                
+                <!-- 🌍 全球商机时钟 -->
+                <div class="mb-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="w-1 h-4 bg-red-500 rounded-full"></span>
+                            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">
+                                <i class="fas fa-globe-asia mr-2 text-blue-500"></i>Global Business Hours
+                            </h3>
+                        </div>
+                        <span id="local-time-ref" class="text-xs text-gray-600 font-mono"></span>
+                    </div>
+                    <div id="global-clock-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                        <!-- 时钟卡片由JS动态生成 -->
+                        <div class="rounded-lg p-3 text-center border border-gray-700/30 bg-dark-3/50 animate-pulse">
+                            <div class="h-3 bg-gray-700 rounded w-16 mx-auto mb-2"></div>
+                            <div class="h-6 bg-gray-700 rounded w-12 mx-auto"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🔥 每日励志金句 -->
+                <div class="mb-6 p-4 glass rounded-xl border-l-4 border-l-yellow-500/50 bg-gradient-to-r from-yellow-900/10 to-transparent">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">💪</span>
+                        <div>
+                            <p id="daily-quote" class="text-sm text-gray-300 italic leading-relaxed">Loading motivation...</p>
+                            <p class="text-[10px] text-gray-600 mt-1">— Daily Motivation</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPI 卡片 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <div class="glass rounded-xl p-5 hover:border-blue-500/30 transition group">
+                        <div class="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-2">
+                            <i class="fas fa-chart-line text-blue-500"></i> Total Revenue
+                        </div>
+                        <div class="text-2xl font-bold text-blue-400 font-mono" id="kpi-revenue">¥0.00</div>
+                        <div class="text-xs text-gray-600 mt-2" id="dashboard-total-orders">订单: 0</div>
+                    </div>
+                    <div class="glass rounded-xl p-5 hover:border-green-500/30 transition group">
+                        <div class="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-2">
+                            <i class="fas fa-coins text-green-500"></i> Gross Profit
+                        </div>
+                        <div class="text-2xl font-bold text-green-400 font-mono" id="kpi-gross">¥0.00</div>
+                        <div class="text-xs text-gray-600 mt-2" id="dashboard-pending-orders">待处理: 0</div>
+                    </div>
+                    <div class="glass rounded-xl p-5 hover:border-purple-500/30 transition group">
+                        <div class="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-2">
+                            <i class="fas fa-piggy-bank text-purple-500"></i> Net Profit
+                        </div>
+                        <div class="text-2xl font-bold text-purple-400 font-mono" id="kpi-net">¥0.00</div>
+                        <div class="text-xs text-gray-600 mt-2" id="dashboard-completed-orders">已完成: 0</div>
+                    </div>
+                    <div class="glass rounded-xl p-5 hover:border-red-500/30 transition relative overflow-hidden group">
+                        <div class="absolute -right-4 -top-4 text-7xl text-red-500/10 group-hover:text-red-500/20 transition">
+                            <i class="fas fa-hourglass-half"></i>
+                        </div>
+                        <div class="text-xs text-red-400 uppercase tracking-wider mb-1 flex items-center gap-2">
+                            <i class="fas fa-heartbeat text-red-500"></i> Survival Status
+                        </div>
+                        <div class="text-xl font-bold text-white">72h Safe</div>
+                        <div class="text-xs text-red-400/70 mt-2">距上次进账: <span id="hours-since-income" class="font-mono">0</span>h</div>
+                    </div>
+                </div>
+
+                <!-- 🔥 P0 生存指标（V14.7 新增）-->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                    <div class="glass rounded-xl p-4 border-l-4 border-l-red-500 hover:border-red-500/50 transition">
+                        <div class="text-xs text-red-400 uppercase tracking-wider mb-1 flex items-center gap-2">
+                            <i class="fas fa-crosshairs animate-pulse"></i> P0 客户数
+                        </div>
+                        <div class="text-3xl font-bold text-red-400 font-mono" id="kpi-p0-count">0</div>
+                        <div class="text-xs text-gray-600 mt-1">生死攸关的目标</div>
+                    </div>
+                    <div class="glass rounded-xl p-4 border-l-4 border-l-yellow-500 hover:border-yellow-500/50 transition">
+                        <div class="text-xs text-yellow-400 uppercase tracking-wider mb-1 flex items-center gap-2">
+                            <i class="fas fa-dollar-sign"></i> P0 预期金额
+                        </div>
+                        <div class="text-3xl font-bold text-yellow-400 font-mono" id="kpi-p0-amount">¥0.00</div>
+                        <div class="text-xs text-gray-600 mt-1">待拿下的订单</div>
+                    </div>
+                    <div class="glass rounded-xl p-4 border-l-4 border-l-orange-500 hover:border-orange-500/50 transition">
+                        <div class="text-xs text-orange-400 uppercase tracking-wider mb-1 flex items-center gap-2">
+                            <i class="fas fa-exclamation-triangle"></i> P0 超时未跟进
+                        </div>
+                        <div class="text-3xl font-bold text-orange-400 font-mono" id="kpi-p0-overdue">0</div>
+                        <div class="text-xs text-gray-600 mt-1">超过72h未更新</div>
+                    </div>
+                </div>
+
+                <!-- 今日行动 -->
+                <div class="mb-8">
+                    <h3 class="text-sm font-bold text-gray-400 uppercase mb-4 flex items-center gap-2">
+                        <i class="fas fa-bullseye text-red-500"></i> Today's Focus
+                    </h3>
+                    <div id="actions-display" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="glass rounded-xl p-5 text-center text-gray-500">
+                            <i class="fas fa-clipboard-list text-3xl mb-3 opacity-30"></i>
+                            <p class="text-sm">完成生存模式登录后显示今日行动</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 快捷操作 -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <button onclick="app.kanban.openQuickAdd()" class="glass p-5 rounded-xl hover:bg-blue-900/20 hover:border-blue-500/30 transition text-sm font-medium group">
+                        <i class="fas fa-plus mb-3 block text-xl text-blue-500 group-hover:scale-110 transition-transform"></i> 新增订单
+                    </button>
+                    <button onclick="app.crm.openAddModal()" class="glass p-5 rounded-xl hover:bg-green-900/20 hover:border-green-500/30 transition text-sm font-medium group">
+                        <i class="fas fa-user-plus mb-3 block text-xl text-green-500 group-hover:scale-110 transition-transform"></i> 录入客户
+                    </button>
+                    <button onclick="app.expenses.openAddModal()" class="glass p-5 rounded-xl hover:bg-yellow-900/20 hover:border-yellow-500/30 transition text-sm font-medium group">
+                        <i class="fas fa-receipt mb-3 block text-xl text-yellow-500 group-hover:scale-110 transition-transform"></i> 记一笔账
+                    </button>
+                    <button onclick="app.firebase.manualSync()" class="glass p-5 rounded-xl hover:bg-cyan-900/20 hover:border-cyan-500/30 transition text-sm font-medium group">
+                        <i class="fas fa-sync mb-3 block text-xl text-cyan-500 group-hover:scale-110 transition-transform"></i> 同步数据
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 看板 Tab -->
+        <div id="tab-kanban" class="tab-content">
+            <div class="h-14 px-6 flex items-center justify-between border-b border-dark-4/50 bg-dark-1/80 backdrop-blur-sm">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fas fa-columns text-blue-500"></i> 作战指挥板
+                </h2>
+                <button onclick="app.kanban.openQuickAdd()" class="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white px-4 py-2 rounded-lg text-sm font-bold transition shadow-lg shadow-blue-900/20 flex items-center gap-2">
+                    <i class="fas fa-plus"></i> 立项
+                </button>
+            </div>
+
+            <div class="kanban-board" id="kanban-wrapper">
+                <!-- 询盘列 -->
+                <div class="kanban-column">
+                    <div class="kanban-column-header">
+                        <div class="flex justify-between items-center">
+                            <span class="text-blue-400 text-sm font-bold uppercase tracking-wide">New Inquiry</span>
+                            <span class="bg-dark-3 px-2 py-0.5 rounded text-xs text-gray-400 font-mono" id="count-inquiry">0</span>
+                        </div>
+                    </div>
+                    <div id="kanban-inquiry" class="kanban-cards"></div>
+                </div>
+
+                <!-- PI已发列 -->
+                <div class="kanban-column">
+                    <div class="kanban-column-header">
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-400 text-sm font-bold uppercase tracking-wide">PI Sent</span>
+                            <span class="bg-dark-3 px-2 py-0.5 rounded text-xs text-gray-400 font-mono" id="count-pi">0</span>
+                        </div>
+                    </div>
+                    <div id="kanban-pi" class="kanban-cards"></div>
+                </div>
+
+                <!-- 生产中列 -->
+                <div class="kanban-column">
+                    <div class="kanban-column-header">
+                        <div class="flex justify-between items-center">
+                            <span class="text-purple-400 text-sm font-bold uppercase tracking-wide">Production</span>
+                            <span class="bg-dark-3 px-2 py-0.5 rounded text-xs text-gray-400 font-mono" id="count-production">0</span>
+                        </div>
+                    </div>
+                    <div id="kanban-production" class="kanban-cards"></div>
+                </div>
+
+                <!-- 已发货列 -->
+                <div class="kanban-column">
+                    <div class="kanban-column-header">
+                        <div class="flex justify-between items-center">
+                            <span class="text-cyan-400 text-sm font-bold uppercase tracking-wide">Shipped</span>
+                            <span class="bg-dark-3 px-2 py-0.5 rounded text-xs text-gray-400 font-mono" id="count-shipped">0</span>
+                        </div>
+                    </div>
+                    <div id="kanban-shipped" class="kanban-cards"></div>
+                </div>
+
+                <!-- 已完成列 -->
+                <div class="kanban-column">
+                    <div class="kanban-column-header">
+                        <div class="flex justify-between items-center">
+                            <span class="text-green-400 text-sm font-bold uppercase tracking-wide">Paid & Done</span>
+                            <span class="bg-dark-3 px-2 py-0.5 rounded text-xs text-gray-400 font-mono" id="count-paid">0</span>
+                        </div>
+                    </div>
+                    <div id="kanban-paid" class="kanban-cards"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 客户 Tab -->
+        <div id="tab-crm" class="tab-content">
+            <div class="container mx-auto p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-white">客户资产库</h2>
+                    <button onclick="app.crm.openAddModal()" class="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white px-4 py-2 rounded-lg text-sm font-bold transition shadow-lg shadow-green-900/20">
+                        <i class="fas fa-user-plus mr-2"></i> 录入客户
+                    </button>
+                </div>
+                <div id="customer-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+        </div>
+
+        <!-- 供应商 Tab -->
+        <div id="tab-suppliers" class="tab-content">
+            <div class="container mx-auto p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-white">供应链管理</h2>
+                    <button onclick="app.suppliers.openAddModal()" class="bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white px-4 py-2 rounded-lg text-sm font-bold transition shadow-lg shadow-indigo-900/20">
+                        <i class="fas fa-plus mr-2"></i> 新增供应商
+                    </button>
+                </div>
+                <div id="supplier-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+        </div>
+
+        <!-- 支出 Tab -->
+        <div id="tab-expenses" class="tab-content">
+            <div class="container mx-auto p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-white">资金流水</h2>
+                    <button onclick="app.expenses.openAddModal()" class="bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-white px-4 py-2 rounded-lg text-sm font-bold transition shadow-lg shadow-yellow-900/20">
+                        <i class="fas fa-plus mr-2"></i> 记一笔
+                    </button>
+                </div>
+                <div class="glass rounded-xl overflow-hidden">
+                    <table class="w-full text-sm text-left text-gray-400">
+                        <thead class="text-xs uppercase bg-dark-3/50 text-gray-500">
+                            <tr>
+                                <th class="px-4 py-3">日期</th>
+                                <th class="px-4 py-3">项目</th>
+                                <th class="px-4 py-3">分类</th>
+                                <th class="px-4 py-3 text-right">金额</th>
+                                <th class="px-4 py-3 text-right">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expenses-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🧰 外贸工具箱 Tab -->
+        <div id="tab-tools" class="tab-content">
+            <div class="container mx-auto p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-white">
+                        <i class="fas fa-toolbox mr-2 text-orange-500"></i>外贸工具箱
+                    </h2>
+                    <button onclick="WorkbenchTools.resetAll()" class="text-gray-500 hover:text-white text-sm transition">
+                        <i class="fas fa-redo mr-1"></i> 重置
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    <!-- 📦 CBM 体积计算器 -->
+                    <div class="glass rounded-xl overflow-hidden">
+                        <div class="bg-gradient-to-r from-blue-900/30 to-blue-800/20 px-5 py-4 border-b border-dark-4/50">
+                            <h3 class="font-bold text-white flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center">📦</span>
+                                CBM 体积计算器
+                            </h3>
+                            <p class="text-xs text-gray-500 mt-1">计算货物体积和材积重</p>
+                        </div>
+                        <div class="p-5 space-y-4">
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="text-xs text-gray-500 mb-1 block">长 (cm)</label>
+                                    <input id="cbm-l" type="number" step="0.1" min="0" placeholder="60" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono placeholder-gray-600 focus:border-blue-500 outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500 mb-1 block">宽 (cm)</label>
+                                    <input id="cbm-w" type="number" step="0.1" min="0" placeholder="40" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono placeholder-gray-600 focus:border-blue-500 outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500 mb-1 block">高 (cm)</label>
+                                    <input id="cbm-h" type="number" step="0.1" min="0" placeholder="50" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono placeholder-gray-600 focus:border-blue-500 outline-none transition">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 mb-1 block">数量 (箱)</label>
+                                <input id="cbm-qty" type="number" min="1" value="1" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono focus:border-blue-500 outline-none transition">
+                            </div>
+                            <button id="btn-calc-cbm" onclick="WorkbenchTools.calcCBM()" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-3 rounded-lg transition">
+                                <i class="fas fa-calculator mr-2"></i>计算体积
+                            </button>
+                            <div id="cbm-result" class="hidden p-4 bg-dark-2 rounded-lg space-y-2 text-sm">
+                                <div class="flex justify-between"><span class="text-gray-400">单箱体积:</span><span id="res-vol-one" class="text-blue-400 font-mono">0.000 m³</span></div>
+                                <div class="flex justify-between"><span class="text-gray-400">总体积:</span><span id="res-vol-total" class="text-green-400 font-mono font-bold">0.000 m³</span></div>
+                                <div class="flex justify-between"><span class="text-gray-400">材积重(快递):</span><span id="res-weight-express" class="text-yellow-400 font-mono">0.00 kg</span></div>
+                                <div class="flex justify-between"><span class="text-gray-400">材积重(空运):</span><span id="res-weight-air" class="text-orange-400 font-mono">0.00 kg</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 💱 汇率转换器 -->
+                    <div class="glass rounded-xl overflow-hidden">
+                        <div class="bg-gradient-to-r from-green-900/30 to-green-800/20 px-5 py-4 border-b border-dark-4/50">
+                            <h3 class="font-bold text-white flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg bg-green-600/20 flex items-center justify-center">💱</span>
+                                汇率转换器
+                            </h3>
+                            <p class="text-xs text-gray-500 mt-1">实时汇率换算</p>
+                        </div>
+                        <div class="p-5 space-y-4">
+                            <div>
+                                <label class="text-xs text-gray-500 mb-1 block">金额</label>
+                                <input id="exchange-amount" type="number" step="0.01" min="0" placeholder="1000" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono placeholder-gray-600 focus:border-green-500 outline-none transition">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-xs text-gray-500 mb-1 block">从</label>
+                                    <select id="exchange-from" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white focus:border-green-500 outline-none transition">
+                                        <option value="USD">🇺🇸 USD 美元</option>
+                                        <option value="EUR">🇪🇺 EUR 欧元</option>
+                                        <option value="GBP">🇬🇧 GBP 英镑</option>
+                                        <option value="CNY">🇨🇳 CNY 人民币</option>
+                                        <option value="AED">🇦🇪 AED 迪拉姆</option>
+                                        <option value="TRY">🇹🇷 TRY 里拉</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500 mb-1 block">到</label>
+                                    <select id="exchange-to" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white focus:border-green-500 outline-none transition">
+                                        <option value="CNY">🇨🇳 CNY 人民币</option>
+                                        <option value="USD">🇺🇸 USD 美元</option>
+                                        <option value="EUR">🇪🇺 EUR 欧元</option>
+                                        <option value="GBP">🇬🇧 GBP 英镑</option>
+                                        <option value="AED">🇦🇪 AED 迪拉姆</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 mb-1 block">自定义汇率 (可选)</label>
+                                <input id="exchange-rate" type="number" step="0.0001" min="0" placeholder="留空使用默认汇率" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono placeholder-gray-600 focus:border-green-500 outline-none transition">
+                            </div>
+                            <button onclick="WorkbenchTools.calcExchange()" class="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-bold py-3 rounded-lg transition">
+                                <i class="fas fa-exchange-alt mr-2"></i>转换
+                            </button>
+                            <div id="exchange-result" class="hidden"></div>
+                        </div>
+                    </div>
+
+                    <!-- 📝 报价计算器 -->
+                    <div class="glass rounded-xl overflow-hidden">
+                        <div class="bg-gradient-to-r from-purple-900/30 to-purple-800/20 px-5 py-4 border-b border-dark-4/50">
+                            <h3 class="font-bold text-white flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg bg-purple-600/20 flex items-center justify-center">📝</span>
+                                快速报价计算器
+                            </h3>
+                            <p class="text-xs text-gray-500 mt-1">成本 → 利润率 → 报价</p>
+                        </div>
+                        <div class="p-5 space-y-4">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-xs text-gray-500 mb-1 block">成本价 (¥)</label>
+                                    <input id="quote-cost" type="number" step="0.01" min="0" placeholder="100" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono placeholder-gray-600 focus:border-purple-500 outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500 mb-1 block">利润率 (%)</label>
+                                    <input id="quote-margin" type="number" step="1" min="0" value="30" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono focus:border-purple-500 outline-none transition">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-xs text-gray-500 mb-1 block">数量</label>
+                                    <input id="quote-qty" type="number" min="1" value="1" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono focus:border-purple-500 outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500 mb-1 block">汇率 (USD)</label>
+                                    <input id="quote-rate" type="number" step="0.01" min="0" value="7.25" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono focus:border-purple-500 outline-none transition">
+                                </div>
+                            </div>
+                            <button onclick="WorkbenchTools.calcQuote()" class="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-bold py-3 rounded-lg transition">
+                                <i class="fas fa-tag mr-2"></i>计算报价
+                            </button>
+                            <div id="quote-result" class="hidden"></div>
+                        </div>
+                    </div>
+
+                    <!-- 🚢 运费估算器 -->
+                    <div class="glass rounded-xl overflow-hidden">
+                        <div class="bg-gradient-to-r from-orange-900/30 to-orange-800/20 px-5 py-4 border-b border-dark-4/50">
+                            <h3 class="font-bold text-white flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg bg-orange-600/20 flex items-center justify-center">🚢</span>
+                                运费估算器
+                            </h3>
+                            <p class="text-xs text-gray-500 mt-1">快递 / 空运 / 海运估价</p>
+                        </div>
+                        <div class="p-5 space-y-4">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-xs text-gray-500 mb-1 block">体积 (CBM)</label>
+                                    <input id="freight-cbm" type="number" step="0.001" min="0" placeholder="0.5" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono placeholder-gray-600 focus:border-orange-500 outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500 mb-1 block">实重 (KG)</label>
+                                    <input id="freight-weight" type="number" step="0.1" min="0" placeholder="50" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono placeholder-gray-600 focus:border-orange-500 outline-none transition">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 mb-1 block">运输方式</label>
+                                <select id="freight-mode" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white focus:border-orange-500 outline-none transition">
+                                    <option value="express">📦 国际快递 (DHL/FedEx/UPS)</option>
+                                    <option value="airCargo">✈️ 空运专线</option>
+                                    <option value="seaLCL">🚢 海运拼箱 (LCL)</option>
+                                    <option value="seaFCL20">📦 海运整柜 20尺</option>
+                                    <option value="seaFCL40">📦 海运整柜 40尺</option>
+                                    <option value="seaFCL40HQ">📦 海运整柜 40HQ</option>
+                                </select>
+                            </div>
+                            <button onclick="WorkbenchTools.calcFreight()" class="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white font-bold py-3 rounded-lg transition">
+                                <i class="fas fa-truck mr-2"></i>估算运费
+                            </button>
+                            <div id="freight-result" class="hidden"></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- 常用链接 -->
+                <div class="mt-8">
+                    <h3 class="text-sm font-bold text-gray-400 uppercase mb-4 flex items-center gap-2">
+                        <i class="fas fa-link text-cyan-500"></i> 常用外贸工具链接
+                    </h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                        <a href="https://www.searates.com/container/tracking/" target="_blank" class="glass p-4 rounded-xl text-center hover:bg-cyan-900/20 hover:border-cyan-500/30 transition group">
+                            <div class="text-2xl mb-2">🔍</div>
+                            <div class="text-xs text-gray-400 group-hover:text-white">物流追踪</div>
+                        </a>
+                        <a href="https://hscode.org/" target="_blank" class="glass p-4 rounded-xl text-center hover:bg-cyan-900/20 hover:border-cyan-500/30 transition group">
+                            <div class="text-2xl mb-2">📋</div>
+                            <div class="text-xs text-gray-400 group-hover:text-white">HS编码</div>
+                        </a>
+                        <a href="https://www.xe.com/" target="_blank" class="glass p-4 rounded-xl text-center hover:bg-cyan-900/20 hover:border-cyan-500/30 transition group">
+                            <div class="text-2xl mb-2">💹</div>
+                            <div class="text-xs text-gray-400 group-hover:text-white">XE汇率</div>
+                        </a>
+                        <a href="https://www.alibaba.com/" target="_blank" class="glass p-4 rounded-xl text-center hover:bg-cyan-900/20 hover:border-cyan-500/30 transition group">
+                            <div class="text-2xl mb-2">🛒</div>
+                            <div class="text-xs text-gray-400 group-hover:text-white">阿里巴巴</div>
+                        </a>
+                        <a href="https://www.made-in-china.com/" target="_blank" class="glass p-4 rounded-xl text-center hover:bg-cyan-900/20 hover:border-cyan-500/30 transition group">
+                            <div class="text-2xl mb-2">🏭</div>
+                            <div class="text-xs text-gray-400 group-hover:text-white">中国制造</div>
+                        </a>
+                        <a href="https://translate.google.com/" target="_blank" class="glass p-4 rounded-xl text-center hover:bg-cyan-900/20 hover:border-cyan-500/30 transition group">
+                            <div class="text-2xl mb-2">🌐</div>
+                            <div class="text-xs text-gray-400 group-hover:text-white">翻译工具</div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ==================== 模态框 ==================== -->
+    
+    <!-- 新增/编辑客户模态框（V2.1.0 Combat 增强版）-->
+    <div id="customer-modal" class="modal-overlay hidden">
+        <div class="modal-content max-w-lg">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="crm-modal-title" class="text-lg font-bold text-white">录入作战客户</h3>
+                <button onclick="WorkbenchCRM.closeModal()" class="text-gray-500 hover:text-white transition text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                <!-- 基础信息 -->
+                <input id="crm-name" type="text" placeholder="公司名称 (必填)" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-green-500 outline-none transition">
+                <input id="crm-contact" type="text" placeholder="联系人姓名" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-green-500 outline-none transition">
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <select id="crm-country" class="bg-dark-1 border border-dark-4 rounded-lg p-3 text-white focus:border-green-500 outline-none transition">
+                        <option value="China">🇨🇳 China</option>
+                        <option value="USA">🇺🇸 USA</option>
+                        <option value="UK">🇬🇧 UK</option>
+                        <option value="Germany">🇩🇪 Germany</option>
+                        <option value="Netherlands">🇳🇱 Netherlands</option>
+                        <option value="Turkey">🇹🇷 Turkey</option>
+                        <option value="Philippines">🇵🇭 Philippines</option>
+                        <option value="Other">🌍 Other</option>
+                    </select>
+                    <input id="crm-whatsapp" type="text" placeholder="WhatsApp" class="bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-green-500 outline-none transition">
+                </div>
+
+                <!-- 🔥 生存作战字段 -->
+                <div class="border-t border-dark-4 pt-4 mt-4">
+                    <div class="text-xs text-red-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i class="fas fa-crosshairs"></i> 作战参数
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <select id="crm-priority" class="bg-dark-1 border border-dark-4 rounded-lg p-3 text-white focus:border-red-500 outline-none transition">
+                            <option value="P0">🔴 P0 - 生死攸关</option>
+                            <option value="P1">🟠 P1 - 重要紧急</option>
+                            <option value="P2" selected>🟡 P2 - 正常跟进</option>
+                            <option value="P3">⚪ P3 - 观察培养</option>
+                        </select>
+                        <select id="crm-entity" class="bg-dark-1 border border-dark-4 rounded-lg p-3 text-white focus:border-green-500 outline-none transition">
+                            <option value="V5 Medical (CN)">V5 Medical (CN)</option>
+                            <option value="V5 Medical (HK)">V5 Medical (HK)</option>
+                            <option value="V5 Global (US)">V5 Global (US)</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mt-3">
+                        <input id="crm-amount" type="number" step="0.01" min="0" placeholder="预期金额" class="bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono placeholder-gray-500 focus:border-green-500 outline-none transition">
+                        <select id="crm-currency" class="bg-dark-1 border border-dark-4 rounded-lg p-3 text-white focus:border-green-500 outline-none transition">
+                            <option value="USD">USD 美元</option>
+                            <option value="CNY">CNY 人民币</option>
+                            <option value="EUR">EUR 欧元</option>
+                        </select>
+                    </div>
+                    <input id="crm-next" type="text" placeholder="下一步行动（如：发PI、催款、寄样品）" class="w-full mt-3 bg-dark-1 border border-yellow-600/50 rounded-lg p-3 text-white placeholder-gray-500 focus:border-yellow-500 outline-none transition">
+                </div>
+
+                <textarea id="crm-address" rows="2" placeholder="详细地址..." class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-green-500 outline-none transition resize-none"></textarea>
+            </div>
+            <button id="crm-save-btn" onclick="WorkbenchCRM.save()" class="w-full mt-6 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                保存档案
+            </button>
+        </div>
+    </div>
+
+    <!-- 新增供应商模态框 -->
+    <div id="supplier-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-white">新增供应商</h3>
+                <button onclick="app.suppliers.closeModal()" class="text-gray-500 hover:text-white transition text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <input id="supp-name" type="text" placeholder="供应商名称 (必填)" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-indigo-500 outline-none transition">
+                <input id="supp-product" type="text" placeholder="主营产品" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-indigo-500 outline-none transition">
+                <input id="supp-contact" type="text" placeholder="联系方式" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-indigo-500 outline-none transition">
+                <textarea id="supp-note" rows="2" placeholder="备注信息..." class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-indigo-500 outline-none transition resize-none"></textarea>
+            </div>
+            <button onclick="app.suppliers.save()" class="w-full mt-6 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                添加供应商
+            </button>
+        </div>
+    </div>
+
+    <!-- 新增支出模态框 -->
+    <div id="expense-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-white">记录支出</h3>
+                <button onclick="app.expenses.closeModal()" class="text-gray-500 hover:text-white transition text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <input id="expense-name" type="text" placeholder="支出项目 (必填)" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-yellow-500 outline-none transition">
+                <div class="grid grid-cols-2 gap-3">
+                    <input id="expense-amount" type="number" step="0.01" min="0" placeholder="金额 (必填)" class="bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono placeholder-gray-500 focus:border-yellow-500 outline-none transition">
+                    <select id="expense-category" class="bg-dark-1 border border-dark-4 rounded-lg p-3 text-white focus:border-yellow-500 outline-none transition">
+                        <option value="采购">采购成本</option>
+                        <option value="物流">物流运费</option>
+                        <option value="工资">人员工资</option>
+                        <option value="租金">房租水电</option>
+                        <option value="营销">营销推广</option>
+                        <option value="办公">办公耗材</option>
+                        <option value="其他">其他支出</option>
+                    </select>
+                </div>
+                <textarea id="expense-note" rows="2" placeholder="备注说明..." class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-yellow-500 outline-none transition resize-none"></textarea>
+            </div>
+            <button onclick="app.expenses.save()" class="w-full mt-6 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                记录支出
+            </button>
+        </div>
+    </div>
+
+    <!-- 快速添加订单模态框 -->
+    <div id="kanban-quick-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-white">新增订单立项</h3>
+                <button onclick="app.kanban.closeQuickModal()" class="text-gray-500 hover:text-white transition text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <input id="kanban-title" type="text" placeholder="订单标题 (必填)" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-blue-500 outline-none transition">
+                <input id="kanban-customer" type="text" placeholder="客户名称" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-blue-500 outline-none transition">
+                <input id="kanban-amount" type="number" step="0.01" min="0" placeholder="订单金额 (必填)" class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white font-mono placeholder-gray-500 focus:border-blue-500 outline-none transition">
+                <textarea id="kanban-note" rows="2" placeholder="订单备注..." class="w-full bg-dark-1 border border-dark-4 rounded-lg p-3 text-white placeholder-gray-500 focus:border-blue-500 outline-none transition resize-none"></textarea>
+            </div>
+            <button onclick="app.kanban.saveQuickOrder()" class="w-full mt-6 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                创建订单
+            </button>
+        </div>
+    </div>
+
+    <!-- 设置模态框 -->
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="modal-content max-w-lg">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-white"><i class="fas fa-cog mr-2"></i>系统设置</h3>
+                <button onclick="app.closeSettings()" class="text-gray-500 hover:text-white transition text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-6">
+                <!-- Firebase 同步设置 -->
+                <div class="p-4 bg-dark-1 rounded-lg border border-dark-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h4 class="text-white font-medium">☁️ Firebase 云同步</h4>
+                            <p class="text-xs text-gray-500 mt-1">开启后数据将自动同步到云端</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="settings-firebase-enabled" class="sr-only peer" onchange="app.firebase.toggleSync(this.checked)">
+                            <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
+                    </div>
+                    <div id="firebase-status" class="text-xs text-gray-500">
+                        状态: 未连接
+                    </div>
+                    <div id="firebase-help" class="mt-2 text-xs text-yellow-600 hidden">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        <a href="https://console.firebase.google.com/project/v5merp/authentication/providers" target="_blank" class="underline hover:text-yellow-500">
+                            启用匿名认证
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 设备ID -->
+                <div class="p-4 bg-dark-1 rounded-lg border border-dark-4">
+                    <h4 class="text-white font-medium mb-2">📱 设备标识</h4>
+                    <p class="text-xs text-gray-500 mb-2">用于跨设备数据同步识别</p>
+                    <div class="flex gap-2">
+                        <input id="settings-device-id" type="text" readonly class="flex-1 bg-dark-2 border border-dark-4 rounded p-2 text-gray-400 text-xs font-mono">
+                        <button onclick="app.firebase.copyDeviceId()" class="px-3 py-2 bg-dark-3 hover:bg-dark-4 text-gray-400 rounded transition text-xs">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 数据操作 -->
+                <div class="p-4 bg-dark-1 rounded-lg border border-dark-4">
+                    <h4 class="text-white font-medium mb-3">🔧 数据操作</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="app.firebase.manualSync()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition">
+                            <i class="fas fa-upload mr-1"></i> 上传到云端
+                        </button>
+                        <button onclick="app.firebase.pullFromCloud()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-medium transition">
+                            <i class="fas fa-download mr-1"></i> 从云端拉取
+                        </button>
+                        <button onclick="app.exportData()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm font-medium transition">
+                            <i class="fas fa-file-export mr-1"></i> 导出JSON
+                        </button>
+                        <button onclick="app.importData()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm font-medium transition">
+                            <i class="fas fa-file-import mr-1"></i> 导入JSON
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 最后同步时间 -->
+                <div class="text-center text-xs text-gray-600">
+                    最后同步: <span id="last-sync-time">从未</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-[9999] space-y-2"></div>
+
+    <!-- 隐藏的文件输入 -->
+    <input type="file" id="import-file-input" accept=".json" class="hidden" onchange="app.handleImportFile(event)">
+
+    <!-- ==================== 外部模块 ==================== -->
+    <script src="js/workbench-dashboard.js"></script>
+    <script src="js/workbench-crm.js"></script>
+
+    <!-- ==================== 核心 JavaScript ==================== -->
+    <script>
+    /**
+     * V14.6 PRO - Firebase 同步版 + 全球时钟 + 外贸工具箱
+     * 集成Firebase云端同步功能
+     * 版本: 14.5.1
+     */
+    (function() {
+        'use strict';
+
+        // ==================== Firebase 配置 ====================
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDBb8AtMjSzjgh1SDmIQNJPHUPxk6tLhQQ",
+            authDomain: "v5merp.firebaseapp.com",
+            projectId: "v5merp",
+            storageBucket: "v5merp.firebasestorage.app",
+            messagingSenderId: "393124793142",
+            appId: "1:393124793142:web:f669fb0287683970d38197"
+        };
+
+        // ==================== 配置常量 ====================
+        const CONFIG = {
+            VERSION: '14.7.0',
+            STORAGE_PREFIX: 'v5_erp_',
+            KEYS: {
+                ORDERS: 'v5_erp_orders',
+                CUSTOMERS: 'v5_erp_customers',
+                SUPPLIERS: 'v5_erp_suppliers',
+                EXPENSES: 'v5_erp_expenses',
+                INCOMES: 'v5_erp_incomes',
+                TODAY_ACTIONS: 'v5_erp_today_actions',
+                UNLOCK_TIME: 'v5_erp_unlock_time',
+                EMERGENCY_TIME: 'v5_erp_emergency_time',
+                SETTINGS: 'v5_erp_settings',
+                DEVICE_ID: 'v5_erp_device_id',
+                LAST_SYNC: 'v5_erp_last_sync'
+            },
+            KANBAN_STATUS: ['inquiry', 'pi', 'production', 'shipped', 'paid'],
+            UNLOCK_DURATION: 30 * 60 * 1000,
+            EMERGENCY_DURATION: 10 * 60 * 1000
+        };
+
+        // ==================== 工具函数 ====================
+        const Utils = {
+            $(id) { return document.getElementById(id); },
+
+            loadData(key, defaultValue = []) {
+                try {
+                    const data = localStorage.getItem(key);
+                    if (data === null || data === undefined || data === '') return defaultValue;
+                    const parsed = JSON.parse(data);
+                    if (Array.isArray(defaultValue)) return Array.isArray(parsed) ? parsed : defaultValue;
+                    if (typeof defaultValue === 'object' && defaultValue !== null) {
+                        return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : defaultValue;
+                    }
+                    return parsed !== null && parsed !== undefined ? parsed : defaultValue;
+                } catch (e) {
+                    console.warn('[Utils] 数据读取失败:', key, e.message);
+                    return defaultValue;
+                }
+            },
+
+            saveData(key, data) {
+                try {
+                    localStorage.setItem(key, JSON.stringify(data));
+                    return true;
+                } catch (e) {
+                    console.error('[Utils] 数据保存失败:', key, e.message);
+                    return false;
+                }
+            },
+
+            escapeHtml(str) {
+                if (!str) return '';
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            },
+
+            formatAmount(amount) {
+                const num = parseFloat(amount) || 0;
+                return `¥${num.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            },
+
+            formatDate(dateStr) {
+                if (!dateStr) return '未知';
+                try {
+                    const date = new Date(dateStr);
+                    if (isNaN(date.getTime())) return '未知';
+                    return date.toLocaleDateString('zh-CN');
+                } catch { return '未知'; }
+            },
+
+            formatDateTime(dateStr) {
+                if (!dateStr) return '从未';
+                try {
+                    const date = new Date(dateStr);
+                    if (isNaN(date.getTime())) return '从未';
+                    return date.toLocaleString('zh-CN');
+                } catch { return '从未'; }
+            },
+
+            generateId(prefix = 'item') {
+                return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            },
+
+            toast(message, type = 'info', duration = 3000) {
+                const container = Utils.$('toast-container');
+                if (!container) return;
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+                toast.innerHTML = `
+                    <span class="text-xl">${icons[type] || icons.info}</span>
+                    <span class="font-medium">${Utils.escapeHtml(message)}</span>
+                `;
+                container.appendChild(toast);
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateX(100%)';
+                    setTimeout(() => toast.remove(), 300);
+                }, duration);
+            },
+
+            getDeviceId() {
+                let deviceId = localStorage.getItem(CONFIG.KEYS.DEVICE_ID);
+                if (!deviceId) {
+                    deviceId = Utils.generateId('device');
+                    localStorage.setItem(CONFIG.KEYS.DEVICE_ID, deviceId);
+                }
+                return deviceId;
+            },
+
+            safeArray(data) { return Array.isArray(data) ? data : []; },
+            safeFilter(data, callback) {
+                const arr = Utils.safeArray(data);
+                return typeof callback === 'function' ? arr.filter(callback) : [];
+            },
+            safeForEach(data, callback) {
+                const arr = Utils.safeArray(data);
+                if (typeof callback === 'function') arr.forEach(callback);
+            }
+        };
+
+        // ==================== Firebase 模块 ====================
+        const FirebaseModule = {
+            db: null,
+            auth: null,
+            isInitialized: false,
+            isConnected: false,
+            syncEnabled: false,
+            authEnabled: false, // 是否启用了认证
+            unsubscribers: [],
+
+            async init() {
+                try {
+                    if (typeof firebase === 'undefined') {
+                        console.warn('[Firebase] SDK未加载');
+                        return false;
+                    }
+
+                    // 初始化Firebase
+                    if (!firebase.apps.length) {
+                        firebase.initializeApp(FIREBASE_CONFIG);
+                    }
+
+                    this.db = firebase.firestore();
+                    this.auth = firebase.auth();
+
+                    // 启用离线持久化
+                    try {
+                        await this.db.enablePersistence({ synchronizeTabs: true });
+                        console.log('[Firebase] 离线持久化已启用');
+                    } catch (err) {
+                        if (err.code === 'failed-precondition') {
+                            console.warn('[Firebase] 多标签页打开，离线持久化受限');
+                        } else if (err.code === 'unimplemented') {
+                            console.warn('[Firebase] 浏览器不支持离线持久化');
+                        }
+                    }
+
+                    // 尝试匿名登录（可选，失败不影响Firestore使用）
+                    try {
+                        await this.auth.signInAnonymously();
+                        this.authEnabled = true;
+                        console.log('[Firebase] 匿名登录成功');
+                    } catch (authError) {
+                        console.warn('[Firebase] 匿名登录跳过:', authError.code);
+                        console.log('[Firebase] 提示: 请在Firebase Console启用匿名认证');
+                        console.log('[Firebase] 路径: Authentication > Sign-in method > Anonymous > 启用');
+                        // 认证失败不影响继续使用Firestore
+                        this.authEnabled = false;
+                    }
+
+                    this.isInitialized = true;
+                    this.isConnected = true;
+
+                    // 加载同步设置
+                    const settings = Utils.loadData(CONFIG.KEYS.SETTINGS, {});
+                    this.syncEnabled = settings.firebaseEnabled || false;
+
+                    if (this.syncEnabled) {
+                        this.startRealtimeSync();
+                    }
+
+                    this.updateSyncStatus();
+                    console.log('[Firebase] ✅ 初始化成功' + (this.authEnabled ? '' : '（无认证模式）'));
+                    return true;
+                } catch (error) {
+                    console.error('[Firebase] ❌ 初始化失败:', error);
+                    this.isConnected = false;
+                    this.updateSyncStatus();
+                    return false;
+                }
+            },
+
+            updateSyncStatus() {
+                const icon = Utils.$('sync-icon');
+                const text = Utils.$('sync-text');
+                const statusEl = Utils.$('sync-status');
+                const firebaseStatus = Utils.$('firebase-status');
+                const firebaseHelp = Utils.$('firebase-help');
+
+                if (!icon || !text) return;
+
+                statusEl.classList.remove('syncing');
+
+                // 隐藏帮助链接默认
+                if (firebaseHelp) firebaseHelp.classList.add('hidden');
+
+                if (!this.isInitialized) {
+                    icon.className = 'fas fa-circle text-[8px] text-gray-500';
+                    text.textContent = '未初始化';
+                    if (firebaseStatus) firebaseStatus.textContent = '状态: Firebase未初始化';
+                } else if (!this.syncEnabled) {
+                    icon.className = 'fas fa-circle text-[8px] text-gray-500';
+                    text.textContent = '仅本地';
+                    if (firebaseStatus) {
+                        firebaseStatus.textContent = '状态: 同步已关闭（仅本地存储）';
+                        if (!this.authEnabled) {
+                            firebaseStatus.textContent += ' - 匿名认证未启用';
+                            if (firebaseHelp) firebaseHelp.classList.remove('hidden');
+                        }
+                    }
+                } else if (this.isConnected) {
+                    icon.className = 'fas fa-circle text-[8px] text-green-500';
+                    text.textContent = '已同步';
+                    if (firebaseStatus) {
+                        firebaseStatus.textContent = '状态: 已连接到云端';
+                        if (!this.authEnabled) {
+                            firebaseStatus.textContent += '（无认证模式）';
+                        }
+                    }
+                } else {
+                    icon.className = 'fas fa-circle text-[8px] text-yellow-500';
+                    text.textContent = '离线';
+                    if (firebaseStatus) firebaseStatus.textContent = '状态: 离线模式';
+                }
+
+                // 更新最后同步时间
+                const lastSync = localStorage.getItem(CONFIG.KEYS.LAST_SYNC);
+                const lastSyncEl = Utils.$('last-sync-time');
+                if (lastSyncEl) {
+                    lastSyncEl.textContent = Utils.formatDateTime(lastSync);
+                }
+            },
+
+            showSyncing() {
+                const statusEl = Utils.$('sync-status');
+                const text = Utils.$('sync-text');
+                if (statusEl) statusEl.classList.add('syncing');
+                if (text) text.textContent = '同步中...';
+            },
+
+            getDocId() {
+                return Utils.getDeviceId();
+            },
+
+            async syncToCloud(dataType, data) {
+                if (!this.isInitialized || !this.syncEnabled) return false;
+
+                try {
+                    this.showSyncing();
+                    const docId = this.getDocId();
+                    
+                    await this.db.collection(dataType).doc(docId).set({
+                        data: data,
+                        deviceId: docId,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+
+                    localStorage.setItem(CONFIG.KEYS.LAST_SYNC, new Date().toISOString());
+                    this.updateSyncStatus();
+                    console.log(`[Firebase] ✅ ${dataType} 已同步到云端`);
+                    return true;
+                } catch (error) {
+                    console.error(`[Firebase] ❌ ${dataType} 同步失败:`, error);
+                    // 处理权限错误
+                    if (error.code === 'permission-denied') {
+                        console.log('[Firebase] 提示: 请检查Firestore安全规则');
+                        console.log('[Firebase] 临时规则: allow read, write: if true;');
+                        Utils.toast('同步失败: 请检查Firestore权限设置', 'error');
+                    }
+                    this.updateSyncStatus();
+                    return false;
+                }
+            },
+
+            async pullFromCloud(dataType) {
+                if (!this.isInitialized) return null;
+
+                try {
+                    const docId = this.getDocId();
+                    const doc = await this.db.collection(dataType).doc(docId).get();
+                    
+                    if (doc.exists) {
+                        const cloudData = doc.data();
+                        console.log(`[Firebase] ✅ 从云端拉取 ${dataType}`);
+                        return cloudData.data || [];
+                    }
+                    return null;
+                } catch (error) {
+                    console.error(`[Firebase] ❌ 拉取 ${dataType} 失败:`, error);
+                    return null;
+                }
+            },
+
+            async syncAllToCloud() {
+                if (!this.isInitialized || !this.syncEnabled) {
+                    Utils.toast('请先在设置中启用云同步', 'warning');
+                    return;
+                }
+
+                Utils.toast('开始同步数据...', 'info');
+                this.showSyncing();
+
+                try {
+                    const dataTypes = [
+                        { key: CONFIG.KEYS.ORDERS, collection: 'orders' },
+                        { key: CONFIG.KEYS.CUSTOMERS, collection: 'customers' },
+                        { key: CONFIG.KEYS.SUPPLIERS, collection: 'suppliers' },
+                        { key: CONFIG.KEYS.EXPENSES, collection: 'expenses' }
+                    ];
+
+                    for (const { key, collection } of dataTypes) {
+                        const data = Utils.loadData(key, []);
+                        await this.syncToCloud(collection, data);
+                    }
+
+                    Utils.toast('数据同步完成！', 'success');
+                } catch (error) {
+                    Utils.toast('同步失败: ' + error.message, 'error');
+                }
+            },
+
+            async pullAllFromCloud() {
+                if (!this.isInitialized) {
+                    Utils.toast('Firebase未初始化', 'warning');
+                    return;
+                }
+
+                if (!confirm('从云端拉取将覆盖本地数据，确定继续吗？')) return;
+
+                Utils.toast('正在从云端拉取数据...', 'info');
+
+                try {
+                    const dataTypes = [
+                        { key: CONFIG.KEYS.ORDERS, collection: 'orders' },
+                        { key: CONFIG.KEYS.CUSTOMERS, collection: 'customers' },
+                        { key: CONFIG.KEYS.SUPPLIERS, collection: 'suppliers' },
+                        { key: CONFIG.KEYS.EXPENSES, collection: 'expenses' }
+                    ];
+
+                    let pullCount = 0;
+                    for (const { key, collection } of dataTypes) {
+                        const cloudData = await this.pullFromCloud(collection);
+                        if (cloudData !== null) {
+                            Utils.saveData(key, cloudData);
+                            pullCount++;
+                        }
+                    }
+
+                    if (pullCount > 0) {
+                        Utils.toast(`成功拉取 ${pullCount} 类数据，正在刷新...`, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        Utils.toast('云端没有找到数据', 'warning');
+                    }
+                } catch (error) {
+                    Utils.toast('拉取失败: ' + error.message, 'error');
+                }
+            },
+
+            startRealtimeSync() {
+                if (!this.isInitialized || !this.syncEnabled) return;
+
+                // 清除旧的监听器
+                this.stopRealtimeSync();
+
+                const docId = this.getDocId();
+                const collections = ['orders', 'customers', 'suppliers', 'expenses'];
+
+                collections.forEach(collection => {
+                    const unsubscribe = this.db.collection(collection).doc(docId)
+                        .onSnapshot(doc => {
+                            if (doc.exists) {
+                                const cloudData = doc.data();
+                                const localKey = CONFIG.KEYS[collection.toUpperCase()];
+                                
+                                // 比较时间戳，云端更新则覆盖本地
+                                if (cloudData.updatedAt) {
+                                    const cloudTime = cloudData.updatedAt.toDate?.() || new Date(cloudData.updatedAt);
+                                    const localSync = localStorage.getItem(CONFIG.KEYS.LAST_SYNC);
+                                    const localTime = localSync ? new Date(localSync) : new Date(0);
+                                    
+                                    if (cloudTime > localTime && cloudData.data) {
+                                        Utils.saveData(localKey, cloudData.data);
+                                        console.log(`[Firebase] 实时同步: ${collection} 已更新`);
+                                        // 刷新UI
+                                        if (window.app) {
+                                            app.calculateKPI();
+                                            app.kanban.render();
+                                            app.crm.render();
+                                            app.suppliers.render();
+                                            app.expenses.render();
+                                        }
+                                    }
+                                }
+                            }
+                        }, error => {
+                            console.error(`[Firebase] 实时监听 ${collection} 失败:`, error);
+                        });
+
+                    this.unsubscribers.push(unsubscribe);
+                });
+
+                console.log('[Firebase] 实时同步已启动');
+            },
+
+            stopRealtimeSync() {
+                this.unsubscribers.forEach(unsub => unsub());
+                this.unsubscribers = [];
+            },
+
+            toggleSync(enabled) {
+                this.syncEnabled = enabled;
+                
+                // 保存设置
+                const settings = Utils.loadData(CONFIG.KEYS.SETTINGS, {});
+                settings.firebaseEnabled = enabled;
+                Utils.saveData(CONFIG.KEYS.SETTINGS, settings);
+
+                if (enabled) {
+                    this.startRealtimeSync();
+                    Utils.toast('云同步已开启', 'success');
+                    // 立即同步一次
+                    this.syncAllToCloud();
+                } else {
+                    this.stopRealtimeSync();
+                    Utils.toast('云同步已关闭', 'info');
+                }
+
+                this.updateSyncStatus();
+            },
+
+            showStatus() {
+                app.openSettings();
+            },
+
+            copyDeviceId() {
+                const deviceId = Utils.getDeviceId();
+                navigator.clipboard.writeText(deviceId).then(() => {
+                    Utils.toast('设备ID已复制', 'success');
+                }).catch(() => {
+                    Utils.toast('复制失败', 'error');
+                });
+            }
+        };
+
+        // ==================== 主应用对象 ====================
+        window.app = {
+            state: {
+                emergencyTimer: null,
+                currentTab: 'dashboard'
+            },
+
+            // ========== 初始化 ==========
+            async init() {
+                console.log(`[V14.7 SURVIVAL] 系统初始化中... 版本: ${CONFIG.VERSION}`);
+                
+                // 初始化Firebase
+                await FirebaseModule.init();
+                
+                // 检查生存模式
+                app.survival.check();
+                
+                // 初始化外部模块（如果已加载）
+                if (window.WorkbenchCRM && typeof WorkbenchCRM.init === 'function') {
+                    WorkbenchCRM.init();
+                }
+                if (window.WorkbenchDashboard && typeof WorkbenchDashboard.init === 'function') {
+                    WorkbenchDashboard.init();
+                }
+                
+                // 初始化各模块
+                app.calculateKPI();
+                app.kanban.render();
+                app.crm.render();
+                app.suppliers.render();
+                app.expenses.render();
+                
+                // 🌍 启动全球商机时钟和励志金句
+                app.dashboard.startGlobalClock();
+                app.dashboard.showDailyQuote();
+                
+                // 刷新仪表盘数据（外部模块）
+                app.dashboard.render();
+                
+                console.log('[V14.7 SURVIVAL] ✅ 系统初始化完成');
+            },
+
+            // ========== 仪表盘接口（代理到 WorkbenchDashboard）==========
+            dashboard: {
+                startGlobalClock() {
+                    if (window.WorkbenchDashboard) {
+                        WorkbenchDashboard.startGlobalClock();
+                    } else {
+                        console.warn('[Dashboard] WorkbenchDashboard 模块未加载，使用内置时钟');
+                        this._fallbackGlobalClock();
+                    }
+                },
+
+                showDailyQuote() {
+                    const quotes = [
+                        "Every 'No' brings you closer to a 'Yes'. 每一次拒绝都让你离成交更近",
+                        "Quality is the best business plan. 质量是最好的商业计划",
+                        "Don't wait for opportunity. Create it. 不要等待机会，去创造它",
+                        "今天多打一个电话，明天多一个订单！",
+                        "Speed is the new currency of business. 速度是新的商业货币",
+                        "500万不是梦，是必须拿下的山头！",
+                        "Great things never come from comfort zones. 伟大成就从不源于舒适区",
+                        "Your network is your net worth. 你的人脉就是你的净资产",
+                        "成交之前的每一次拒绝，都是在积累运气。",
+                        "Action is the foundational key to all success. 行动是所有成功的基石",
+                        "The fortune is in the follow-up. 财富在跟进中",
+                        "今日事今日毕，明日订单滚滚来！"
+                    ];
+                    const quoteEl = document.getElementById('daily-quote');
+                    if (quoteEl) {
+                        quoteEl.textContent = quotes[Math.floor(Math.random() * quotes.length)];
+                    }
+                },
+
+                render() {
+                    if (window.WorkbenchDashboard) {
+                        WorkbenchDashboard.renderDashboard();
+                    }
+                },
+
+                // 内置后备时钟（当外部模块未加载时使用）
+                _fallbackGlobalClock() {
+                    const container = document.getElementById('global-clock-grid');
+                    if (!container) return;
+
+                    const timeZones = [
+                        { city: 'Kunshan',   label: '🇨🇳 Base',    tz: 'Asia/Shanghai' },
+                        { city: 'Manila',    label: '🇵🇭 Mikki',   tz: 'Asia/Manila' },
+                        { city: 'Istanbul',  label: '🇹🇷 Turhan',  tz: 'Europe/Istanbul' },
+                        { city: 'Dubai',     label: '🇦🇪 Gulf',    tz: 'Asia/Dubai' },
+                        { city: 'London',    label: '🇬🇧 Amazon',  tz: 'Europe/London' },
+                        { city: 'New York',  label: '🇺🇸 Market',  tz: 'America/New_York' }
+                    ];
+
+                    const update = () => {
+                        const now = new Date();
+                        container.innerHTML = timeZones.map(tz => {
+                            let timeString, hour;
+                            try {
+                                const options = { timeZone: tz.tz, hour: 'numeric', minute: '2-digit', hour12: false };
+                                timeString = new Intl.DateTimeFormat('en-GB', options).format(now);
+                                hour = parseInt(timeString.split(':')[0]);
+                            } catch (e) {
+                                timeString = '--:--';
+                                hour = 0;
+                            }
+
+                            let statusClass = 'border-gray-600/30';
+                            let statusText = hour >= 9 && hour < 18 ? 'OPEN' : 'OFF';
+
+                            return `
+                                <div class="rounded-lg p-3 text-center border ${statusClass}">
+                                    <div class="text-[10px] text-gray-400">${tz.label}</div>
+                                    <div class="text-2xl font-mono font-bold text-white">${timeString}</div>
+                                    <div class="text-[9px] text-gray-500">${statusText}</div>
+                                </div>
+                            `;
+                        }).join('');
+                    };
+                    update();
+                    setInterval(update, 60000);
+                }
+            },
+
+            // ========== Firebase接口 ==========
+            firebase: {
+                manualSync: () => FirebaseModule.syncAllToCloud(),
+                pullFromCloud: () => FirebaseModule.pullAllFromCloud(),
+                toggleSync: (enabled) => FirebaseModule.toggleSync(enabled),
+                showStatus: () => FirebaseModule.showStatus(),
+                copyDeviceId: () => FirebaseModule.copyDeviceId()
+            },
+
+            // ========== 生存模式 ==========
+            survival: {
+                checkInputs() {
+                    const a1 = Utils.$('action-1')?.value?.trim();
+                    const a2 = Utils.$('action-2')?.value?.trim();
+                    const a3 = Utils.$('action-3')?.value?.trim();
+                    const btn = Utils.$('battle-start-btn');
+                    if (btn) btn.disabled = !(a1 && a2 && a3);
+                },
+
+                check() {
+                    const unlockTime = parseInt(localStorage.getItem(CONFIG.KEYS.UNLOCK_TIME)) || 0;
+                    const emergencyTime = parseInt(localStorage.getItem(CONFIG.KEYS.EMERGENCY_TIME)) || 0;
+                    const now = Date.now();
+
+                    if (now < unlockTime) {
+                        app.survival.hideCurtain();
+                        app.survival.showActions();
+                    } else if (now < emergencyTime) {
+                        app.survival.hideCurtain();
+                        app.survival.startEmergencyTimer(emergencyTime);
+                    } else {
+                        app.survival.showCurtain();
+                    }
+                },
+
+                showCurtain() { Utils.$('survival-curtain')?.classList.remove('hidden'); },
+                hideCurtain() { Utils.$('survival-curtain')?.classList.add('hidden'); },
+
+                unlock() {
+                    const a1 = Utils.$('action-1')?.value?.trim();
+                    const a2 = Utils.$('action-2')?.value?.trim();
+                    const a3 = Utils.$('action-3')?.value?.trim();
+
+                    if (!a1 || !a2 || !a3) {
+                        Utils.toast('请填写完整的今日三件事', 'warning');
+                        return;
+                    }
+
+                    Utils.saveData(CONFIG.KEYS.TODAY_ACTIONS, [a1, a2, a3]);
+                    localStorage.setItem(CONFIG.KEYS.UNLOCK_TIME, String(Date.now() + CONFIG.UNLOCK_DURATION));
+
+                    app.survival.hideCurtain();
+                    app.survival.showActions();
+                    Utils.toast('战斗开始！今日必胜！', 'success');
+                },
+
+                emergency() {
+                    if (!confirm('确定使用紧急进入吗？（仅10分钟有效）')) return;
+
+                    const emergencyEnd = Date.now() + CONFIG.EMERGENCY_DURATION;
+                    localStorage.setItem(CONFIG.KEYS.EMERGENCY_TIME, String(emergencyEnd));
+                    Utils.saveData(CONFIG.KEYS.TODAY_ACTIONS, ['紧急任务', '快速处理', '临时工作']);
+
+                    app.survival.hideCurtain();
+                    app.survival.startEmergencyTimer(emergencyEnd);
+                    Utils.toast('紧急模式已激活（10分钟）', 'warning');
+                },
+
+                startEmergencyTimer(endTime) {
+                    Utils.$('emergency-warning')?.classList.remove('hidden');
+                    
+                    if (app.state.emergencyTimer) clearInterval(app.state.emergencyTimer);
+
+                    const updateTimer = () => {
+                        const remaining = Math.max(0, endTime - Date.now());
+                        const minutes = Math.floor(remaining / 60000);
+                        const seconds = Math.floor((remaining % 60000) / 1000);
+                        
+                        const timerEl = Utils.$('emergency-timer');
+                        if (timerEl) timerEl.textContent = `${minutes}:${String(seconds).padStart(2, '0')}`;
+
+                        if (remaining <= 0) {
+                            clearInterval(app.state.emergencyTimer);
+                            app.state.emergencyTimer = null;
+                            app.survival.showCurtain();
+                            Utils.$('emergency-warning')?.classList.add('hidden');
+                        }
+                    };
+
+                    updateTimer();
+                    app.state.emergencyTimer = setInterval(updateTimer, 1000);
+                },
+
+                showActions() {
+                    const actions = Utils.loadData(CONFIG.KEYS.TODAY_ACTIONS, []);
+                    const container = Utils.$('actions-display');
+                    if (!container || actions.length === 0) return;
+
+                    container.innerHTML = actions.map((action, i) => `
+                        <div class="glass rounded-xl p-5 hover:border-red-500/30 transition">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl font-bold text-red-500">#${i + 1}</span>
+                                <span class="text-white font-medium">${Utils.escapeHtml(action)}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            },
+
+            // ========== Tab 切换 ==========
+            switchTab(tabId) {
+                app.state.currentTab = tabId;
+                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+                Utils.$(`tab-${tabId}`)?.classList.add('active');
+                document.querySelectorAll('.nav-tab').forEach(btn => {
+                    const isActive = btn.dataset.tab === tabId;
+                    btn.classList.toggle('active', isActive);
+                });
+
+                switch (tabId) {
+                    case 'dashboard': app.calculateKPI(); break;
+                    case 'kanban': app.kanban.render(); break;
+                    case 'crm': app.crm.render(); break;
+                    case 'suppliers': app.suppliers.render(); break;
+                    case 'expenses': app.expenses.render(); break;
+                }
+            },
+
+            // ========== 设置 ==========
+            openSettings() {
+                const modal = Utils.$('settings-modal');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    
+                    // 加载设置
+                    const settings = Utils.loadData(CONFIG.KEYS.SETTINGS, {});
+                    const checkbox = Utils.$('settings-firebase-enabled');
+                    if (checkbox) checkbox.checked = settings.firebaseEnabled || false;
+
+                    const deviceIdEl = Utils.$('settings-device-id');
+                    if (deviceIdEl) deviceIdEl.value = Utils.getDeviceId();
+
+                    FirebaseModule.updateSyncStatus();
+                }
+            },
+
+            closeSettings() {
+                Utils.$('settings-modal')?.classList.add('hidden');
+            },
+
+            // ========== KPI 计算 ==========
+            calculateKPI() {
+                const orders = Utils.loadData(CONFIG.KEYS.ORDERS, []);
+                const expenses = Utils.loadData(CONFIG.KEYS.EXPENSES, []);
+
+                const now = new Date();
+                const currentMonth = now.getMonth();
+                const currentYear = now.getFullYear();
+
+                const paidOrders = Utils.safeFilter(orders, o => {
+                    if (o.status !== 'paid') return false;
+                    const d = new Date(o.createdAt);
+                    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+                });
+
+                const totalRevenue = paidOrders.reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
+                const totalExpenses = Utils.safeArray(expenses).reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+                const netProfit = totalRevenue - totalExpenses;
+
+                const updateEl = (id, value) => {
+                    const el = Utils.$(id);
+                    if (el) el.textContent = value;
+                };
+
+                updateEl('kpi-revenue', Utils.formatAmount(totalRevenue));
+                updateEl('kpi-gross', Utils.formatAmount(totalRevenue));
+                updateEl('kpi-net', Utils.formatAmount(netProfit));
+                updateEl('dashboard-total-orders', `订单: ${orders.length}`);
+                updateEl('dashboard-pending-orders', `待处理: ${Utils.safeFilter(orders, o => o.status !== 'paid').length}`);
+                updateEl('dashboard-completed-orders', `已完成: ${paidOrders.length}`);
+            },
+
+            // ========== 看板模块 ==========
+            kanban: {
+                openQuickAdd() {
+                    ['kanban-title', 'kanban-customer', 'kanban-amount', 'kanban-note'].forEach(id => {
+                        const el = Utils.$(id);
+                        if (el) el.value = '';
+                    });
+                    Utils.$('kanban-quick-modal')?.classList.remove('hidden');
+                    Utils.$('kanban-title')?.focus();
+                },
+
+                closeQuickModal() {
+                    Utils.$('kanban-quick-modal')?.classList.add('hidden');
+                },
+
+                saveQuickOrder() {
+                    const title = Utils.$('kanban-title')?.value?.trim();
+                    const customer = Utils.$('kanban-customer')?.value?.trim();
+                    const amount = parseFloat(Utils.$('kanban-amount')?.value) || 0;
+                    const note = Utils.$('kanban-note')?.value?.trim();
+
+                    if (!title) { Utils.toast('请输入订单标题', 'warning'); return; }
+                    if (amount <= 0) { Utils.toast('请输入有效金额', 'warning'); return; }
+
+                    const orders = Utils.loadData(CONFIG.KEYS.ORDERS, []);
+                    const newOrder = {
+                        id: Utils.generateId('ORDER'),
+                        title, customer: customer || '未知客户', amount: amount.toFixed(2), note,
+                        status: 'inquiry',
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    };
+                    orders.push(newOrder);
+
+                    Utils.saveData(CONFIG.KEYS.ORDERS, orders);
+                    
+                    // 同步到云端
+                    if (FirebaseModule.syncEnabled) {
+                        FirebaseModule.syncToCloud('orders', orders);
+                    }
+
+                    app.kanban.closeQuickModal();
+                    app.kanban.render();
+                    app.calculateKPI();
+                    Utils.toast('订单创建成功', 'success');
+                },
+
+                render() {
+                    const orders = Utils.loadData(CONFIG.KEYS.ORDERS, []);
+                    const grouped = { inquiry: [], pi: [], production: [], shipped: [], paid: [] };
+
+                    Utils.safeForEach(orders, order => {
+                        const status = order.status || 'inquiry';
+                        if (grouped[status]) grouped[status].push(order);
+                    });
+
+                    CONFIG.KANBAN_STATUS.forEach(status => {
+                        const container = Utils.$(`kanban-${status}`);
+                        const countEl = Utils.$(`count-${status}`);
+                        const list = grouped[status] || [];
+
+                        if (countEl) countEl.textContent = list.length;
+                        if (container) {
+                            container.innerHTML = list.length === 0 
+                                ? '<div class="text-center text-gray-600 py-8 text-sm">暂无订单</div>'
+                                : list.map(order => app.kanban.renderCard(order)).join('');
+                        }
+                    });
+                },
+
+                renderCard(order) {
+                    return `
+                        <div class="kanban-card" data-id="${order.id}">
+                            <div class="font-semibold text-white mb-1 truncate">${Utils.escapeHtml(order.title)}</div>
+                            <div class="flex justify-between items-center text-xs text-gray-400 mb-2">
+                                <span>${Utils.escapeHtml(order.customer)}</span>
+                                <span class="font-mono text-green-400">${Utils.formatAmount(order.amount)}</span>
+                            </div>
+                            ${order.note ? `<div class="text-xs text-gray-500 truncate mb-2">${Utils.escapeHtml(order.note)}</div>` : ''}
+                            <div class="flex justify-end gap-2 pt-2 border-t border-dark-4/50">
+                                <button onclick="app.kanban.updateStatus('${order.id}', 'next')" class="text-xs px-2 py-1 bg-blue-900/50 text-blue-400 rounded hover:bg-blue-900 transition">
+                                    <i class="fas fa-arrow-right"></i>
+                                </button>
+                                <button onclick="app.kanban.deleteOrder('${order.id}')" class="text-xs px-2 py-1 bg-red-900/50 text-red-400 rounded hover:bg-red-900 transition">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                },
+
+                updateStatus(id, direction) {
+                    const orders = Utils.loadData(CONFIG.KEYS.ORDERS, []);
+                    const order = orders.find(o => o.id === id);
+                    if (!order) return;
+
+                    const currentIdx = CONFIG.KANBAN_STATUS.indexOf(order.status);
+                    let newIdx = direction === 'next' 
+                        ? Math.min(currentIdx + 1, CONFIG.KANBAN_STATUS.length - 1)
+                        : Math.max(currentIdx - 1, 0);
+
+                    order.status = CONFIG.KANBAN_STATUS[newIdx];
+                    order.updatedAt = new Date().toISOString();
+
+                    Utils.saveData(CONFIG.KEYS.ORDERS, orders);
+                    if (FirebaseModule.syncEnabled) FirebaseModule.syncToCloud('orders', orders);
+
+                    app.kanban.render();
+                    app.calculateKPI();
+                    Utils.toast('订单状态已更新', 'info');
+                },
+
+                deleteOrder(id) {
+                    if (!confirm('确定删除此订单吗？')) return;
+                    let orders = Utils.loadData(CONFIG.KEYS.ORDERS, []);
+                    orders = orders.filter(o => o.id !== id);
+                    Utils.saveData(CONFIG.KEYS.ORDERS, orders);
+                    if (FirebaseModule.syncEnabled) FirebaseModule.syncToCloud('orders', orders);
+                    app.kanban.render();
+                    app.calculateKPI();
+                    Utils.toast('订单已删除', 'success');
+                }
+            },
+
+            // ========== 客户模块（代理到 WorkbenchCRM）==========
+            crm: {
+                openAddModal() {
+                    if (window.WorkbenchCRM) {
+                        WorkbenchCRM.openAddModal();
+                    } else {
+                        console.error('[CRM] WorkbenchCRM 模块未加载');
+                        Utils.toast('CRM模块未加载', 'error');
+                    }
+                },
+
+                openEditModal(id) {
+                    if (window.WorkbenchCRM) {
+                        WorkbenchCRM.openEditModal(id);
+                    } else {
+                        console.error('[CRM] WorkbenchCRM 模块未加载');
+                        Utils.toast('CRM模块未加载', 'error');
+                    }
+                },
+
+                closeModal() {
+                    if (window.WorkbenchCRM) {
+                        WorkbenchCRM.closeModal();
+                    } else {
+                        Utils.$('customer-modal')?.classList.add('hidden');
+                    }
+                },
+
+                save() {
+                    if (window.WorkbenchCRM) {
+                        WorkbenchCRM.save();
+                    } else {
+                        console.error('[CRM] WorkbenchCRM 模块未加载');
+                        Utils.toast('CRM模块未加载', 'error');
+                    }
+                },
+
+                render() {
+                    if (window.WorkbenchCRM) {
+                        WorkbenchCRM.render();
+                    } else {
+                        // Fallback: 显示加载中
+                        const container = Utils.$('customer-grid');
+                        if (container) {
+                            container.innerHTML = `
+                                <div class="col-span-full text-center py-12 text-gray-500">
+                                    <i class="fas fa-spinner fa-spin text-4xl mb-4 opacity-30"></i>
+                                    <p>正在加载客户模块...</p>
+                                </div>
+                            `;
+                        }
+                    }
+                },
+
+                delete(id) {
+                    if (window.WorkbenchCRM) {
+                        WorkbenchCRM.delete(id);
+                    } else {
+                        console.error('[CRM] WorkbenchCRM 模块未加载');
+                        Utils.toast('CRM模块未加载', 'error');
+                    }
+                }
+            },
+
+            // ========== 供应商模块 ==========
+            suppliers: {
+                openAddModal() {
+                    ['supp-name', 'supp-product', 'supp-contact', 'supp-note'].forEach(id => {
+                        const el = Utils.$(id);
+                        if (el) el.value = '';
+                    });
+                    Utils.$('supplier-modal')?.classList.remove('hidden');
+                    Utils.$('supp-name')?.focus();
+                },
+
+                closeModal() { Utils.$('supplier-modal')?.classList.add('hidden'); },
+
+                save() {
+                    const name = Utils.$('supp-name')?.value?.trim();
+                    if (!name) { Utils.toast('请输入供应商名称', 'warning'); return; }
+
+                    const suppliers = Utils.loadData(CONFIG.KEYS.SUPPLIERS, []);
+                    suppliers.unshift({
+                        id: Utils.generateId('SUPP'),
+                        name,
+                        product: Utils.$('supp-product')?.value?.trim() || '',
+                        contact: Utils.$('supp-contact')?.value?.trim() || '',
+                        note: Utils.$('supp-note')?.value?.trim() || '',
+                        createdAt: new Date().toISOString()
+                    });
+
+                    Utils.saveData(CONFIG.KEYS.SUPPLIERS, suppliers);
+                    if (FirebaseModule.syncEnabled) FirebaseModule.syncToCloud('suppliers', suppliers);
+
+                    app.suppliers.closeModal();
+                    app.suppliers.render();
+                    Utils.toast('供应商已添加', 'success');
+                },
+
+                render() {
+                    const container = Utils.$('supplier-list');
+                    if (!container) return;
+
+                    const suppliers = Utils.loadData(CONFIG.KEYS.SUPPLIERS, []);
+
+                    if (suppliers.length === 0) {
+                        container.innerHTML = `
+                            <div class="col-span-full text-center py-12 text-gray-500">
+                                <i class="fas fa-industry text-4xl mb-4 opacity-30"></i>
+                                <p>暂无供应商档案</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    container.innerHTML = suppliers.map(s => `
+                        <div class="glass rounded-xl p-5 hover:border-indigo-500/30 transition group">
+                            <div class="flex items-start justify-between mb-3">
+                                <div>
+                                    <h3 class="font-bold text-white">${Utils.escapeHtml(s.name)}</h3>
+                                    ${s.product ? `<span class="text-xs text-indigo-400 bg-indigo-900/30 px-2 py-0.5 rounded">${Utils.escapeHtml(s.product)}</span>` : ''}
+                                </div>
+                                <button onclick="app.suppliers.delete('${s.id}')" class="text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            ${s.contact ? `<div class="text-sm text-gray-400"><i class="fas fa-phone mr-2 w-4 text-center"></i>${Utils.escapeHtml(s.contact)}</div>` : ''}
+                        </div>
+                    `).join('');
+                },
+
+                delete(id) {
+                    if (!confirm('确定删除此供应商吗？')) return;
+                    let suppliers = Utils.loadData(CONFIG.KEYS.SUPPLIERS, []);
+                    suppliers = suppliers.filter(s => s.id !== id);
+                    Utils.saveData(CONFIG.KEYS.SUPPLIERS, suppliers);
+                    if (FirebaseModule.syncEnabled) FirebaseModule.syncToCloud('suppliers', suppliers);
+                    app.suppliers.render();
+                    Utils.toast('供应商已删除', 'success');
+                }
+            },
+
+            // ========== 支出模块 ==========
+            expenses: {
+                openAddModal() {
+                    ['expense-name', 'expense-amount', 'expense-note'].forEach(id => {
+                        const el = Utils.$(id);
+                        if (el) el.value = '';
+                    });
+                    Utils.$('expense-modal')?.classList.remove('hidden');
+                    Utils.$('expense-name')?.focus();
+                },
+
+                closeModal() { Utils.$('expense-modal')?.classList.add('hidden'); },
+
+                save() {
+                    const name = Utils.$('expense-name')?.value?.trim();
+                    const amount = parseFloat(Utils.$('expense-amount')?.value) || 0;
+
+                    if (!name) { Utils.toast('请输入支出项目', 'warning'); return; }
+                    if (amount <= 0) { Utils.toast('请输入有效金额', 'warning'); return; }
+
+                    const expenses = Utils.loadData(CONFIG.KEYS.EXPENSES, []);
+                    expenses.unshift({
+                        id: Utils.generateId('EXP'),
+                        name,
+                        amount: amount.toFixed(2),
+                        category: Utils.$('expense-category')?.value || '其他',
+                        note: Utils.$('expense-note')?.value?.trim() || '',
+                        createdAt: new Date().toISOString()
+                    });
+
+                    Utils.saveData(CONFIG.KEYS.EXPENSES, expenses);
+                    if (FirebaseModule.syncEnabled) FirebaseModule.syncToCloud('expenses', expenses);
+
+                    app.expenses.closeModal();
+                    app.expenses.render();
+                    app.calculateKPI();
+                    Utils.toast('支出已记录', 'success');
+                },
+
+                render() {
+                    const tbody = Utils.$('expenses-tbody');
+                    if (!tbody) return;
+
+                    const expenses = Utils.loadData(CONFIG.KEYS.EXPENSES, []);
+
+                    if (expenses.length === 0) {
+                        tbody.innerHTML = `
+                            <tr><td colspan="5" class="text-center py-12 text-gray-500">
+                                <i class="fas fa-receipt text-3xl mb-3 opacity-30 block"></i>暂无支出记录
+                            </td></tr>
+                        `;
+                        return;
+                    }
+
+                    tbody.innerHTML = expenses.map(e => `
+                        <tr class="border-b border-dark-4/50 hover:bg-dark-3/50 transition">
+                            <td class="px-4 py-3 text-gray-300">${Utils.formatDate(e.createdAt)}</td>
+                            <td class="px-4 py-3 text-white font-medium">${Utils.escapeHtml(e.name)}</td>
+                            <td class="px-4 py-3"><span class="px-2 py-1 text-xs bg-dark-3 rounded text-gray-400">${Utils.escapeHtml(e.category)}</span></td>
+                            <td class="px-4 py-3 text-right text-red-400 font-mono">-${Utils.formatAmount(e.amount)}</td>
+                            <td class="px-4 py-3 text-right">
+                                <button onclick="app.expenses.delete('${e.id}')" class="text-gray-600 hover:text-red-500 transition"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `).join('');
+                },
+
+                delete(id) {
+                    if (!confirm('确定删除此支出记录吗？')) return;
+                    let expenses = Utils.loadData(CONFIG.KEYS.EXPENSES, []);
+                    expenses = expenses.filter(e => e.id !== id);
+                    Utils.saveData(CONFIG.KEYS.EXPENSES, expenses);
+                    if (FirebaseModule.syncEnabled) FirebaseModule.syncToCloud('expenses', expenses);
+                    app.expenses.render();
+                    app.calculateKPI();
+                    Utils.toast('支出记录已删除', 'success');
+                }
+            },
+
+            // ========== 数据导出导入 ==========
+            exportData() {
+                const data = {
+                    version: CONFIG.VERSION,
+                    exportTime: new Date().toISOString(),
+                    deviceId: Utils.getDeviceId(),
+                    orders: Utils.loadData(CONFIG.KEYS.ORDERS, []),
+                    customers: Utils.loadData(CONFIG.KEYS.CUSTOMERS, []),
+                    suppliers: Utils.loadData(CONFIG.KEYS.SUPPLIERS, []),
+                    expenses: Utils.loadData(CONFIG.KEYS.EXPENSES, []),
+                    todayActions: Utils.loadData(CONFIG.KEYS.TODAY_ACTIONS, [])
+                };
+
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `erp-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                Utils.toast('数据已导出', 'success');
+            },
+
+            importData() {
+                Utils.$('import-file-input')?.click();
+            },
+
+            handleImportFile(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        
+                        if (!confirm(`确定要导入数据吗？这将覆盖当前数据。\n导出时间: ${data.exportTime || '未知'}`)) return;
+
+                        if (data.orders) Utils.saveData(CONFIG.KEYS.ORDERS, data.orders);
+                        if (data.customers) Utils.saveData(CONFIG.KEYS.CUSTOMERS, data.customers);
+                        if (data.suppliers) Utils.saveData(CONFIG.KEYS.SUPPLIERS, data.suppliers);
+                        if (data.expenses) Utils.saveData(CONFIG.KEYS.EXPENSES, data.expenses);
+
+                        Utils.toast('数据导入成功，正在刷新...', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } catch (error) {
+                        Utils.toast('导入失败: 文件格式错误', 'error');
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = '';
+            },
+
+            // ========== 登出 ==========
+            logout() {
+                if (!confirm('确定要退出系统吗？')) return;
+
+                localStorage.removeItem(CONFIG.KEYS.UNLOCK_TIME);
+                localStorage.removeItem(CONFIG.KEYS.EMERGENCY_TIME);
+                localStorage.removeItem(CONFIG.KEYS.TODAY_ACTIONS);
+
+                if (app.state.emergencyTimer) {
+                    clearInterval(app.state.emergencyTimer);
+                    app.state.emergencyTimer = null;
+                }
+
+                app.survival.showCurtain();
+                Utils.$('emergency-warning')?.classList.add('hidden');
+                
+                Utils.toast('已安全退出', 'info');
+            }
+        };
+
+        // ==================== 外贸工具箱模块 ====================
+        const WorkbenchTools = {
+            rates: { USD: 7.25, EUR: 7.85, GBP: 9.15, AED: 1.97, TRY: 0.22 },
+
+            calcCBM() {
+                const l = parseFloat(document.getElementById('cbm-l')?.value) || 0;
+                const w = parseFloat(document.getElementById('cbm-w')?.value) || 0;
+                const h = parseFloat(document.getElementById('cbm-h')?.value) || 0;
+                const qty = parseInt(document.getElementById('cbm-qty')?.value) || 1;
+
+                if (l === 0 || w === 0 || h === 0) {
+                    Utils.toast('请输入完整的长宽高尺寸', 'error');
+                    return;
+                }
+
+                const volOne = (l * w * h) / 1000000;
+                const volTotal = volOne * qty;
+                const volWeightExpress = (l * w * h * qty) / 5000;
+                const volWeightAir = (l * w * h * qty) / 6000;
+
+                const resultEl = document.getElementById('cbm-result');
+                if (resultEl) {
+                    resultEl.classList.remove('hidden');
+                    document.getElementById('res-vol-one').textContent = volOne.toFixed(4) + ' m³';
+                    document.getElementById('res-vol-total').textContent = volTotal.toFixed(3) + ' m³';
+                    document.getElementById('res-weight-express').textContent = volWeightExpress.toFixed(2) + ' kg';
+                    document.getElementById('res-weight-air').textContent = volWeightAir.toFixed(2) + ' kg';
+                }
+                Utils.toast('计算完成', 'success');
+            },
+
+            calcExchange() {
+                const amount = parseFloat(document.getElementById('exchange-amount')?.value) || 0;
+                const fromCurrency = document.getElementById('exchange-from')?.value || 'USD';
+                const toCurrency = document.getElementById('exchange-to')?.value || 'CNY';
+                const customRate = parseFloat(document.getElementById('exchange-rate')?.value) || 0;
+
+                if (amount === 0) {
+                    Utils.toast('请输入金额', 'error');
+                    return;
+                }
+
+                let result, rateUsed;
+                if (toCurrency === 'CNY') {
+                    rateUsed = customRate || this.rates[fromCurrency] || 1;
+                    result = amount * rateUsed;
+                } else if (fromCurrency === 'CNY') {
+                    rateUsed = customRate || this.rates[toCurrency] || 1;
+                    result = amount / rateUsed;
+                } else {
+                    const fromRate = this.rates[fromCurrency] || 1;
+                    const toRate = this.rates[toCurrency] || 1;
+                    result = (amount * fromRate) / toRate;
+                    rateUsed = fromRate / toRate;
+                }
+
+                const resultEl = document.getElementById('exchange-result');
+                if (resultEl) {
+                    resultEl.classList.remove('hidden');
+                    resultEl.innerHTML = `
+                        <div class="text-center p-4 bg-dark-2 rounded-lg">
+                            <div class="text-sm text-gray-400 mb-2">${amount.toLocaleString()} ${fromCurrency} =</div>
+                            <div class="text-3xl font-bold text-blue-400 font-mono">
+                                ${toCurrency === 'CNY' ? '¥' : ''}${result.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                ${toCurrency !== 'CNY' ? toCurrency : ''}
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">汇率: ${rateUsed.toFixed(4)}</div>
+                        </div>
+                    `;
+                }
+            },
+
+            calcQuote() {
+                const cost = parseFloat(document.getElementById('quote-cost')?.value) || 0;
+                const margin = parseFloat(document.getElementById('quote-margin')?.value) || 30;
+                const qty = parseInt(document.getElementById('quote-qty')?.value) || 1;
+                const exchangeRate = parseFloat(document.getElementById('quote-rate')?.value) || 7.25;
+
+                if (cost === 0) {
+                    Utils.toast('请输入成本价', 'error');
+                    return;
+                }
+
+                const unitPriceCNY = cost * (1 + margin / 100);
+                const unitPriceUSD = unitPriceCNY / exchangeRate;
+                const totalCNY = unitPriceCNY * qty;
+                const totalUSD = unitPriceUSD * qty;
+                const profit = totalCNY - (cost * qty);
+
+                const resultEl = document.getElementById('quote-result');
+                if (resultEl) {
+                    resultEl.classList.remove('hidden');
+                    resultEl.innerHTML = `
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div class="p-3 bg-dark-2 rounded-lg">
+                                <div class="text-gray-500 text-xs mb-1">单价 (CNY)</div>
+                                <div class="text-xl font-bold text-yellow-400">¥${unitPriceCNY.toFixed(2)}</div>
+                            </div>
+                            <div class="p-3 bg-dark-2 rounded-lg">
+                                <div class="text-gray-500 text-xs mb-1">单价 (USD)</div>
+                                <div class="text-xl font-bold text-green-400">$${unitPriceUSD.toFixed(2)}</div>
+                            </div>
+                            <div class="p-3 bg-dark-2 rounded-lg">
+                                <div class="text-gray-500 text-xs mb-1">总价 (${qty}件)</div>
+                                <div class="text-lg font-bold text-blue-400">$${totalUSD.toFixed(2)}</div>
+                            </div>
+                            <div class="p-3 bg-dark-2 rounded-lg">
+                                <div class="text-gray-500 text-xs mb-1">预计利润</div>
+                                <div class="text-lg font-bold text-purple-400">¥${profit.toFixed(2)}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+
+            calcFreight() {
+                const cbm = parseFloat(document.getElementById('freight-cbm')?.value) || 0;
+                const weight = parseFloat(document.getElementById('freight-weight')?.value) || 0;
+                const mode = document.getElementById('freight-mode')?.value || 'seaLCL';
+
+                if (cbm === 0 && weight === 0) {
+                    Utils.toast('请输入体积或重量', 'error');
+                    return;
+                }
+
+                const rates = {
+                    express: { perKg: 45, min: 21 },
+                    airCargo: { perKg: 28, min: 45 },
+                    seaLCL: { perCBM: 350, min: 1 },
+                    seaFCL20: { flat: 8500 },
+                    seaFCL40: { flat: 12000 },
+                    seaFCL40HQ: { flat: 13500 }
+                };
+
+                let estimate = 0, chargeWeight = weight;
+                switch (mode) {
+                    case 'express':
+                        const volWeightExp = cbm * 1000000 / 5000;
+                        chargeWeight = Math.max(weight, volWeightExp);
+                        estimate = Math.max(chargeWeight * rates.express.perKg, rates.express.min * rates.express.perKg);
+                        break;
+                    case 'airCargo':
+                        const volWeightAir = cbm * 1000000 / 6000;
+                        chargeWeight = Math.max(weight, volWeightAir);
+                        estimate = Math.max(chargeWeight * rates.airCargo.perKg, rates.airCargo.min * rates.airCargo.perKg);
+                        break;
+                    case 'seaLCL':
+                        estimate = Math.max(cbm * rates.seaLCL.perCBM, rates.seaLCL.min * rates.seaLCL.perCBM);
+                        break;
+                    case 'seaFCL20': estimate = rates.seaFCL20.flat; break;
+                    case 'seaFCL40': estimate = rates.seaFCL40.flat; break;
+                    case 'seaFCL40HQ': estimate = rates.seaFCL40HQ.flat; break;
+                }
+
+                const resultEl = document.getElementById('freight-result');
+                if (resultEl) {
+                    resultEl.classList.remove('hidden');
+                    resultEl.innerHTML = `
+                        <div class="p-4 bg-dark-2 rounded-lg text-center">
+                            <div class="text-sm text-gray-400 mb-2">运费估算</div>
+                            <div class="text-3xl font-bold text-orange-400 font-mono">¥${estimate.toFixed(0)}</div>
+                            ${['express', 'airCargo'].includes(mode) ? 
+                                `<div class="text-xs text-gray-500 mt-2">计费重: ${chargeWeight.toFixed(1)} kg</div>` : 
+                                `<div class="text-xs text-gray-500 mt-2">体积: ${cbm.toFixed(3)} CBM</div>`
+                            }
+                            <div class="text-[10px] text-gray-600 mt-1">* 仅供参考，实际以货代报价为准</div>
+                        </div>
+                    `;
+                }
+            },
+
+            resetAll() {
+                ['cbm-l', 'cbm-w', 'cbm-h', 'exchange-amount', 'quote-cost', 'freight-cbm', 'freight-weight'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = '';
+                });
+                document.getElementById('cbm-qty').value = '1';
+                document.getElementById('quote-qty').value = '1';
+                document.getElementById('quote-margin').value = '30';
+                ['cbm-result', 'exchange-result', 'quote-result', 'freight-result'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.add('hidden');
+                });
+                Utils.toast('已重置所有计算器', 'success');
+            }
+        };
+        window.WorkbenchTools = WorkbenchTools;
+
+        // ==================== DOM 加载完成后初始化 ====================
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => app.init());
+        } else {
+            app.init();
+        }
+
+        console.log(`[V14.6 PRO] 脚本已加载 - Firebase同步版 + 全球时钟 + 外贸工具箱 - 版本: ${CONFIG.VERSION}`);
+    })();
+    </script>
+</body>
+</html>
