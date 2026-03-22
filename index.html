@@ -575,14 +575,155 @@
                     </div>
                     
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header flex justify-between items-center">
                             <span class="font-bold text-slate-800"><i class="fas fa-bell text-warning mr-2"></i>待办提醒</span>
+                            <button onclick="showTodoModal()" class="text-xs bg-warning hover:bg-yellow-600 text-white px-2 py-1 rounded transition">
+                                <i class="fas fa-plus"></i> 添加
+                            </button>
                         </div>
                         <div class="p-4">
-                            <div id="todo-list" class="space-y-2 text-sm">
+                            <div id="todo-list" class="space-y-2 text-sm max-h-40 overflow-y-auto">
                                 <p class="text-slate-400 text-center py-4">暂无待办事项</p>
                             </div>
                         </div>
+                    </div>
+                </div>
+                
+                <!-- 外部工具链接 -->
+                <div class="mt-8">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="w-1 h-5 bg-primary rounded-full"></span>
+                        <h3 class="font-bold text-slate-700">外部工具链接</h3>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        <!-- Notion -->
+                        <a href="https://www.notion.so/V5-Medical-31575f07e2b1808aafe2ea809fddc715" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-indigo-300 transition text-center">
+                            <div class="w-12 h-12 bg-slate-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-indigo-50 transition">
+                                <i class="fas fa-book text-slate-600 text-xl group-hover:text-indigo-600"></i>
+                            </div>
+                            <div class="font-medium text-slate-700 text-sm">Notion</div>
+                            <div class="text-xs text-slate-400 mt-1">知识库</div>
+                        </a>
+                        
+                        <!-- Telegram -->
+                        <a href="https://t.me/openclaw_bot" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-blue-300 transition text-center">
+                            <div class="w-12 h-12 bg-slate-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-blue-50 transition">
+                                <i class="fab fa-telegram text-slate-600 text-xl group-hover:text-blue-500"></i>
+                            </div>
+                            <div class="font-medium text-slate-700 text-sm">Telegram</div>
+                            <div class="text-xs text-slate-400 mt-1">AI Bot</div>
+                        </a>
+                        
+                        <!-- Discord -->
+                        <a href="https://discord.com/channels/1473272341420183746/1480647041842413759" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-indigo-300 transition text-center">
+                            <div class="w-12 h-12 bg-slate-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-indigo-50 transition">
+                                <i class="fab fa-discord text-slate-600 text-xl group-hover:text-indigo-500"></i>
+                            </div>
+                            <div class="font-medium text-slate-700 text-sm">Discord</div>
+                            <div class="text-xs text-slate-400 mt-1">社区</div>
+                        </a>
+                        
+                        <!-- 飞书 -->
+                        <a href="https://vvohooin.feishu.cn/drive/home/" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-blue-300 transition text-center">
+                            <div class="w-12 h-12 bg-slate-100 rounded-lg mx-auto mb-2 flex items-center justify-center group-hover:bg-blue-50 transition">
+                                <i class="fas fa-cloud text-slate-600 text-xl group-hover:text-blue-500"></i>
+                            </div>
+                            <div class="font-medium text-slate-700 text-sm">飞书</div>
+                            <div class="text-xs text-slate-400 mt-1">云文档</div>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 社媒矩阵 -->
+                <div class="mt-8">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="w-1 h-5 bg-primary rounded-full"></span>
+                        <h3 class="font-bold text-slate-700">社媒矩阵</h3>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <!-- LinkedIn -->
+                        <a href="https://linkedin.com/company/v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-blue-300 transition">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <i class="fab fa-linkedin text-blue-600 text-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-slate-700 text-sm">LinkedIn</div>
+                                    <div class="text-xs text-amber-500">⭐⭐⭐⭐⭐</div>
+                                    <div class="text-xs text-slate-400">最高B2B</div>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <!-- YouTube -->
+                        <a href="https://www.youtube.com/@v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-red-300 transition">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                                    <i class="fab fa-youtube text-red-600 text-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-slate-700 text-sm">YouTube</div>
+                                    <div class="text-xs text-amber-500">⭐⭐⭐⭐</div>
+                                    <div class="text-xs text-slate-400">高信任度</div>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <!-- Facebook -->
+                        <a href="https://facebook.com/v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-blue-300 transition">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <i class="fab fa-facebook text-blue-600 text-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-slate-700 text-sm">Facebook</div>
+                                    <div class="text-xs text-amber-500">⭐⭐⭐</div>
+                                    <div class="text-xs text-slate-400">B2B推广</div>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <!-- Instagram -->
+                        <a href="https://www.instagram.com/v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-pink-300 transition">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center">
+                                    <i class="fab fa-instagram text-pink-600 text-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-slate-700 text-sm">Instagram</div>
+                                    <div class="text-xs text-amber-500">⭐⭐</div>
+                                    <div class="text-xs text-slate-400">视觉展示</div>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <!-- TikTok -->
+                        <a href="https://www.tiktok.com/@v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-slate-300 transition">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                                    <i class="fab fa-tiktok text-slate-800 text-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-slate-700 text-sm">TikTok</div>
+                                    <div class="text-xs text-amber-500">⭐</div>
+                                    <div class="text-xs text-slate-400">短视频</div>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <!-- X (Twitter) -->
+                        <a href="https://twitter.com/v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-slate-300 transition">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                                    <i class="fab fa-x-twitter text-slate-800 text-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-slate-700 text-sm">X</div>
+                                    <div class="text-xs text-amber-500">⭐</div>
+                                    <div class="text-xs text-slate-400">资讯</div>
+                                </div>
+                            </div>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -1790,6 +1931,52 @@
         </div>
     </div>
 
+    <!-- 待办事项弹窗 -->
+    <div id="todo-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden">
+            <div class="bg-gradient-to-r from-warning to-yellow-600 px-6 py-4 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white">添加待办事项</h3>
+                <button onclick="closeTodoModal()" class="text-white/80 hover:text-white transition text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">待办内容 <span class="text-danger">*</span></label>
+                        <input id="todo-content" type="text" placeholder="例如：跟进土耳其客户报价" class="input-field">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">优先级</label>
+                            <select id="todo-priority" class="input-field">
+                                <option value="high">🔴 高优先级</option>
+                                <option value="medium" selected>🟡 中优先级</option>
+                                <option value="low">🟢 低优先级</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">截止日期</label>
+                            <input id="todo-due" type="date" class="input-field">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">关联客户/订单</label>
+                        <input id="todo-related" type="text" placeholder="可选：输入客户名称或订单号" class="input-field">
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
+                <button onclick="closeTodoModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-3 rounded-lg transition">
+                    取消
+                </button>
+                <button onclick="saveTodo()" class="flex-1 bg-gradient-to-r from-warning to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                    <i class="fas fa-save mr-2"></i>添加
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast 通知 -->
     <div id="toast" class="toast">
         <i id="toast-icon" class="fas fa-check-circle text-success text-xl"></i>
@@ -1832,6 +2019,7 @@
             expenses: [],
             suppliers: [],
             trash: [], // 回收站
+            todos: [], // 待办事项
             isOnline: false,
             isSyncing: false,
             lastSync: null
@@ -1863,6 +2051,7 @@
             renderOrdersKanban();
             renderOrdersList();
             renderTrash();
+            renderTodos();
             
             // 加载汇率设置
             const savedRate = localStorage.getItem(CONFIG.storagePrefix + 'usd_rate');
@@ -1972,7 +2161,7 @@
         
         // ==================== 数据管理 ====================
         function loadAllData() {
-            const keys = ['orders', 'customers', 'expenses', 'suppliers', 'trash'];
+            const keys = ['orders', 'customers', 'expenses', 'suppliers', 'trash', 'todos'];
             keys.forEach(key => {
                 const data = localStorage.getItem(CONFIG.storagePrefix + key);
                 if (data) {
@@ -3762,6 +3951,134 @@
             showToast('已重置所有计算器', 'info');
         }
         
+        // ==================== 待办事项功能 ====================
+        function showTodoModal() {
+            document.getElementById('todo-content').value = '';
+            document.getElementById('todo-priority').value = 'medium';
+            document.getElementById('todo-due').value = '';
+            document.getElementById('todo-related').value = '';
+            
+            // 设置默认截止日期为明天
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('todo-due').value = tomorrow.toISOString().split('T')[0];
+            
+            document.getElementById('todo-modal').classList.remove('hidden');
+        }
+        
+        function closeTodoModal() {
+            document.getElementById('todo-modal').classList.add('hidden');
+        }
+        
+        function saveTodo() {
+            const content = document.getElementById('todo-content').value.trim();
+            const priority = document.getElementById('todo-priority').value;
+            const due = document.getElementById('todo-due').value;
+            const related = document.getElementById('todo-related').value.trim();
+            
+            if (!content) {
+                showToast('请输入待办内容', 'warning');
+                return;
+            }
+            
+            const todo = {
+                id: generateId('TODO'),
+                content: content,
+                priority: priority,
+                due: due,
+                related: related,
+                completed: false,
+                createdAt: new Date().toISOString()
+            };
+            
+            if (!state.todos) state.todos = [];
+            state.todos.push(todo);
+            saveData('todos', state.todos);
+            
+            renderTodos();
+            closeTodoModal();
+            showToast('待办事项已添加', 'success');
+        }
+        
+        function renderTodos() {
+            const container = document.getElementById('todo-list');
+            if (!container) return;
+            
+            const todos = state.todos || [];
+            const activeTodos = todos.filter(t => !t.completed);
+            
+            if (activeTodos.length === 0) {
+                container.innerHTML = '<p class="text-slate-400 text-center py-4">暂无待办事项</p>';
+                return;
+            }
+            
+            // 按优先级和截止日期排序
+            const priorityOrder = { high: 0, medium: 1, low: 2 };
+            activeTodos.sort((a, b) => {
+                if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+                    return priorityOrder[a.priority] - priorityOrder[b.priority];
+                }
+                return (a.due || '').localeCompare(b.due || '');
+            });
+            
+            const priorityColors = {
+                high: 'border-l-red-500 bg-red-50',
+                medium: 'border-l-yellow-500 bg-yellow-50',
+                low: 'border-l-green-500 bg-green-50'
+            };
+            
+            const priorityLabels = {
+                high: '高',
+                medium: '中',
+                low: '低'
+            };
+            
+            container.innerHTML = activeTodos.map(todo => {
+                const isOverdue = todo.due && new Date(todo.due) < new Date().setHours(0,0,0,0);
+                const dueText = todo.due 
+                    ? `<span class="${isOverdue ? 'text-red-600 font-medium' : 'text-slate-500'}">${todo.due}${isOverdue ? ' (已逾期)' : ''}</span>`
+                    : '<span class="text-slate-400">无截止日期</span>';
+                
+                return `
+                <div class="flex items-start gap-2 p-2 rounded border-l-4 ${priorityColors[todo.priority]}">
+                    <input type="checkbox" onchange="completeTodo('${todo.id}')" class="mt-1 w-4 h-4 text-primary rounded border-slate-300 focus:ring-primary">
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium text-slate-700">${escapeHtml(todo.content)}</div>
+                        <div class="text-xs mt-1 flex items-center gap-2">
+                            <span class="px-1.5 py-0.5 bg-white rounded text-slate-500">${priorityLabels[todo.priority]}</span>
+                            ${dueText}
+                            ${todo.related ? `<span class="text-slate-400 truncate">· ${escapeHtml(todo.related)}</span>` : ''}
+                        </div>
+                    </div>
+                    <button onclick="deleteTodo('${todo.id}')" class="text-slate-400 hover:text-danger transition">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;}).join('');
+        }
+        
+        function completeTodo(id) {
+            if (!state.todos) return;
+            const todo = state.todos.find(t => t.id === id);
+            if (todo) {
+                todo.completed = true;
+                todo.completedAt = new Date().toISOString();
+                saveData('todos', state.todos);
+                renderTodos();
+                showToast('待办已完成', 'success');
+            }
+        }
+        
+        function deleteTodo(id) {
+            if (!state.todos) return;
+            if (confirm('确定要删除此待办事项吗？')) {
+                state.todos = state.todos.filter(t => t.id !== id);
+                saveData('todos', state.todos);
+                renderTodos();
+                showToast('待办已删除', 'success');
+            }
+        }
+        
         // ==================== 产品利润率计算器 ====================
         function calculateProfit() {
             const cost = parseFloat(document.getElementById('profit-cost')?.value) || 0;
@@ -4034,6 +4351,12 @@
         window.calculateDuty = calculateDuty;
         window.calculateFX = calculateFX;
         window.resetAllTools = resetAllTools;
+        window.showTodoModal = showTodoModal;
+        window.closeTodoModal = closeTodoModal;
+        window.saveTodo = saveTodo;
+        window.completeTodo = completeTodo;
+        window.deleteTodo = deleteTodo;
+        window.renderTodos = renderTodos;
     </script>
 </body>
 </html>
