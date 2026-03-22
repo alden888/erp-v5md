@@ -1038,6 +1038,285 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- 产品利润率计算器 -->
+                    <div class="card border-t-4 border-t-purple-500">
+                        <div class="card-header">
+                            <span class="font-bold text-slate-800"><i class="fas fa-percentage text-purple-500 mr-2"></i>产品利润率计算器</span>
+                        </div>
+                        <div class="p-5 space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">成本价 (RMB)</label>
+                                    <input type="number" id="profit-cost" class="input-field" placeholder="100">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">销售价 (RMB)</label>
+                                    <input type="number" id="profit-sell" class="input-field" placeholder="150">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">其他费用 (RMB)</label>
+                                <input type="number" id="profit-fee" class="input-field" value="0" placeholder="运费、平台费等">
+                            </div>
+                            <button onclick="calculateProfit()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 rounded-lg transition">
+                                <i class="fas fa-calculator"></i> 计算利润率
+                            </button>
+                            <div id="profit-result" class="hidden mt-4 p-4 bg-slate-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-slate-600">毛利润:</span>
+                                    <span class="text-xl font-bold text-purple-600" id="profit-amount">¥0</span>
+                                </div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-slate-600">利润率:</span>
+                                    <span class="text-2xl font-bold text-purple-600" id="profit-rate">0%</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-slate-600">保本售价:</span>
+                                    <span class="font-bold text-slate-700" id="profit-break-even">¥0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 国际快递费用估算 -->
+                    <div class="card border-t-4 border-t-orange-500">
+                        <div class="card-header">
+                            <span class="font-bold text-slate-800"><i class="fas fa-shipping-fast text-orange-500 mr-2"></i>国际快递费用估算</span>
+                        </div>
+                        <div class="p-5 space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">重量 (kg)</label>
+                                    <input type="number" id="express-weight" class="input-field" placeholder="1.5" step="0.1">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">区域</label>
+                                    <select id="express-zone" class="input-field">
+                                        <option value="1">亚洲邻国</option>
+                                        <option value="2">欧美主要国家</option>
+                                        <option value="3">南美/非洲/偏远地区</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">快递公司</label>
+                                <select id="express-company" class="input-field">
+                                    <option value="dhl">DHL</option>
+                                    <option value="fedex">FedEx</option>
+                                    <option value="ups">UPS</option>
+                                    <option value="sf">顺丰国际</option>
+                                </select>
+                            </div>
+                            <button onclick="calculateExpress()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition">
+                                <i class="fas fa-calculator"></i> 估算运费
+                            </button>
+                            <div id="express-result" class="hidden mt-4 p-4 bg-slate-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-slate-600">预计运费:</span>
+                                    <span class="text-2xl font-bold text-orange-600" id="express-price">¥0</span>
+                                </div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-slate-600">预计时效:</span>
+                                    <span class="font-bold text-slate-700" id="express-time">3-5个工作日</span>
+                                </div>
+                                <div class="text-xs text-slate-500 mt-2">
+                                    * 仅供参考，实际费用以快递公司报价为准
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 海运费估算 -->
+                    <div class="card border-t-4 border-t-cyan-500">
+                        <div class="card-header">
+                            <span class="font-bold text-slate-800"><i class="fas fa-ship text-cyan-500 mr-2"></i>海运费估算</span>
+                        </div>
+                        <div class="p-5 space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">起运港</label>
+                                    <select id="ship-from" class="input-field">
+                                        <option value="shanghai">上海</option>
+                                        <option value="shenzhen">深圳</option>
+                                        <option value="ningbo">宁波</option>
+                                        <option value="qingdao">青岛</option>
+                                        <option value="xiamen">厦门</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">目的地区域</label>
+                                    <select id="ship-to" class="input-field">
+                                        <option value="asia">东南亚</option>
+                                        <option value="eu">欧洲</option>
+                                        <option value="us">美国</option>
+                                        <option value="me">中东</option>
+                                        <option value="af">非洲</option>
+                                        <option value="sa">南美</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">体积 (CBM)</label>
+                                    <input type="number" id="ship-cbm" class="input-field" placeholder="10" step="0.1">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">重量 (kg)</label>
+                                    <input type="number" id="ship-weight" class="input-field" placeholder="5000" step="10">
+                                </div>
+                            </div>
+                            <button onclick="calculateShipping()" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 rounded-lg transition">
+                                <i class="fas fa-calculator"></i> 估算海运费
+                            </button>
+                            <div id="ship-result" class="hidden mt-4 p-4 bg-slate-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-slate-600">预计海运费:</span>
+                                    <span class="text-2xl font-bold text-cyan-600" id="ship-price">$0</span>
+                                </div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-slate-600">预计时效:</span>
+                                    <span class="font-bold text-slate-700" id="ship-time">15-25天</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-slate-600">计费方式:</span>
+                                    <span class="font-bold text-slate-700" id="ship-method">按体积计费</span>
+                                </div>
+                                <div class="text-xs text-slate-500 mt-2">
+                                    * 仅供参考，实际费用以货代报价为准
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 关税计算器 -->
+                    <div class="card border-t-4 border-t-red-500">
+                        <div class="card-header">
+                            <span class="font-bold text-slate-800"><i class="fas fa-file-invoice-dollar text-red-500 mr-2"></i>关税计算器</span>
+                        </div>
+                        <div class="p-5 space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">产品货值 (USD)</label>
+                                <input type="number" id="duty-value" class="input-field" placeholder="10000">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">目的国</label>
+                                    <select id="duty-country" class="input-field" onchange="updateDutyRate()">
+                                        <option value="us">美国</option>
+                                        <option value="eu">欧盟</option>
+                                        <option value="uk">英国</option>
+                                        <option value="jp">日本</option>
+                                        <option value="au">澳大利亚</option>
+                                        <option value="ca">加拿大</option>
+                                        <option value="other">其他</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">关税税率 (%)</label>
+                                    <input type="number" id="duty-rate" class="input-field" value="25" placeholder="25">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">增值税/消费税 (%)</label>
+                                <input type="number" id="duty-vat" class="input-field" value="0" placeholder="如美国为0">
+                            </div>
+                            <button onclick="calculateDuty()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition">
+                                <i class="fas fa-calculator"></i> 计算关税
+                            </button>
+                            <div id="duty-result" class="hidden mt-4 p-4 bg-slate-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-slate-600">关税:</span>
+                                    <span class="font-bold text-red-600" id="duty-amount">$0</span>
+                                </div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-slate-600">增值税:</span>
+                                    <span class="font-bold text-slate-700" id="duty-vat-amount">$0</span>
+                                </div>
+                                <div class="flex justify-between items-center pt-2 border-t border-slate-200">
+                                    <span class="text-slate-600">税费合计:</span>
+                                    <span class="text-xl font-bold text-red-600" id="duty-total">$0</span>
+                                </div>
+                                <div class="flex justify-between items-center mt-2">
+                                    <span class="text-slate-600">含税总价:</span>
+                                    <span class="font-bold text-slate-800" id="duty-grand-total">$0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 汇率换算器 -->
+                    <div class="card border-t-4 border-t-indigo-500">
+                        <div class="card-header">
+                            <span class="font-bold text-slate-800"><i class="fas fa-exchange-alt text-indigo-500 mr-2"></i>汇率换算器</span>
+                        </div>
+                        <div class="p-5 space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">持有货币</label>
+                                    <select id="fx-from" class="input-field" onchange="calculateFX()">
+                                        <option value="CNY">CNY 人民币</option>
+                                        <option value="USD" selected>USD 美元</option>
+                                        <option value="EUR">EUR 欧元</option>
+                                        <option value="GBP">GBP 英镑</option>
+                                        <option value="JPY">JPY 日元</option>
+                                        <option value="AUD">AUD 澳元</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">目标货币</label>
+                                    <select id="fx-to" class="input-field" onchange="calculateFX()">
+                                        <option value="CNY" selected>CNY 人民币</option>
+                                        <option value="USD">USD 美元</option>
+                                        <option value="EUR">EUR 欧元</option>
+                                        <option value="GBP">GBP 英镑</option>
+                                        <option value="JPY">JPY 日元</option>
+                                        <option value="AUD">AUD 澳元</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">金额</label>
+                                <input type="number" id="fx-amount" class="input-field" placeholder="1000" oninput="calculateFX()">
+                            </div>
+                            <div class="p-4 bg-indigo-50 rounded-lg text-center">
+                                <div class="text-sm text-slate-500 mb-1">换算结果</div>
+                                <div class="text-3xl font-bold text-indigo-600" id="fx-result">-</div>
+                                <div class="text-xs text-slate-400 mt-1" id="fx-rate">汇率: 1 USD = 7.25 CNY</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 贸易术语快速参考 -->
+                    <div class="card border-t-4 border-t-slate-500">
+                        <div class="card-header">
+                            <span class="font-bold text-slate-800"><i class="fas fa-book text-slate-500 mr-2"></i>贸易术语快速参考</span>
+                        </div>
+                        <div class="p-4">
+                            <div class="space-y-2 text-sm">
+                                <div class="flex items-start gap-3 p-2 bg-slate-50 rounded">
+                                    <span class="font-bold text-primary w-16">EXW</span>
+                                    <span class="text-slate-600">工厂交货 - 买方承担所有费用和风险</span>
+                                </div>
+                                <div class="flex items-start gap-3 p-2 bg-slate-50 rounded">
+                                    <span class="font-bold text-primary w-16">FOB</span>
+                                    <span class="text-slate-600">船上交货 - 卖方负责装船前费用，买方负责海运及之后</span>
+                                </div>
+                                <div class="flex items-start gap-3 p-2 bg-slate-50 rounded">
+                                    <span class="font-bold text-primary w-16">CIF</span>
+                                    <span class="text-slate-600">成本+保险+运费 - 卖方负责海运和保险，买方负责卸货后</span>
+                                </div>
+                                <div class="flex items-start gap-3 p-2 bg-slate-50 rounded">
+                                    <span class="font-bold text-primary w-16">DDP</span>
+                                    <span class="text-slate-600">完税后交货 - 卖方承担所有费用和风险直至目的地</span>
+                                </div>
+                                <div class="flex items-start gap-3 p-2 bg-slate-50 rounded">
+                                    <span class="font-bold text-primary w-16">DAP</span>
+                                    <span class="text-slate-600">目的地交货 - 卖方负责运输，买方负责进口清关和税费</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3448,7 +3727,207 @@
             document.getElementById('cbm-qty').value = '1';
             document.getElementById('cbm-result').classList.add('hidden');
             
+            // 重置利润率计算器
+            document.getElementById('profit-cost').value = '';
+            document.getElementById('profit-sell').value = '';
+            document.getElementById('profit-fee').value = '0';
+            document.getElementById('profit-result').classList.add('hidden');
+            
+            // 重置快递计算器
+            document.getElementById('express-weight').value = '';
+            document.getElementById('express-result').classList.add('hidden');
+            
+            // 重置海运费计算器
+            document.getElementById('ship-cbm').value = '';
+            document.getElementById('ship-weight').value = '';
+            document.getElementById('ship-result').classList.add('hidden');
+            
+            // 重置关税计算器
+            document.getElementById('duty-value').value = '';
+            document.getElementById('duty-rate').value = '25';
+            document.getElementById('duty-vat').value = '0';
+            document.getElementById('duty-result').classList.add('hidden');
+            
+            // 重置汇率换算器
+            document.getElementById('fx-amount').value = '';
+            document.getElementById('fx-result').textContent = '-';
+            
             showToast('已重置所有计算器', 'info');
+        }
+        
+        // ==================== 产品利润率计算器 ====================
+        function calculateProfit() {
+            const cost = parseFloat(document.getElementById('profit-cost')?.value) || 0;
+            const sell = parseFloat(document.getElementById('profit-sell')?.value) || 0;
+            const fee = parseFloat(document.getElementById('profit-fee')?.value) || 0;
+            
+            if (cost <= 0 || sell <= 0) {
+                showToast('请输入有效的成本价和销售价', 'warning');
+                return;
+            }
+            
+            const profit = sell - cost - fee;
+            const rate = (profit / sell * 100).toFixed(1);
+            const breakEven = cost + fee;
+            
+            document.getElementById('profit-amount').textContent = '¥' + profit.toFixed(2);
+            document.getElementById('profit-rate').textContent = rate + '%';
+            document.getElementById('profit-break-even').textContent = '¥' + breakEven.toFixed(2);
+            document.getElementById('profit-result').classList.remove('hidden');
+        }
+        
+        // ==================== 国际快递费用估算 ====================
+        function calculateExpress() {
+            const weight = parseFloat(document.getElementById('express-weight')?.value) || 0;
+            const zone = document.getElementById('express-zone')?.value || '2';
+            const company = document.getElementById('express-company')?.value || 'dhl';
+            
+            if (weight <= 0) {
+                showToast('请输入有效的重量', 'warning');
+                return;
+            }
+            
+            // 基础费率 (RMB/kg)
+            const rates = {
+                dhl: { 1: 120, 2: 180, 3: 220 },
+                fedex: { 1: 110, 2: 170, 3: 210 },
+                ups: { 1: 115, 2: 175, 3: 215 },
+                sf: { 1: 90, 2: 150, 3: 190 }
+            };
+            
+            // 时效
+            const times = {
+                1: '2-4个工作日',
+                2: '3-5个工作日',
+                3: '5-8个工作日'
+            };
+            
+            const rate = rates[company][zone];
+            const fuelSurcharge = 1.25; // 燃油附加费 25%
+            const price = weight * rate * fuelSurcharge;
+            
+            document.getElementById('express-price').textContent = '¥' + Math.round(price).toLocaleString();
+            document.getElementById('express-time').textContent = times[zone];
+            document.getElementById('express-result').classList.remove('hidden');
+        }
+        
+        // ==================== 海运费估算 ====================
+        function calculateShipping() {
+            const cbm = parseFloat(document.getElementById('ship-cbm')?.value) || 0;
+            const weight = parseFloat(document.getElementById('ship-weight')?.value) || 0;
+            const to = document.getElementById('ship-to')?.value || 'us';
+            
+            if (cbm <= 0 && weight <= 0) {
+                showToast('请输入体积或重量', 'warning');
+                return;
+            }
+            
+            // 拼箱费率 (USD/CBM)
+            const rates = {
+                asia: 30,
+                eu: 80,
+                us: 70,
+                me: 60,
+                af: 90,
+                sa: 100
+            };
+            
+            // 时效
+            const times = {
+                asia: '7-12天',
+                eu: '20-30天',
+                us: '15-25天',
+                me: '18-28天',
+                af: '25-35天',
+                sa: '30-45天'
+            };
+            
+            // 按体积计费 vs 按重量计费 (1 CBM = 1000 kg)
+            const weightInCBM = weight / 1000;
+            const chargeableCBM = Math.max(cbm, weightInCBM);
+            const price = chargeableCBM * rates[to];
+            
+            const method = cbm >= weightInCBM ? '按体积计费' : '按重量计费';
+            
+            document.getElementById('ship-price').textContent = '$' + Math.round(price).toLocaleString();
+            document.getElementById('ship-time').textContent = times[to];
+            document.getElementById('ship-method').textContent = method;
+            document.getElementById('ship-result').classList.remove('hidden');
+        }
+        
+        // ==================== 关税计算器 ====================
+        function updateDutyRate() {
+            const country = document.getElementById('duty-country')?.value || 'us';
+            const rates = {
+                us: 25,
+                eu: 12,
+                uk: 12,
+                jp: 8,
+                au: 5,
+                ca: 8,
+                other: 15
+            };
+            const vats = {
+                us: 0,
+                eu: 20,
+                uk: 20,
+                jp: 10,
+                au: 10,
+                ca: 13,
+                other: 0
+            };
+            document.getElementById('duty-rate').value = rates[country];
+            document.getElementById('duty-vat').value = vats[country];
+        }
+        
+        function calculateDuty() {
+            const value = parseFloat(document.getElementById('duty-value')?.value) || 0;
+            const rate = parseFloat(document.getElementById('duty-rate')?.value) || 0;
+            const vat = parseFloat(document.getElementById('duty-vat')?.value) || 0;
+            
+            if (value <= 0) {
+                showToast('请输入产品货值', 'warning');
+                return;
+            }
+            
+            const dutyAmount = value * rate / 100;
+            const vatBase = value + dutyAmount; // 增值税通常含关税
+            const vatAmount = vatBase * vat / 100;
+            const total = dutyAmount + vatAmount;
+            const grandTotal = value + total;
+            
+            document.getElementById('duty-amount').textContent = '$' + dutyAmount.toFixed(2);
+            document.getElementById('duty-vat-amount').textContent = '$' + vatAmount.toFixed(2);
+            document.getElementById('duty-total').textContent = '$' + total.toFixed(2);
+            document.getElementById('duty-grand-total').textContent = '$' + grandTotal.toFixed(2);
+            document.getElementById('duty-result').classList.remove('hidden');
+        }
+        
+        // ==================== 汇率换算器 ====================
+        function calculateFX() {
+            const amount = parseFloat(document.getElementById('fx-amount')?.value) || 0;
+            const from = document.getElementById('fx-from')?.value || 'USD';
+            const to = document.getElementById('fx-to')?.value || 'CNY';
+            
+            // 基准汇率 (对USD)
+            const rates = {
+                CNY: 0.138,
+                USD: 1,
+                EUR: 1.09,
+                GBP: 1.27,
+                JPY: 0.0067,
+                AUD: 0.66
+            };
+            
+            // 换算: 先转成USD，再转成目标货币
+            const inUSD = amount * rates[from];
+            const result = inUSD / rates[to];
+            
+            // 计算汇率
+            const rate = rates[to] / rates[from];
+            
+            document.getElementById('fx-result').textContent = result.toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' ' + to;
+            document.getElementById('fx-rate').textContent = `汇率: 1 ${from} = ${rate.toFixed(4)} ${to}`;
         }
         
         // ==================== 工具函数 ====================
@@ -3541,6 +4020,12 @@
         window.setExchangeRate = setExchangeRate;
         window.calculateFOB = calculateFOB;
         window.calculateCBM = calculateCBM;
+        window.calculateProfit = calculateProfit;
+        window.calculateExpress = calculateExpress;
+        window.calculateShipping = calculateShipping;
+        window.updateDutyRate = updateDutyRate;
+        window.calculateDuty = calculateDuty;
+        window.calculateFX = calculateFX;
         window.resetAllTools = resetAllTools;
     </script>
 </body>
