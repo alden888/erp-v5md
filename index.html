@@ -486,19 +486,23 @@
         <div class="page-container">
             <!-- 仪表盘 -->
             <div id="tab-dashboard" class="tab-content active">
-                <!-- 世界时钟 -->
-                <div class="mb-8">
-                    <div class="flex items-center gap-2 mb-4">
-                        <span class="w-1 h-5 bg-primary rounded-full"></span>
-                        <h3 class="font-bold text-slate-700">全球商机时钟</h3>
-                    </div>
-                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" id="world-clock-container">
-                        <!-- 时钟卡片由 JS 生成 -->
-                    </div>
-                </div>
-                
-                <!-- KPI 卡片 -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <!-- 主内容区 + 右侧边栏 -->
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <!-- 左侧主内容区 -->
+                    <div class="flex-1 min-w-0">
+                        <!-- 世界时钟 -->
+                        <div class="mb-8">
+                            <div class="flex items-center gap-2 mb-4">
+                                <span class="w-1 h-5 bg-primary rounded-full"></span>
+                                <h3 class="font-bold text-slate-700">全球商机时钟</h3>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3" id="world-clock-container">
+                                <!-- 时钟卡片由 JS 生成 -->
+                            </div>
+                        </div>
+                        
+                        <!-- KPI 卡片 -->
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                     <div class="kpi-card border-l-4 border-l-primary">
                         <i class="fas fa-trophy kpi-icon text-primary"></i>
                         <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">年度达成率</div>
@@ -533,40 +537,46 @@
                     </div>
                 </div>
                 
-                <!-- 快捷操作 + 右侧日历备忘 -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- 左侧：快速创建 -->
-                    <div class="card">
-                        <div class="card-header">
-                            <span class="font-bold text-slate-800"><i class="fas fa-plus-circle text-primary mr-2"></i>快速创建</span>
-                        </div>
-                        <div class="p-4 space-y-3">
-                            <button onclick="quickCreateOrder()" class="w-full btn-primary">
-                                <i class="fas fa-file-invoice"></i> 新建订单
-                            </button>
-                            <button onclick="quickCreateCustomer()" class="w-full bg-slate-600 hover:bg-slate-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2">
-                                <i class="fas fa-user-plus"></i> 新建客户
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- 中间：待办提醒 -->
-                    <div class="card">
-                        <div class="card-header flex justify-between items-center">
-                            <span class="font-bold text-slate-800"><i class="fas fa-bell text-warning mr-2"></i>待办提醒</span>
-                            <button onclick="showTodoModal()" class="text-xs bg-warning hover:bg-yellow-600 text-white px-2 py-1 rounded transition">
-                                <i class="fas fa-plus"></i> 添加
-                            </button>
-                        </div>
-                        <div class="p-4">
-                            <div id="todo-list" class="space-y-2 text-sm max-h-40 overflow-y-auto">
-                                <p class="text-slate-400 text-center py-4">暂无待办事项</p>
+                <!-- 主内容区 + 右侧边栏 -->
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <!-- 左侧主内容区 -->
+                    <div class="flex-1 min-w-0">
+                        <!-- 快捷操作 -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <!-- 快速创建 -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <span class="font-bold text-slate-800"><i class="fas fa-plus-circle text-primary mr-2"></i>快速创建</span>
+                                </div>
+                                <div class="p-4 space-y-3">
+                                    <button onclick="quickCreateOrder()" class="w-full btn-primary">
+                                        <i class="fas fa-file-invoice"></i> 新建订单
+                                    </button>
+                                    <button onclick="quickCreateCustomer()" class="w-full bg-slate-600 hover:bg-slate-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                                        <i class="fas fa-user-plus"></i> 新建客户
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- 待办提醒 -->
+                            <div class="card">
+                                <div class="card-header flex justify-between items-center">
+                                    <span class="font-bold text-slate-800"><i class="fas fa-bell text-warning mr-2"></i>待办提醒</span>
+                                    <button onclick="showTodoModal()" class="text-xs bg-warning hover:bg-yellow-600 text-white px-2 py-1 rounded transition">
+                                        <i class="fas fa-plus"></i> 添加
+                                    </button>
+                                </div>
+                                <div class="p-4">
+                                    <div id="todo-list" class="space-y-2 text-sm max-h-40 overflow-y-auto">
+                                        <p class="text-slate-400 text-center py-4">暂无待办事项</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- 右侧：月日历 + 云同步 + 备忘 -->
-                    <div class="space-y-4">
+                    <!-- 右侧边栏：日历、云同步、备忘 -->
+                    <div class="w-full lg:w-80 flex-shrink-0 space-y-4">
                         <!-- 月日历 -->
                         <div class="card">
                             <div class="card-header flex justify-between items-center">
@@ -639,10 +649,9 @@
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <!-- 外部工具链接 -->
-                <div class="mt-8">
+                    
+                    <!-- 左侧主内容区继续：外部工具链接 -->
+                    <div class="mt-8">
                     <div class="flex items-center gap-2 mb-4">
                         <span class="w-1 h-5 bg-primary rounded-full"></span>
                         <h3 class="font-bold text-slate-700">外部工具链接</h3>
@@ -777,8 +786,103 @@
                             </div>
                         </a>
                     </div>
-                </div>
-            </div>
+                    
+                    <!-- 左侧主内容区继续：社媒矩阵 -->
+                    <div class="mt-8">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="w-1 h-5 bg-primary rounded-full"></span>
+                            <h3 class="font-bold text-slate-700">社媒矩阵</h3>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                            <!-- LinkedIn -->
+                            <a href="https://linkedin.com/company/v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-blue-300 transition">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                        <i class="fab fa-linkedin text-blue-600 text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-slate-700 text-sm">LinkedIn</div>
+                                        <div class="text-xs text-amber-500">⭐⭐⭐⭐⭐</div>
+                                        <div class="text-xs text-slate-400">最高B2B</div>
+                                    </div>
+                                </div>
+                            </a>
+                            
+                            <!-- YouTube -->
+                            <a href="https://www.youtube.com/@v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-red-300 transition">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                                        <i class="fab fa-youtube text-red-600 text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-slate-700 text-sm">YouTube</div>
+                                        <div class="text-xs text-amber-500">⭐⭐⭐⭐</div>
+                                        <div class="text-xs text-slate-400">高信任度</div>
+                                    </div>
+                                </div>
+                            </a>
+                            
+                            <!-- Facebook -->
+                            <a href="https://facebook.com/v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-blue-300 transition">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                        <i class="fab fa-facebook text-blue-600 text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-slate-700 text-sm">Facebook</div>
+                                        <div class="text-xs text-amber-500">⭐⭐⭐</div>
+                                        <div class="text-xs text-slate-400">B2B推广</div>
+                                    </div>
+                                </div>
+                            </a>
+                            
+                            <!-- Instagram -->
+                            <a href="https://www.instagram.com/v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-pink-300 transition">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center">
+                                        <i class="fab fa-instagram text-pink-600 text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-slate-700 text-sm">Instagram</div>
+                                        <div class="text-xs text-amber-500">⭐⭐</div>
+                                        <div class="text-xs text-slate-400">视觉展示</div>
+                                    </div>
+                                </div>
+                            </a>
+                            
+                            <!-- TikTok -->
+                            <a href="https://www.tiktok.com/@v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-slate-300 transition">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                                        <i class="fab fa-tiktok text-slate-800 text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-slate-700 text-sm">TikTok</div>
+                                        <div class="text-xs text-amber-500">⭐</div>
+                                        <div class="text-xs text-slate-400">短视频</div>
+                                    </div>
+                                </div>
+                            </a>
+                            
+                            <!-- X (Twitter) -->
+                            <a href="https://twitter.com/v5med" target="_blank" class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-slate-300 transition">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                                        <i class="fab fa-x-twitter text-slate-800 text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-slate-700 text-sm">X</div>
+                                        <div class="text-xs text-amber-500">⭐</div>
+                                        <div class="text-xs text-slate-400">资讯</div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                    
+                </div><!-- /左侧主内容区 -->
+                
+            </div><!-- /主内容区 + 右侧边栏 -->
             
             <!-- 订单管理 -->
             <div id="tab-orders" class="tab-content">
