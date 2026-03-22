@@ -1129,9 +1129,20 @@
                     <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">订单详情</h4>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">订单金额 (USD) <span class="text-danger">*</span></label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">订单金额 <span class="text-danger">*</span></label>
                             <input id="order-amount" type="number" step="0.01" min="0" placeholder="0.00" class="input-field">
                         </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">货币</label>
+                            <select id="order-currency" class="input-field" onchange="updatePaymentMethods()">
+                                <option value="USD">USD 美元</option>
+                                <option value="CNY">CNY 人民币</option>
+                                <option value="EUR">EUR 欧元</option>
+                                <option value="GBP">GBP 英镑</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mt-4">
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 mb-1">当前状态</label>
                             <select id="order-status" class="input-field">
@@ -1142,16 +1153,30 @@
                                 <option value="paid">已完成</option>
                             </select>
                         </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">贸易条款</label>
+                            <select id="order-term" class="input-field">
+                                <option value="FOB Shanghai">FOB Shanghai</option>
+                                <option value="FOB Shenzhen">FOB Shenzhen</option>
+                                <option value="CIF">CIF</option>
+                                <option value="EXW">EXW</option>
+                                <option value="DAP">DAP</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="mt-4">
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">贸易条款</label>
-                        <select id="order-term" class="input-field">
-                            <option value="FOB Shanghai">FOB Shanghai</option>
-                            <option value="FOB Shenzhen">FOB Shenzhen</option>
-                            <option value="CIF">CIF</option>
-                            <option value="EXW">EXW</option>
-                            <option value="DAP">DAP</option>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">汇款路径</label>
+                        <select id="order-payment-method" class="input-field">
+                            <option value="stripe_usd">Stripe - 美元信用卡</option>
+                            <option value="bank_wire_usd">Bank Wire - 美元电汇</option>
+                            <option value="alipay_cny">支付宝 - 人民币</option>
+                            <option value="wechat_cny">微信支付 - 人民币</option>
+                            <option value="bank_transfer_cny">银行转账 - 人民币</option>
+                            <option value="xtransfer">XTransfer</option>
+                            <option value="wise">Wise</option>
+                            <option value="other">其他</option>
                         </select>
+                        <p class="text-xs text-slate-400 mt-1" id="payment-hint">客户通过官网Stripe支付美元</p>
                     </div>
                 </div>
                 
@@ -1749,11 +1774,16 @@
             document.getElementById('order-customer-select').value = '';
             document.getElementById('order-customer-input').value = '';
             document.getElementById('order-amount').value = '';
+            document.getElementById('order-currency').value = 'USD';
             document.getElementById('order-status').value = 'inquiry';
             document.getElementById('order-term').value = 'FOB Shanghai';
             document.getElementById('order-ship-date').value = '';
-            document.getElementById('order-payment').value = 'T/T';
+            // payment method is set by updatePaymentMethods()
             document.getElementById('order-note').value = '';
+            
+            // 初始化汇款路径
+            updatePaymentMethods();
+            document.getElementById('order-payment-method').value = 'stripe_usd';
             
             // 重置产品列表
             document.getElementById('order-products-list').innerHTML = `
@@ -1776,6 +1806,43 @@
             document.getElementById('order-modal').classList.remove('hidden');
         }
         
+        // 根据货币更新汇款路径选项
+        function updatePaymentMethods() {
+            const currency = document.getElementById('order-currency').value;
+            const paymentSelect = document.getElementById('order-payment-method');
+            const hint = document.getElementById('payment-hint');
+            
+            // 清空当前选项
+            paymentSelect.innerHTML = '';
+            
+            // 根据货币添加相应选项
+            if (currency === 'CNY') {
+                paymentSelect.innerHTML = `
+                    <option value="alipay_cny">支付宝 - 人民币</option>
+                    <option value="wechat_cny">微信支付 - 人民币</option>
+                    <option value="bank_transfer_cny">银行转账 - 人民币</option>
+                `;
+                hint.textContent = '客户通过支付宝/微信/银行转账支付人民币';
+            } else if (currency === 'USD') {
+                paymentSelect.innerHTML = `
+                    <option value="stripe_usd">Stripe - 美元信用卡</option>
+                    <option value="bank_wire_usd">Bank Wire - 美元电汇</option>
+                    <option value="xtransfer">XTransfer</option>
+                    <option value="wise">Wise</option>
+                `;
+                hint.textContent = '客户通过官网Stripe支付美元或使用银行电汇';
+            } else {
+                // EUR, GBP等其他货币
+                paymentSelect.innerHTML = `
+                    <option value="stripe">Stripe - 信用卡</option>
+                    <option value="bank_wire">Bank Wire - 银行电汇</option>
+                    <option value="wise">Wise</option>
+                    <option value="xtransfer">XTransfer</option>
+                `;
+                hint.textContent = '客户通过Stripe或银行电汇支付';
+            }
+        }
+        
         function showEditOrderModal(id) {
             const order = state.orders.find(o => o.id === id);
             if (!order) return;
@@ -1789,11 +1856,16 @@
             document.getElementById('order-customer-select').value = order.customer || '';
             document.getElementById('order-customer-input').value = order.customer || '';
             document.getElementById('order-amount').value = order.amount || '';
+            document.getElementById('order-currency').value = order.currency || 'USD';
             document.getElementById('order-status').value = order.status || 'inquiry';
             document.getElementById('order-term').value = order.term || 'FOB Shanghai';
             document.getElementById('order-ship-date').value = order.shipDate || '';
-            document.getElementById('order-payment').value = order.payment || 'T/T';
+            // payment method is set after updatePaymentMethods()
             document.getElementById('order-note').value = order.note || '';
+            
+            // 更新汇款路径选项并设置值
+            updatePaymentMethods();
+            document.getElementById('order-payment-method').value = order.paymentMethod || 'stripe_usd';
             
             // 加载客户列表
             loadCustomerOptions();
@@ -1868,15 +1940,19 @@
                 }
             });
             
+            const currency = document.getElementById('order-currency').value;
+            const paymentMethod = document.getElementById('order-payment-method').value;
+            
             const orderData = {
                 id: editingOrderId || generateId('ORDER'),
                 title: title,
                 customer: customer,
                 amount: amount,
+                currency: currency,
                 status: document.getElementById('order-status').value,
                 term: document.getElementById('order-term').value,
                 shipDate: document.getElementById('order-ship-date').value,
-                payment: document.getElementById('order-payment').value,
+                paymentMethod: paymentMethod,
                 products: products,
                 note: document.getElementById('order-note').value.trim(),
                 updatedAt: new Date().toISOString()
@@ -2001,12 +2077,22 @@
                 'paid': '已完成'
             };
             
+            const currencySymbols = {
+                'USD': '$',
+                'CNY': '¥',
+                'EUR': '€',
+                'GBP': '£'
+            };
+            
+            const currency = order.currency || 'USD';
+            const symbol = currencySymbols[currency] || '$';
+            
             return `
                 <div class="bg-white rounded-lg border border-slate-200 border-l-4 ${statusColors[order.status] || 'border-l-slate-500'} p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onclick="showEditOrderModal('${order.id}')">
                     <div class="font-semibold text-slate-800 text-sm mb-1 truncate">${escapeHtml(order.title)}</div>
                     <div class="flex justify-between items-center text-xs text-slate-500 mb-2">
                         <span>${escapeHtml(order.customer)}</span>
-                        <span class="font-mono text-primary font-bold">$${order.amount?.toLocaleString() || 0}</span>
+                        <span class="font-mono text-primary font-bold">${symbol}${order.amount?.toLocaleString() || 0} <span class="text-slate-400">${currency}</span></span>
                     </div>
                     <div class="flex justify-between items-center pt-2 border-t border-slate-100">
                         <span class="text-xs text-slate-400">${statusNames[order.status] || order.status}</span>
@@ -2052,12 +2138,22 @@
                 'paid': '已完成'
             };
             
-            tbody.innerHTML = orders.slice().reverse().map(order => `
+            const currencySymbols = {
+                'USD': '$',
+                'CNY': '¥',
+                'EUR': '€',
+                'GBP': '£'
+            };
+            
+            tbody.innerHTML = orders.slice().reverse().map(order => {
+                const currency = order.currency || 'USD';
+                const symbol = currencySymbols[currency] || '$';
+                return `
                 <tr>
                     <td class="font-mono text-xs">${order.id?.split('_')[1] || order.id}</td>
                     <td>${escapeHtml(order.title)}</td>
                     <td>${escapeHtml(order.customer)}</td>
-                    <td class="font-medium">$${order.amount?.toLocaleString() || 0}</td>
+                    <td class="font-medium">${symbol}${order.amount?.toLocaleString() || 0} <span class="text-slate-400 text-xs">${currency}</span></td>
                     <td><span class="px-2 py-1 rounded text-xs ${statusColors[order.status] || 'bg-slate-100'}">${statusNames[order.status] || order.status}</span></td>
                     <td class="text-slate-500 text-xs">${formatDate(order.createdAt)}</td>
                     <td>
@@ -2065,7 +2161,7 @@
                         <button onclick="deleteOrder('${order.id}')" class="text-danger hover:text-red-700"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
-            `).join('');
+            `;}).join('');
         }
         
         // ==================== 客户管理功能 ====================
