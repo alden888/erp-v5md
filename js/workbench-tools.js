@@ -8,12 +8,12 @@ const WorkbenchTools = (() => {
 
     // 默认汇率配置
     const DEFAULT_RATES = {
-        USD: 7.25,
-        EUR: 7.85,
-        GBP: 9.15,
-        JPY: 0.048,
-        AED: 1.97,
-        TRY: 0.22
+        USD: 6.89,
+        EUR: 7.96,
+        GBP: 9.18,
+        JPY: 0.0432,
+        AED: 1.86,
+        TRY: 0.145
     };
 
     // 体积重系数
