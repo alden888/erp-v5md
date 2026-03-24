@@ -350,8 +350,8 @@
 <body class="bg-slate-50 text-slate-700 font-sans antialiased">
     
     <!-- 登录界面 -->
-    <div id="login-screen" class="fixed inset-0 z-50 bg-gradient-to-br from-slate-900 via-slate-800 to-primary flex items-center justify-center hidden">
-        <div class="w-full max-w-md p-8">
+    <div id="login-screen" class="fixed inset-0 z-50 bg-gradient-to-br from-slate-900 via-slate-800 to-primary flex items-center justify-center hidden overflow-y-auto">
+        <div class="w-full max-w-md p-4 md:p-8 min-h-screen flex flex-col justify-center">
             <div class="text-center mb-8">
                 <div class="w-20 h-20 bg-white rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
                     <i class="fas fa-shield-alt text-primary text-4xl"></i>
@@ -531,10 +531,10 @@
                         <div class="text-sm font-medium text-slate-700" id="user-name">Admin</div>
                         <div class="text-xs text-slate-500" id="user-role">管理员</div>
                     </div>
-                    <div class="relative group">
-                        <img src="https://ui-avatars.com/api/?name=Admin&background=1e40af&color=fff" alt="User" class="w-9 h-9 rounded-full border-2 border-white shadow-sm cursor-pointer">
+                    <div class="relative" id="user-menu-container">
+                        <img src="https://ui-avatars.com/api/?name=Admin&background=1e40af&color=fff" alt="User" class="w-9 h-9 rounded-full border-2 border-white shadow-sm cursor-pointer" onclick="toggleUserMenu()">
                         <!-- 下拉菜单 -->
-                        <div class="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-2 hidden group-hover:block z-50">
+                        <div id="user-menu-dropdown" class="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-2 hidden z-50">
                             <div class="px-4 py-2 border-b border-slate-100">
                                 <div class="text-sm font-medium text-slate-800" id="dropdown-user-name">Admin</div>
                                 <div class="text-xs text-slate-500" id="dropdown-user-email">admin@v5medical.com</div>
@@ -2872,10 +2872,11 @@
             loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登录中...';
             
             try {
+                console.log('[Auth] 尝试登录:', email);
                 const userCredential = await firebaseAuth.signInWithEmailAndPassword(email, password);
                 const user = userCredential.user;
                 
-                console.log('[Auth] 登录成功:', user.email);
+                console.log('[Auth] 登录成功:', user.email, 'UID:', user.uid);
                 showToast('登录成功，欢迎回来', 'success');
                 
                 // 保存登录状态到本地存储
@@ -2910,7 +2911,37 @@
             }
         }
         
+        // 用户菜单切换（移动端兼容）
+        function toggleUserMenu() {
+            const dropdown = document.getElementById('user-menu-dropdown');
+            if (dropdown.classList.contains('hidden')) {
+                dropdown.classList.remove('hidden');
+                // 点击外部关闭
+                setTimeout(() => {
+                    document.addEventListener('click', closeUserMenuOnClickOutside);
+                }, 0);
+            } else {
+                dropdown.classList.add('hidden');
+                document.removeEventListener('click', closeUserMenuOnClickOutside);
+            }
+        }
+        
+        function closeUserMenuOnClickOutside(event) {
+            const container = document.getElementById('user-menu-container');
+            if (container && !container.contains(event.target)) {
+                const dropdown = document.getElementById('user-menu-dropdown');
+                if (dropdown) {
+                    dropdown.classList.add('hidden');
+                }
+                document.removeEventListener('click', closeUserMenuOnClickOutside);
+            }
+        }
+        
         async function logout() {
+            // 关闭下拉菜单
+            const dropdown = document.getElementById('user-menu-dropdown');
+            if (dropdown) dropdown.classList.add('hidden');
+            
             if (!confirm('确定要退出登录吗？')) {
                 return;
             }
@@ -2919,6 +2950,9 @@
                 await firebaseAuth.signOut();
                 console.log('[Auth] 已退出登录');
                 showToast('已安全退出', 'success');
+                
+                // 清除保存的用户信息
+                localStorage.removeItem(CONFIG.storagePrefix + 'last_user');
                 
                 // 清空敏感数据
                 state.orders = [];
@@ -2991,8 +3025,14 @@
                 if (typeof firebase === 'undefined') {
                     console.warn('[Firebase] SDK 未加载');
                     updateSyncStatus('offline');
+                    // 显示登录界面，允许离线使用
+                    document.getElementById('login-screen').classList.remove('hidden');
                     return;
                 }
+                
+                // 检测是否移动端
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                console.log('[Firebase] 设备类型:', isMobile ? '移动端' : '桌面端');
                 
                 // 初始化 Firebase
                 const app = firebase.initializeApp(CONFIG.firebase);
@@ -3001,10 +3041,9 @@
                 
                 console.log('[Firebase] 初始化成功');
                 
-                // 启用离线持久化
-                firebaseDb.enablePersistence({
-                    synchronizeTabs: true
-                }).catch((err) => {
+                // 启用离线持久化（移动端不启用 synchronizeTabs）
+                const persistenceOptions = isMobile ? {} : { synchronizeTabs: true };
+                firebaseDb.enablePersistence(persistenceOptions).catch((err) => {
                     console.warn('[Firebase] 持久化启用失败:', err.code);
                 });
                 
@@ -6375,6 +6414,7 @@
         window.reconnectFirebase = reconnectFirebase;
         window.handleLogin = handleLogin;
         window.logout = logout;
+        window.toggleUserMenu = toggleUserMenu;
         window.togglePasswordVisibility = togglePasswordVisibility;
         window.showResetPassword = showResetPassword;
         window.emergencyDataRecovery = emergencyDataRecovery;
