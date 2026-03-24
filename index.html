@@ -4572,6 +4572,11 @@
         
         function closeExpenseModal() {
             document.getElementById('expense-modal').classList.add('hidden');
+            
+            // 重置编辑状态
+            editingExpenseId = null;
+            document.querySelector('#expense-modal h3').textContent = '记一笔';
+            document.querySelector('#expense-modal button[onclick="saveExpense()"]').innerHTML = '<i class="fas fa-save mr-2"></i>保存';
         }
         
         // 记账显示更新
@@ -4680,15 +4685,28 @@
                 createdAt: new Date().toISOString()
             };
             
-            state.expenses.push(expense);
-            saveData('expenses', state.expenses);
+            if (editingExpenseId) {
+                // 编辑模式
+                const index = state.expenses.findIndex(e => e.id === editingExpenseId);
+                if (index !== -1) {
+                    expense.id = editingExpenseId;
+                    expense.createdAt = state.expenses[index].createdAt;
+                    expense.updatedAt = new Date().toISOString();
+                    state.expenses[index] = expense;
+                    showToast('记录已更新', 'success');
+                }
+                editingExpenseId = null;
+            } else {
+                // 新增模式
+                state.expenses.push(expense);
+                showToast(type === 'income' ? '收入记录已添加' : '支出记录已添加', 'success');
+            }
             
+            saveData('expenses', state.expenses);
             renderExpenses();
             updateDashboard();
             updateExpenseStats();
             closeExpenseModal();
-            
-            showToast(type === 'income' ? '收入记录已添加' : '支出记录已添加', 'success');
         }
         
         function renderExpenses() {
@@ -4754,7 +4772,10 @@
                     <td class="text-right font-medium ${amountClass}">${amountDisplay}</td>
                     <td class="text-slate-500 text-xs">${escapeHtml(e.note || '-')}</td>
                     <td class="text-right">
-                        <button onclick="deleteExpense('${e.id}')" class="text-slate-400 hover:text-danger transition px-2 py-1 rounded hover:bg-red-50">
+                        <button onclick="editExpense('${e.id}')" class="text-slate-400 hover:text-primary transition px-2 py-1 rounded hover:bg-blue-50 mr-1" title="编辑">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteExpense('${e.id}')" class="text-slate-400 hover:text-danger transition px-2 py-1 rounded hover:bg-red-50" title="删除">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     </td>
@@ -4830,6 +4851,52 @@
             document.getElementById('expense-filter-category').value = 'all';
             document.getElementById('expense-filter-month').value = 'all';
             renderExpenses();
+        }
+        
+        // 编辑记账
+        let editingExpenseId = null;
+        
+        function editExpense(id) {
+            const expense = state.expenses.find(e => e.id === id);
+            if (!expense) {
+                showToast('记录不存在', 'error');
+                return;
+            }
+            
+            editingExpenseId = id;
+            
+            // 填充表单数据
+            document.getElementById('expense-date').value = expense.date;
+            document.getElementById('expense-currency').value = expense.currency || 'CNY';
+            document.getElementById('expense-amount').value = expense.amount;
+            document.getElementById('expense-fee-percent').value = expense.feePercent || '';
+            document.getElementById('expense-actual').value = expense.actualAmount || expense.amount;
+            document.getElementById('expense-exchange-rate').value = expense.exchangeRate || '';
+            document.getElementById('expense-cny-equivalent').value = expense.cnyEquivalent || '';
+            document.getElementById('expense-item').value = expense.item;
+            document.getElementById('expense-note').value = expense.note || '';
+            
+            // 设置收支类型
+            const typeRadio = document.querySelector(`input[name="expense-type"][value="${expense.type}"]`);
+            if (typeRadio) {
+                typeRadio.checked = true;
+            }
+            
+            // 更新分类选项
+            updateExpenseCategories();
+            setTimeout(() => {
+                document.getElementById('expense-category').value = expense.category;
+            }, 0);
+            
+            // 更新显示
+            updateExpenseDisplay();
+            
+            // 修改弹窗标题和按钮
+            document.querySelector('#expense-modal h3').textContent = '编辑记账';
+            document.querySelector('#expense-modal button[onclick="saveExpense()"]').innerHTML = '<i class="fas fa-save mr-2"></i>保存修改';
+            
+            // 打开弹窗
+            document.getElementById('expense-modal').classList.remove('hidden');
         }
         
         function deleteExpense(id) {
@@ -5898,6 +5965,7 @@
         window.resetExpenseFilters = resetExpenseFilters;
         window.exportFinanceReport = exportFinanceReport;
         window.deleteExpense = deleteExpense;
+        window.editExpense = editExpense;
         window.updateExpenseDisplay = updateExpenseDisplay;
         window.calculateExpenseActual = calculateExpenseActual;
         window.calculateExpenseCNY = calculateExpenseCNY;
