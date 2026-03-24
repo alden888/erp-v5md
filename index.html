@@ -3246,12 +3246,31 @@
                     console.log('[Firebase] 供应商同步完成:', state.suppliers.length);
                 }
                 
+                // 加载收支记录
+                const expensesSnapshot = await firebaseDb.collection('expenses').get();
+                if (!expensesSnapshot.empty) {
+                    const cloudExpenses = [];
+                    expensesSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        delete data._syncedAt;
+                        cloudExpenses.push(data);
+                    });
+                    
+                    const cloudIds = new Set(cloudExpenses.map(e => e.id));
+                    const localOnly = state.expenses.filter(e => e.id && !cloudIds.has(e.id));
+                    state.expenses = [...cloudExpenses, ...localOnly];
+                    
+                    localStorage.setItem(CONFIG.storagePrefix + 'expenses', JSON.stringify(state.expenses));
+                    console.log('[Firebase] 收支记录同步完成:', state.expenses.length);
+                }
+                
                 // 刷新界面
                 updateDashboard();
                 renderOrdersKanban();
                 renderOrdersList();
                 renderCustomers();
                 renderSuppliers();
+                renderExpenses();
                 
                 showToast('云端数据已同步', 'success');
                 
