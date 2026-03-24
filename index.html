@@ -1551,6 +1551,57 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- 金额大写转换器 -->
+                    <div class="card border-t-4 border-t-amber-500 lg:col-span-2">
+                        <div class="card-header">
+                            <span class="font-bold text-slate-800"><i class="fas fa-font text-amber-500 mr-2"></i>金额大写转换器</span>
+                        </div>
+                        <div class="p-5 space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">数字金额</label>
+                                    <input type="text" id="amount-input" class="input-field" placeholder="例如: 12345.67" oninput="convertAmount()">
+                                    <p class="text-xs text-slate-400 mt-1">支持人民币和美元格式</p>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">币种</label>
+                                    <select id="amount-currency" class="input-field" onchange="convertAmount()">
+                                        <option value="CNY">人民币 CNY</option>
+                                        <option value="USD">美元 USD</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- 中文大写结果 -->
+                            <div class="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium text-amber-800">中文大写</span>
+                                    <button onclick="copyToClipboard('amount-chinese')" class="text-xs bg-amber-200 hover:bg-amber-300 text-amber-800 px-2 py-1 rounded transition">
+                                        <i class="fas fa-copy mr-1"></i>复制
+                                    </button>
+                                </div>
+                                <div id="amount-chinese" class="text-lg font-bold text-amber-900 break-all">请输入金额</div>
+                            </div>
+                            
+                            <!-- 英文大写结果 -->
+                            <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium text-blue-800">英文大写</span>
+                                    <button onclick="copyToClipboard('amount-english')" class="text-xs bg-blue-200 hover:bg-blue-300 text-blue-800 px-2 py-1 rounded transition">
+                                        <i class="fas fa-copy mr-1"></i>复制
+                                    </button>
+                                </div>
+                                <div id="amount-english" class="text-sm font-bold text-blue-900 break-all">请输入金额</div>
+                            </div>
+                            
+                            <!-- 说明 -->
+                            <div class="text-xs text-slate-500 space-y-1">
+                                <p><i class="fas fa-info-circle mr-1"></i>用途：用于合同、发票(PI)、采购订单(PO)、支票金额等金额大写</p>
+                                <p><i class="fas fa-lightbulb mr-1"></i>范例：12345.67 → 贰万贰仟肆佰肆拾伏元肆角肆分 / SAY US DOLLARS TWELVE THOUSAND THREE HUNDRED AND FORTY-FIVE AND CENTS SIXTY-SEVEN ONLY</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -4798,6 +4849,276 @@
             showToast('已重置所有计算器', 'info');
         }
         
+        // ==================== 金额大写转换功能 ====================
+        function convertAmount() {
+            const input = document.getElementById('amount-input').value.trim();
+            const currency = document.getElementById('amount-currency').value;
+            
+            if (!input || isNaN(input)) {
+                document.getElementById('amount-chinese').textContent = '请输入有效金额';
+                document.getElementById('amount-english').textContent = 'Please enter a valid amount';
+                return;
+            }
+            
+            const amount = parseFloat(input);
+            
+            if (currency === 'CNY') {
+                document.getElementById('amount-chinese').textContent = numberToChinese(amount);
+                document.getElementById('amount-english').textContent = numberToEnglish(amount, 'CNY');
+            } else {
+                document.getElementById('amount-chinese').textContent = usdToChinese(amount);
+                document.getElementById('amount-english').textContent = numberToEnglish(amount, 'USD');
+            }
+        }
+        
+        // 人民币中文大写
+        function numberToChinese(num) {
+            if (isNaN(num) || num === 0) return '零元整';
+            
+            const digits = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
+            const units = ['', '拾', '佰', '仟', '万', '拾万', '佰万', '仟万', '亿'];
+            const decimals = ['角', '分'];
+            
+            const numStr = num.toFixed(2);
+            const parts = numStr.split('.');
+            const integerPart = parts[0];
+            const decimalPart = parts[1];
+            
+            let result = '';
+            
+            // 处理整数部分
+            if (integerPart !== '0') {
+                let zeroFlag = false;
+                const intLen = integerPart.length;
+                
+                for (let i = 0; i < intLen; i++) {
+                    const digit = parseInt(integerPart[i]);
+                    const position = intLen - i - 1;
+                    const unit = units[position % 8];
+                    
+                    if (digit === 0) {
+                        if (!zeroFlag && position % 4 !== 0 && i < intLen - 1) {
+                            zeroFlag = true;
+                        }
+                    } else {
+                        if (zeroFlag) {
+                            result += digits[0];
+                            zeroFlag = false;
+                        }
+                        result += digits[digit] + unit;
+                    }
+                    
+                    // 处理万、亿单位
+                    if (position === 4 && result !== '') {
+                        result += '万';
+                    } else if (position === 8) {
+                        result += '亿';
+                    }
+                }
+                
+                result += '元';
+            } else {
+                result = '零元';
+            }
+            
+            // 处理小数部分
+            const jiao = parseInt(decimalPart[0]);
+            const fen = parseInt(decimalPart[1]);
+            
+            if (jiao === 0 && fen === 0) {
+                result += '整';
+            } else {
+                if (jiao > 0) {
+                    result += digits[jiao] + '角';
+                }
+                if (fen > 0) {
+                    result += digits[fen] + '分';
+                }
+            }
+            
+            return result;
+        }
+        
+        // 美元中文大写
+        function usdToChinese(num) {
+            if (isNaN(num) || num === 0) return '零美元';
+            
+            const digits = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
+            const numStr = num.toFixed(2);
+            const parts = numStr.split('.');
+            const integerPart = parts[0];
+            const decimalPart = parts[1];
+            
+            let result = '美金';
+            
+            // 处理整数部分
+            if (integerPart !== '0') {
+                const intLen = integerPart.length;
+                const groups = [];
+                let temp = integerPart;
+                
+                while (temp.length > 0) {
+                    groups.unshift(temp.slice(-3));
+                    temp = temp.slice(0, -3);
+                }
+                
+                const groupNames = ['', '千', '百万', '十亿'];
+                
+                for (let i = 0; i < groups.length; i++) {
+                    const group = groups[i];
+                    const groupName = groupNames[groups.length - 1 - i];
+                    let groupResult = '';
+                    
+                    for (let j = 0; j < group.length; j++) {
+                        const digit = parseInt(group[j]);
+                        const pos = group.length - j;
+                        
+                        if (digit !== 0) {
+                            if (pos === 3) groupResult += '佰';
+                            else if (pos === 2) groupResult += '拾';
+                            groupResult += digits[digit];
+                        }
+                    }
+                    
+                    if (groupResult) {
+                        result += groupResult + groupName;
+                    }
+                }
+                
+                result += '元';
+            } else {
+                result += '零元';
+            }
+            
+            // 处理小数部分（分）
+            const cents = parseInt(decimalPart);
+            if (cents > 0) {
+                if (decimalPart[0] !== '0') {
+                    result += digits[parseInt(decimalPart[0])] + '拾';
+                }
+                result += digits[parseInt(decimalPart[1])] + '分';
+            }
+            
+            return result;
+        }
+        
+        // 英文金额大写
+        function numberToEnglish(num, currency) {
+            if (isNaN(num) || num === 0) {
+                return currency === 'CNY' 
+                    ? 'SAY CHINESE YUAN ZERO ONLY' 
+                    : 'SAY US DOLLARS ZERO ONLY';
+            }
+            
+            const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'];
+            const teens = ['TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];
+            const tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
+            const thousands = ['', 'THOUSAND', 'MILLION', 'BILLION'];
+            
+            function convertGroup(n) {
+                let result = '';
+                
+                const hundred = Math.floor(n / 100);
+                const remainder = n % 100;
+                
+                if (hundred > 0) {
+                    result += ones[hundred] + ' HUNDRED';
+                    if (remainder > 0) result += ' AND ';
+                }
+                
+                if (remainder > 0) {
+                    if (remainder < 10) {
+                        result += ones[remainder];
+                    } else if (remainder < 20) {
+                        result += teens[remainder - 10];
+                    } else {
+                        const ten = Math.floor(remainder / 10);
+                        const one = remainder % 10;
+                        result += tens[ten];
+                        if (one > 0) result += '-' + ones[one];
+                    }
+                }
+                
+                return result;
+            }
+            
+            const numStr = num.toFixed(2);
+            const parts = numStr.split('.');
+            const integerPart = parseInt(parts[0]);
+            const decimalPart = parts[1];
+            
+            let result = 'SAY ' + (currency === 'CNY' ? 'CHINESE YUAN ' : 'US DOLLARS ');
+            
+            // 处理整数部分
+            if (integerPart === 0) {
+                result += 'ZERO';
+            } else {
+                let n = integerPart;
+                let groupIndex = 0;
+                const groups = [];
+                
+                while (n > 0) {
+                    const group = n % 1000;
+                    if (group > 0) {
+                        const groupText = convertGroup(group);
+                        if (thousands[groupIndex]) {
+                            groups.unshift(groupText + ' ' + thousands[groupIndex]);
+                        } else {
+                            groups.unshift(groupText);
+                        }
+                    }
+                    n = Math.floor(n / 1000);
+                    groupIndex++;
+                }
+                
+                result += groups.join(', ');
+            }
+            
+            // 处理小数部分（分）
+            const cents = parseInt(decimalPart);
+            if (cents > 0) {
+                result += ' AND CENTS ';
+                if (cents < 10) {
+                    result += 'ZERO-' + ones[cents];
+                } else if (cents < 20) {
+                    result += teens[cents - 10];
+                } else {
+                    const ten = Math.floor(cents / 10);
+                    const one = cents % 10;
+                    result += tens[ten];
+                    if (one > 0) result += '-' + ones[one];
+                }
+            }
+            
+            result += ' ONLY';
+            return result;
+        }
+        
+        // 复制到剪贴板
+        async function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            if (text.includes('请输入') || text.includes('Please')) {
+                showToast('没有可复制的内容', 'warning');
+                return;
+            }
+            
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast('已复制到剪贴板', 'success');
+            } catch (err) {
+                // 降级方案
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast('已复制到剪贴板', 'success');
+            }
+        }
+        
         // ==================== 待办事项功能 ====================
         function showTodoModal() {
             document.getElementById('todo-content').value = '';
@@ -5456,6 +5777,8 @@
         window.calculateDuty = calculateDuty;
         window.calculateFX = calculateFX;
         window.resetAllTools = resetAllTools;
+        window.convertAmount = convertAmount;
+        window.copyToClipboard = copyToClipboard;
         window.showTodoModal = showTodoModal;
         window.closeTodoModal = closeTodoModal;
         window.saveTodo = saveTodo;
