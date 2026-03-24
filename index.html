@@ -779,6 +779,14 @@
                                         <span class="text-slate-500">客户</span>
                                         <span id="sync-customers-count" class="font-medium">0</span>
                                     </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-slate-500">供应商</span>
+                                        <span id="sync-suppliers-count" class="font-medium">0</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-slate-500">收支</span>
+                                        <span id="sync-expenses-count" class="font-medium">0</span>
+                                    </div>
                                     <select id="sync-strategy" class="input-field text-xs py-1 mt-2">
                                         <option value="auto">🔄 自动同步</option>
                                         <option value="local_to_cloud">⬆️ 本地→云端</option>
@@ -2820,6 +2828,7 @@
         function updateSyncCounts() {
             document.getElementById('sync-orders-count').textContent = (state.orders || []).length + ' 条';
             document.getElementById('sync-customers-count').textContent = (state.customers || []).length + ' 条';
+            document.getElementById('sync-suppliers-count').textContent = (state.suppliers || []).length + ' 条';
             document.getElementById('sync-expenses-count').textContent = (state.expenses || []).length + ' 条';
             
             // 更新同步徽章
