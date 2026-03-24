@@ -2035,8 +2035,51 @@
                         <input id="expense-date" type="date" class="input-field">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">金额 (¥) <span class="text-danger">*</span></label>
-                        <input id="expense-amount" type="number" step="0.01" min="0" placeholder="0.00" class="input-field">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">币种 <span class="text-danger">*</span></label>
+                        <select id="expense-currency" class="input-field" onchange="updateExpenseDisplay()">
+                            <option value="CNY">人民币 CNY (¥)</option>
+                            <option value="USD">美元 USD ($)</option>
+                            <option value="HKD">港币 HKD (HK$)</option>
+                            <option value="EUR">欧元 EUR (€)</option>
+                            <option value="GBP">英镑 GBP (£)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- 金额信息 -->
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">金额 <span class="text-danger">*</span></label>
+                    <input id="expense-amount" type="number" step="0.01" min="0" placeholder="0.00" class="input-field" oninput="calculateExpenseActual()">
+                    <p class="text-xs text-slate-400 mt-1">客户支付金额（含手续费前）</p>
+                </div>
+                
+                <!-- 手续费和实际到账 -->
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">手续费 (%)</label>
+                        <input id="expense-fee-percent" type="number" step="0.01" min="0" max="100" placeholder="0" class="input-field" oninput="calculateExpenseActual()">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">实际到账金额</label>
+                        <input id="expense-actual" type="number" step="0.01" min="0" placeholder="0.00" class="input-field bg-green-50 border-green-200">
+                    </div>
+                </div>
+                
+                <!-- 汇率信息（收入时显示） -->
+                <div id="expense-exchange-section" class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100 hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-semibold text-blue-800">汇率转换</label>
+                        <span class="text-xs text-blue-600" id="expense-exchange-rate-display">1 USD = 7.25 CNY</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-1">汇率</label>
+                            <input id="expense-exchange-rate" type="number" step="0.0001" placeholder="7.25" class="input-field text-sm" oninput="calculateExpenseCNY()">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-1">等值人民币 (CNY)</label>
+                            <input id="expense-cny-equivalent" type="number" step="0.01" placeholder="0.00" class="input-field text-sm bg-amber-50" readonly>
+                        </div>
                     </div>
                 </div>
                 
@@ -2049,12 +2092,12 @@
                 
                 <div class="mb-4">
                     <label class="block text-xs font-semibold text-slate-600 mb-1">项目名称 <span class="text-danger">*</span></label>
-                    <input id="expense-item" type="text" placeholder="例如：办公室租金" class="input-field">
+                    <input id="expense-item" type="text" placeholder="例如：墨西哥牙科客户Stripe付款" class="input-field">
                 </div>
                 
                 <div class="mb-4">
                     <label class="block text-xs font-semibold text-slate-600 mb-1">备注</label>
-                    <textarea id="expense-note" rows="2" placeholder="可选填备注信息..." class="input-field resize-none"></textarea>
+                    <textarea id="expense-note" rows="2" placeholder="可选填备注信息，如：客户通过Stripe支付300美元，实际到责2358.93港币，手续费6%..." class="input-field resize-none"></textarea>
                 </div>
             </div>
             <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
@@ -4509,9 +4552,17 @@
         function showExpenseModal() {
             // 设置默认日期为今天
             document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('expense-currency').value = 'CNY';
             document.getElementById('expense-amount').value = '';
+            document.getElementById('expense-fee-percent').value = '';
+            document.getElementById('expense-actual').value = '';
+            document.getElementById('expense-exchange-rate').value = '';
+            document.getElementById('expense-cny-equivalent').value = '';
             document.getElementById('expense-item').value = '';
             document.getElementById('expense-note').value = '';
+            
+            // 隐藏汇率区域
+            document.getElementById('expense-exchange-section').classList.add('hidden');
             
             // 初始化分类选项
             updateExpenseCategories();
@@ -4521,6 +4572,61 @@
         
         function closeExpenseModal() {
             document.getElementById('expense-modal').classList.add('hidden');
+        }
+        
+        // 记账显示更新
+        function updateExpenseDisplay() {
+            const currency = document.getElementById('expense-currency').value;
+            const exchangeSection = document.getElementById('expense-exchange-section');
+            const rateDisplay = document.getElementById('expense-exchange-rate-display');
+            
+            if (currency === 'CNY') {
+                exchangeSection.classList.add('hidden');
+            } else {
+                exchangeSection.classList.remove('hidden');
+                // 设置默认汇率
+                const defaultRates = {
+                    'USD': 7.25,
+                    'HKD': 0.93,
+                    'EUR': 7.85,
+                    'GBP': 9.20
+                };
+                const rate = defaultRates[currency] || 1;
+                document.getElementById('expense-exchange-rate').value = rate;
+                rateDisplay.textContent = `1 ${currency} = ${rate} CNY`;
+                calculateExpenseCNY();
+            }
+            calculateExpenseActual();
+        }
+        
+        // 计算实际到账金额
+        function calculateExpenseActual() {
+            const amount = parseFloat(document.getElementById('expense-amount').value) || 0;
+            const feePercent = parseFloat(document.getElementById('expense-fee-percent').value) || 0;
+            
+            if (amount > 0 && feePercent >= 0) {
+                const feeAmount = amount * (feePercent / 100);
+                const actual = amount - feeAmount;
+                document.getElementById('expense-actual').value = actual.toFixed(2);
+            } else {
+                document.getElementById('expense-actual').value = amount.toFixed(2);
+            }
+            
+            calculateExpenseCNY();
+        }
+        
+        // 计算等值人民币
+        function calculateExpenseCNY() {
+            const currency = document.getElementById('expense-currency').value;
+            const actualAmount = parseFloat(document.getElementById('expense-actual').value) || 0;
+            const exchangeRate = parseFloat(document.getElementById('expense-exchange-rate').value) || 1;
+            
+            if (currency === 'CNY') {
+                document.getElementById('expense-cny-equivalent').value = actualAmount.toFixed(2);
+            } else {
+                const cnyAmount = actualAmount * exchangeRate;
+                document.getElementById('expense-cny-equivalent').value = cnyAmount.toFixed(2);
+            }
         }
         
         function updateExpenseCategories() {
@@ -4535,7 +4641,12 @@
         function saveExpense() {
             const type = document.querySelector('input[name="expense-type"]:checked').value;
             const date = document.getElementById('expense-date').value;
+            const currency = document.getElementById('expense-currency').value;
             const amount = parseFloat(document.getElementById('expense-amount').value) || 0;
+            const feePercent = parseFloat(document.getElementById('expense-fee-percent').value) || 0;
+            const actualAmount = parseFloat(document.getElementById('expense-actual').value) || amount;
+            const exchangeRate = parseFloat(document.getElementById('expense-exchange-rate').value) || 1;
+            const cnyEquivalent = parseFloat(document.getElementById('expense-cny-equivalent').value) || 0;
             const category = document.getElementById('expense-category').value;
             const item = document.getElementById('expense-item').value.trim();
             const note = document.getElementById('expense-note').value.trim();
@@ -4557,7 +4668,12 @@
                 id: generateId('EXP'),
                 type: type,
                 date: date,
+                currency: currency,
                 amount: amount,
+                feePercent: feePercent,
+                actualAmount: actualAmount,
+                exchangeRate: exchangeRate,
+                cnyEquivalent: cnyEquivalent,
                 category: category,
                 item: item,
                 note: note,
@@ -4616,13 +4732,26 @@
                     ? '<span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">收入</span>'
                     : '<span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">支出</span>';
                 
+                const currency = e.currency || 'CNY';
+                const currencySymbols = {'CNY': '¥', 'USD': '$', 'HKD': 'HK$', 'EUR': '€', 'GBP': '£'};
+                const symbol = currencySymbols[currency] || '¥';
+                
+                // 显示金额信息
+                let amountDisplay = `${amountPrefix}${symbol}${e.amount.toLocaleString()}`;
+                if (e.feePercent > 0) {
+                    amountDisplay += ` <span class="text-xs text-slate-400">(手续费${e.feePercent}%)</span>`;
+                }
+                if (e.currency !== 'CNY' && e.cnyEquivalent > 0) {
+                    amountDisplay += `<br><span class="text-xs text-amber-600">≈¥${e.cnyEquivalent.toLocaleString()}</span>`;
+                }
+                
                 return `
                 <tr>
                     <td>${e.date || '-'}</td>
                     <td>${typeBadge}</td>
                     <td>${escapeHtml(e.item)}</td>
                     <td><span class="px-2 py-1 bg-slate-100 rounded text-xs">${escapeHtml(e.category)}</span></td>
-                    <td class="text-right font-medium ${amountClass}">${amountPrefix}¥${e.amount.toLocaleString()}</td>
+                    <td class="text-right font-medium ${amountClass}">${amountDisplay}</td>
                     <td class="text-slate-500 text-xs">${escapeHtml(e.note || '-')}</td>
                     <td class="text-right">
                         <button onclick="deleteExpense('${e.id}')" class="text-slate-400 hover:text-danger transition px-2 py-1 rounded hover:bg-red-50">
@@ -4670,15 +4799,18 @@
             let incomeTotal = 0, expenseTotal = 0;
             
             (state.expenses || []).forEach(e => {
+                // 使用等值人民币进行统计（如果有），否则使用原始金额
+                const amount = e.cnyEquivalent || e.amount || 0;
+                
                 if (e.type === 'income') {
-                    incomeTotal += e.amount;
+                    incomeTotal += amount;
                     if (e.date && e.date.startsWith(thisMonth)) {
-                        incomeMonth += e.amount;
+                        incomeMonth += amount;
                     }
                 } else {
-                    expenseTotal += e.amount;
+                    expenseTotal += amount;
                     if (e.date && e.date.startsWith(thisMonth)) {
-                        expenseMonth += e.amount;
+                        expenseMonth += amount;
                     }
                 }
             });
@@ -5766,6 +5898,9 @@
         window.resetExpenseFilters = resetExpenseFilters;
         window.exportFinanceReport = exportFinanceReport;
         window.deleteExpense = deleteExpense;
+        window.updateExpenseDisplay = updateExpenseDisplay;
+        window.calculateExpenseActual = calculateExpenseActual;
+        window.calculateExpenseCNY = calculateExpenseCNY;
         window.setAnnualTarget = setAnnualTarget;
         window.setExchangeRate = setExchangeRate;
         window.calculateFOB = calculateFOB;
