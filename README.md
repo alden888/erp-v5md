@@ -37,7 +37,7 @@
 
 ### 在线访问
 ```
-https://你的域名.com/erp-v5md/
+https://erp.v5md.com/
 ```
 
 ### 本地开发
