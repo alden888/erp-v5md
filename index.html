@@ -2225,7 +2225,7 @@
             version: '2.0.0',
             storagePrefix: 'v5_erp_',
             annualTarget: 5000000,
-            currency: { USD: 7.25 },
+            currency: { USD: 6.88 },
             firebase: {
                 apiKey: "AIzaSyDBb8AtMjSzjgh1SDmIQNJPHUPxk6tLhQQ",
                 authDomain: "v5merp.firebaseapp.com",
@@ -2519,15 +2519,18 @@
             let incomeTotal = 0, expenseTotal = 0;
             
             (state.expenses || []).forEach(e => {
+                // 使用等值人民币进行统计（如果有），否则使用原始金额
+                const amount = e.cnyEquivalent || e.amount || 0;
+                
                 if (e.type === 'income') {
-                    incomeTotal += e.amount;
+                    incomeTotal += amount;
                     if (e.date && e.date.startsWith(thisMonth)) {
-                        incomeMonth += e.amount;
+                        incomeMonth += amount;
                     }
                 } else {
-                    expenseTotal += e.amount;
+                    expenseTotal += amount;
                     if (e.date && e.date.startsWith(thisMonth)) {
-                        expenseMonth += e.amount;
+                        expenseMonth += amount;
                     }
                 }
             });
@@ -2561,11 +2564,12 @@
             const chartContainer = document.getElementById('expense-category-chart');
             if (!chartContainer) return;
             
-            // 统计各分类支出
+            // 统计各分类支出（使用等值人民币）
             const categoryStats = {};
             (state.expenses || []).forEach(e => {
                 if (e.type === 'expense') {
-                    categoryStats[e.category] = (categoryStats[e.category] || 0) + e.amount;
+                    const amount = e.cnyEquivalent || e.amount || 0;
+                    categoryStats[e.category] = (categoryStats[e.category] || 0) + amount;
                 }
             });
             
@@ -4589,9 +4593,9 @@
                 exchangeSection.classList.add('hidden');
             } else {
                 exchangeSection.classList.remove('hidden');
-                // 设置默认汇率
+                // 设置默认汇率（使用系统设置的汇率）
                 const defaultRates = {
-                    'USD': 7.25,
+                    'USD': CONFIG.currency.USD,
                     'HKD': 0.93,
                     'EUR': 7.85,
                     'GBP': 9.20
