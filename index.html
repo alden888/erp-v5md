@@ -477,6 +477,9 @@
                 <a class="sidebar-nav-item" data-tab="expenses">
                     <i class="fas fa-receipt"></i> 收支管理
                 </a>
+                <a class="sidebar-nav-item" data-tab="logistics">
+                    <i class="fas fa-shipping-fast"></i> 物流跟踪
+                </a>
                 <a class="sidebar-nav-item" data-tab="tools">
                     <i class="fas fa-calculator"></i> 报价工具
                 </a>
@@ -1171,6 +1174,112 @@
                                 <!-- 由 JS 填充 -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 物流跟踪 -->
+            <div id="tab-logistics" class="tab-content">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-bold text-slate-800">物流跟踪</h3>
+                    <button onclick="showLogisticsModal()" class="btn-primary">
+                        <i class="fas fa-plus"></i> 添加快递单号
+                    </button>
+                </div>
+                
+                <!-- 快递列表 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- 国际快递 -->
+                    <div class="card">
+                        <div class="card-header flex justify-between items-center">
+                            <span class="font-bold text-slate-800"><i class="fas fa-globe text-primary mr-2"></i>国际快递</span>
+                            <span class="text-xs text-slate-500">DHL / UPS / FedEx</span>
+                        </div>
+                        <div class="p-4">
+                            <div id="international-logistics-list" class="space-y-3">
+                                <p class="text-slate-400 text-center py-8">暂无国际快递记录</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 国内快递 -->
+                    <div class="card">
+                        <div class="card-header flex justify-between items-center">
+                            <span class="font-bold text-slate-800"><i class="fas fa-truck text-success mr-2"></i>国内快递</span>
+                            <span class="text-xs text-slate-500">顺丰 / 中通 / 圆通</span>
+                        </div>
+                        <div class="p-4">
+                            <div id="domestic-logistics-list" class="space-y-3">
+                                <p class="text-slate-400 text-center py-8">暂无国内快递记录</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 快递查询工具 -->
+                <div class="mt-6 card">
+                    <div class="card-header">
+                        <span class="font-bold text-slate-800"><i class="fas fa-search text-warning mr-2"></i>快递查询工具</span>
+                    </div>
+                    <div class="p-5">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">快递公司</label>
+                                <select id="quick-track-carrier" class="input-field">
+                                    <option value="dhl">DHL</option>
+                                    <option value="ups">UPS</option>
+                                    <option value="fedex">FedEx</option>
+                                    <option value="sf">顺丰</option>
+                                    <option value="zto">中通</option>
+                                    <option value="yto">圆通</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">运单号</label>
+                                <input type="text" id="quick-track-number" class="input-field" placeholder="输入运单号">
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="quickTrackLogistics()" class="w-full btn-primary">
+                                    <i class="fas fa-search"></i> 查询快递
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 查询结果 -->
+                        <div id="quick-track-result" class="mt-4 hidden">
+                            <div class="bg-slate-50 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="font-bold text-slate-700" id="track-result-title">查询结果</span>
+                                    <span class="text-xs text-slate-500" id="track-result-status"></span>
+                                </div>
+                                <div id="track-result-content" class="space-y-2 text-sm"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- 快速链接 -->
+                        <div class="mt-4 pt-4 border-t border-slate-200">
+                            <p class="text-xs text-slate-500 mb-2">官方查询链接：</p>
+                            <div class="flex flex-wrap gap-2">
+                                <a href="https://www.dhl.com/cn-zh/home/tracking.html" target="_blank" class="text-xs bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-1.5 rounded-full transition">
+                                    <i class="fas fa-external-link-alt mr-1"></i>DHL
+                                </a>
+                                <a href="https://www.ups.com/track" target="_blank" class="text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1.5 rounded-full transition">
+                                    <i class="fas fa-external-link-alt mr-1"></i>UPS
+                                </a>
+                                <a href="https://www.fedex.com/en-us/tracking.html" target="_blank" class="text-xs bg-purple-100 hover:bg-purple-200 text-purple-800 px-3 py-1.5 rounded-full transition">
+                                    <i class="fas fa-external-link-alt mr-1"></i>FedEx
+                                </a>
+                                <a href="https://www.sf-express.com/cn/sc/dynamic_function/waybill/" target="_blank" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-full transition">
+                                    <i class="fas fa-external-link-alt mr-1"></i>顺丰
+                                </a>
+                                <a href="https://www.zto.com/cn/waybillQuery.html" target="_blank" class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1.5 rounded-full transition">
+                                    <i class="fas fa-external-link-alt mr-1"></i>中通
+                                </a>
+                                <a href="https://www.yto.net.cn/cn/waybillQuery.html" target="_blank" class="text-xs bg-pink-100 hover:bg-pink-200 text-pink-800 px-3 py-1.5 rounded-full transition">
+                                    <i class="fas fa-external-link-alt mr-1"></i>圆通
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1997,6 +2106,82 @@
         </div>
     </div>
 
+    <!-- 物流快递弹窗 -->
+    <div id="logistics-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4 flex justify-between items-center">
+                <h3 id="logistics-modal-title" class="text-lg font-bold text-white">添加快递单号</h3>
+                <button onclick="closeLogisticsModal()" class="text-white/80 hover:text-white transition text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                <!-- 快递类型 -->
+                <div class="mb-6">
+                    <label class="block text-xs font-semibold text-slate-600 mb-2">快递类型</label>
+                    <div class="flex gap-4">
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="logistics-type" value="international" class="hidden peer" checked onchange="updateLogisticsCarriers()">
+                            <div class="text-center py-3 border-2 border-slate-200 rounded-lg peer-checked:border-primary peer-checked:bg-blue-50 transition">
+                                <i class="fas fa-plane text-primary text-xl mb-1"></i>
+                                <div class="text-sm font-medium text-slate-700">国际快递</div>
+                            </div>
+                        </label>
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="logistics-type" value="domestic" class="hidden peer" onchange="updateLogisticsCarriers()">
+                            <div class="text-center py-3 border-2 border-slate-200 rounded-lg peer-checked:border-success peer-checked:bg-green-50 transition">
+                                <i class="fas fa-truck text-success text-xl mb-1"></i>
+                                <div class="text-sm font-medium text-slate-700">国内快递</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- 快递公司 -->
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">快递公司 <span class="text-danger">*</span></label>
+                    <select id="logistics-carrier" class="input-field">
+                        <option value="dhl">DHL</option>
+                        <option value="ups">UPS</option>
+                        <option value="fedex">FedEx</option>
+                    </select>
+                </div>
+                
+                <!-- 运单号 -->
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">运单号 <span class="text-danger">*</span></label>
+                    <input type="text" id="logistics-tracking" class="input-field" placeholder="例如: 1234567890">
+                </div>
+                
+                <!-- 描述 -->
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">描述</label>
+                    <input type="text" id="logistics-description" class="input-field" placeholder="例如: 菲律宾客户寄样品到海关">
+                </div>
+                
+                <!-- 关联订单/客户 -->
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">关联客户/订单</label>
+                    <input type="text" id="logistics-related" class="input-field" placeholder="可选，如客户名称或订单号">
+                </div>
+                
+                <!-- 备注 -->
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">备注</label>
+                    <textarea id="logistics-note" rows="2" placeholder="其他信息..." class="input-field resize-none"></textarea>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
+                <button onclick="closeLogisticsModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-3 rounded-lg transition">
+                    取消
+                </button>
+                <button onclick="saveLogistics()" class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                    <i class="fas fa-save mr-2"></i>保存
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 收支录入弹窗 -->
     <div id="expense-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
@@ -2245,6 +2430,7 @@
             trash: [], // 回收站
             todos: [], // 待办事项
             memos: [], // 备忘便签
+            logistics: [], // 物流快递
             isOnline: false,
             isSyncing: false,
             lastSync: null
@@ -2283,9 +2469,12 @@
             // 加载汇率设置
             const savedRate = localStorage.getItem(CONFIG.storagePrefix + 'usd_rate');
             if (savedRate) {
-                CONFIG.currency.USD = parseFloat(savedRate);
-                document.getElementById('header-rate').textContent = CONFIG.currency.USD;
+                const rateValue = parseFloat(savedRate);
+                CONFIG.currency.USD = rateValue;
+                console.log('[Init] 加载保存的汇率:', rateValue);
             }
+            // 更新所有汇率显示
+            updateRateDisplay();
             
             // 开始时钟更新
             setInterval(updateWorldClock, 1000);
@@ -2342,6 +2531,8 @@
                         renderTrash();
                     } else if (targetTab === 'finance') {
                         updateFinanceStats();
+                    } else if (targetTab === 'logistics') {
+                        renderLogistics();
                     }
                 });
             });
@@ -2410,7 +2601,7 @@
         
         // ==================== 数据管理 ====================
         function loadAllData() {
-            const keys = ['orders', 'customers', 'expenses', 'suppliers', 'trash', 'todos', 'memos'];
+            const keys = ['orders', 'customers', 'expenses', 'suppliers', 'trash', 'todos', 'memos', 'logistics'];
             keys.forEach(key => {
                 const data = localStorage.getItem(CONFIG.storagePrefix + key);
                 if (data) {
@@ -4955,14 +5146,38 @@
             }
         }
         
+        // 更新汇率显示
+        function updateRateDisplay() {
+            const rate = CONFIG.currency.USD;
+            const rateElements = document.querySelectorAll('#header-rate');
+            rateElements.forEach(el => {
+                if (el) el.textContent = rate.toFixed(2);
+            });
+        }
+        
         function setExchangeRate() {
-            const newRate = prompt('请输入汇率 (USD/RMB):', CONFIG.currency.USD);
+            const currentRate = CONFIG.currency.USD;
+            const newRate = prompt('请输入汇率 (USD/RMB):', currentRate);
             if (newRate && !isNaN(newRate)) {
-                CONFIG.currency.USD = parseFloat(newRate);
-                localStorage.setItem(CONFIG.storagePrefix + 'usd_rate', CONFIG.currency.USD);
-                document.getElementById('header-rate').textContent = CONFIG.currency.USD;
+                const rateValue = parseFloat(newRate);
+                CONFIG.currency.USD = rateValue;
+                
+                // 保存到 localStorage
+                try {
+                    localStorage.setItem(CONFIG.storagePrefix + 'usd_rate', rateValue.toString());
+                    console.log('[Exchange] 汇率已保存:', rateValue);
+                } catch (e) {
+                    console.error('[Exchange] 保存汇率失败:', e);
+                }
+                
+                // 更新所有显示位置
+                updateRateDisplay();
+                
+                // 更新仪表板和财务中心
                 updateDashboard();
-                showToast('汇率已更新', 'success');
+                updateFinanceStats();
+                
+                showToast('汇率已更新为 ' + rateValue.toFixed(2), 'success');
             }
         }
         
@@ -5707,6 +5922,171 @@
             showToast('备忘已删除', 'success');
         }
         
+        // ==================== 物流跟踪功能 ====================
+        function showLogisticsModal() {
+            document.getElementById('logistics-tracking').value = '';
+            document.getElementById('logistics-description').value = '';
+            document.getElementById('logistics-related').value = '';
+            document.getElementById('logistics-note').value = '';
+            updateLogisticsCarriers();
+            document.getElementById('logistics-modal').classList.remove('hidden');
+        }
+        
+        function closeLogisticsModal() {
+            document.getElementById('logistics-modal').classList.add('hidden');
+        }
+        
+        function updateLogisticsCarriers() {
+            const type = document.querySelector('input[name="logistics-type"]:checked').value;
+            const carrierSelect = document.getElementById('logistics-carrier');
+            
+            if (type === 'international') {
+                carrierSelect.innerHTML = `
+                    <option value="dhl">DHL</option>
+                    <option value="ups">UPS</option>
+                    <option value="fedex">FedEx</option>
+                    <option value="tnt">TNT</option>
+                `;
+            } else {
+                carrierSelect.innerHTML = `
+                    <option value="sf">顺丰</option>
+                    <option value="zto">中通</option>
+                    <option value="yto">圆通</option>
+                    <option value="jd">京东</option>
+                `;
+            }
+        }
+        
+        function saveLogistics() {
+            const type = document.querySelector('input[name="logistics-type"]:checked').value;
+            const carrier = document.getElementById('logistics-carrier').value;
+            const tracking = document.getElementById('logistics-tracking').value.trim();
+            const description = document.getElementById('logistics-description').value.trim();
+            const related = document.getElementById('logistics-related').value.trim();
+            const note = document.getElementById('logistics-note').value.trim();
+            
+            if (!tracking) {
+                showToast('请输入运单号', 'warning');
+                return;
+            }
+            
+            const logistics = {
+                id: generateId('LOG'),
+                type: type,
+                carrier: carrier,
+                tracking: tracking,
+                description: description,
+                related: related,
+                note: note,
+                status: 'pending',
+                createdAt: new Date().toISOString()
+            };
+            
+            state.logistics.push(logistics);
+            saveData('logistics', state.logistics);
+            renderLogistics();
+            closeLogisticsModal();
+            showToast('快递单号已添加', 'success');
+        }
+        
+        function deleteLogistics(id) {
+            if (confirm('确定要删除此快递记录吗？')) {
+                state.logistics = state.logistics.filter(l => l.id !== id);
+                saveData('logistics', state.logistics);
+                renderLogistics();
+                showToast('快递记录已删除', 'success');
+            }
+        }
+        
+        function renderLogistics() {
+            const internationalList = document.getElementById('international-logistics-list');
+            const domesticList = document.getElementById('domestic-logistics-list');
+            
+            if (!internationalList || !domesticList) return;
+            
+            const international = state.logistics.filter(l => l.type === 'international');
+            const domestic = state.logistics.filter(l => l.type === 'domestic');
+            
+            const carrierNames = {
+                'dhl': 'DHL', 'ups': 'UPS', 'fedex': 'FedEx', 'tnt': 'TNT',
+                'sf': '顺丰', 'zto': '中通', 'yto': '圆通', 'jd': '京东'
+            };
+            
+            const carrierColors = {
+                'dhl': 'bg-yellow-500', 'ups': 'bg-amber-700', 'fedex': 'bg-purple-600', 'tnt': 'bg-red-600',
+                'sf': 'bg-slate-800', 'zto': 'bg-blue-500', 'yto': 'bg-pink-500', 'jd': 'bg-red-500'
+            };
+            
+            function renderList(list, container) {
+                if (list.length === 0) {
+                    container.innerHTML = `<p class="text-slate-400 text-center py-8">暂无快递记录</p>`;
+                    return;
+                }
+                
+                container.innerHTML = list.slice().reverse().map(l => `
+                    <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 ${carrierColors[l.carrier] || 'bg-slate-500'} text-white text-xs font-bold rounded">${carrierNames[l.carrier] || l.carrier}</span>
+                                <span class="font-mono font-bold text-slate-700">${l.tracking}</span>
+                            </div>
+                            <button onclick="deleteLogistics('${l.id}')" class="text-slate-400 hover:text-danger transition">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                        ${l.description ? `<div class="text-sm text-slate-700 mb-1">${escapeHtml(l.description)}</div>` : ''}
+                        ${l.related ? `<div class="text-xs text-slate-500 mb-1">关联: ${escapeHtml(l.related)}</div>` : ''}
+                        ${l.note ? `<div class="text-xs text-slate-400">${escapeHtml(l.note)}</div>` : ''}
+                        <div class="mt-2 flex gap-2">
+                            ${getTrackingLink(l.carrier, l.tracking)}
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            function getTrackingLink(carrier, tracking) {
+                const links = {
+                    'dhl': `https://www.dhl.com/cn-zh/home/tracking.html?tracking-id=${tracking}`,
+                    'ups': `https://www.ups.com/track?tracknum=${tracking}`,
+                    'fedex': `https://www.fedex.com/fedextrack/?trknbr=${tracking}`,
+                    'tnt': `https://www.tnt.com/express/zh_cn/site/tracking.html?searchType=con&cons=${tracking}`,
+                    'sf': `https://www.sf-express.com/cn/sc/dynamic_function/waybill/#search/bill-number/${tracking}`,
+                    'zto': `https://www.zto.com/cn/waybillQuery.html?waybillNo=${tracking}`,
+                    'yto': `https://www.yto.net.cn/cn/waybillQuery.html?waybillNo=${tracking}`,
+                    'jd': `https://www.jdl.com/order/search?waybillCodes=${tracking}`
+                };
+                const url = links[carrier] || '#';
+                return `<a href="${url}" target="_blank" class="text-xs bg-primary hover:bg-blue-600 text-white px-2 py-1 rounded transition"><i class="fas fa-external-link-alt mr-1"></i>查询物流</a>`;
+            }
+            
+            renderList(international, internationalList);
+            renderList(domestic, domesticList);
+        }
+        
+        function quickTrackLogistics() {
+            const carrier = document.getElementById('quick-track-carrier').value;
+            const tracking = document.getElementById('quick-track-number').value.trim();
+            
+            if (!tracking) {
+                showToast('请输入运单号', 'warning');
+                return;
+            }
+            
+            const links = {
+                'dhl': `https://www.dhl.com/cn-zh/home/tracking.html?tracking-id=${tracking}`,
+                'ups': `https://www.ups.com/track?tracknum=${tracking}`,
+                'fedex': `https://www.fedex.com/fedextrack/?trknbr=${tracking}`,
+                'sf': `https://www.sf-express.com/cn/sc/dynamic_function/waybill/#search/bill-number/${tracking}`,
+                'zto': `https://www.zto.com/cn/waybillQuery.html?waybillNo=${tracking}`,
+                'yto': `https://www.yto.net.cn/cn/waybillQuery.html?waybillNo=${tracking}`
+            };
+            
+            const url = links[carrier];
+            if (url) {
+                window.open(url, '_blank');
+            }
+        }
+        
         // ==================== 产品利润率计算器 ====================
         function calculateProfit() {
             const cost = parseFloat(document.getElementById('profit-cost')?.value) || 0;
@@ -6006,6 +6386,14 @@
         window.closeMemoModal = closeMemoModal;
         window.saveMemo = saveMemo;
         window.deleteMemo = deleteMemo;
+        window.updateRateDisplay = updateRateDisplay;
+        window.showLogisticsModal = showLogisticsModal;
+        window.closeLogisticsModal = closeLogisticsModal;
+        window.saveLogistics = saveLogistics;
+        window.deleteLogistics = deleteLogistics;
+        window.updateLogisticsCarriers = updateLogisticsCarriers;
+        window.quickTrackLogistics = quickTrackLogistics;
+        window.renderLogistics = renderLogistics;
     </script>
     </div><!-- /page-container -->
 </body>
