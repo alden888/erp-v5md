@@ -778,6 +778,16 @@
                                         <span class="text-slate-500">收支</span>
                                         <span id="sync-expenses-count" class="font-medium">0</span>
                                     </div>
+                                    <div class="mt-2 pt-2 border-t border-slate-100">
+                                        <label class="text-[10px] text-slate-400 uppercase">同步密钥（跨设备同步用）</label>
+                                        <div class="flex gap-1 mt-1">
+                                            <input type="text" id="sync-key-input" class="input-field text-xs py-1 flex-1" placeholder="输入共享密钥" value="v5medical">
+                                            <button onclick="saveSyncKey()" class="bg-slate-600 hover:bg-slate-700 text-white text-xs px-2 rounded" title="保存密钥">
+                                                <i class="fas fa-save"></i>
+                                            </button>
+                                        </div>
+                                        <p class="text-[10px] text-slate-400 mt-1">多台设备使用相同密钥即可同步</p>
+                                    </div>
                                     <select id="sync-strategy" class="input-field text-xs py-1 mt-2">
                                         <option value="auto">🔄 自动同步</option>
                                         <option value="local_to_cloud">⬆️ 本地→云端</option>
@@ -2448,6 +2458,13 @@
             // 从本地存储加载数据
             loadAllData();
             
+            // 初始化同步密钥
+            const savedSyncKey = localStorage.getItem(SYNC_KEY_STORAGE);
+            if (savedSyncKey) {
+                document.getElementById('sync-key-input').value = savedSyncKey;
+                console.log('[Init] 加载同步密钥:', savedSyncKey);
+            }
+            
             // 初始化 Firebase
             await initFirebase();
             
@@ -3398,6 +3415,33 @@
             }
         }
         
+        // ==================== 同步密钥管理 ====================
+        const SYNC_KEY_STORAGE = 'v5medical_sync_key';
+        
+        function getSyncKey() {
+            // 优先使用用户设置的密钥，其次使用本地存储的，最后使用默认密钥
+            const customKey = localStorage.getItem(SYNC_KEY_STORAGE);
+            const inputKey = document.getElementById('sync-key-input')?.value?.trim();
+            return inputKey || customKey || 'v5medical_default';
+        }
+        
+        function saveSyncKey() {
+            const key = document.getElementById('sync-key-input').value.trim();
+            if (!key) {
+                showToast('请输入同步密钥', 'warning');
+                return;
+            }
+            localStorage.setItem(SYNC_KEY_STORAGE, key);
+            showToast('同步密钥已保存', 'success');
+            console.log('[Sync] 同步密钥已保存:', key);
+        }
+        
+        // 在文档中存储同步密钥标识
+        function getSyncDocId(itemId) {
+            const syncKey = getSyncKey();
+            return `${syncKey}_${itemId}`;
+        }
+        
         async function syncToCloud(collection, data) {
             if (!firebaseDb || !state.isOnline) {
                 console.warn('[Sync] 无法同步：未连接', { firebaseDb: !!firebaseDb, isOnline: state.isOnline });
@@ -3434,12 +3478,14 @@
                     const batch = firebaseDb.batch();
                     
                     batchData.forEach(item => {
-                        const docRef = firebaseDb.collection(collection).doc(item.id);
+                        const docId = getSyncDocId(item.id);
+                        const docRef = firebaseDb.collection(collection).doc(docId);
                         // 移除可能导致序列化问题的字段
                         const cleanItem = { ...item };
                         delete cleanItem._syncedAt; // 会重新添加
                         batch.set(docRef, {
                             ...cleanItem,
+                            _syncKey: getSyncKey(),
                             _syncedAt: firebase.firestore.FieldValue.serverTimestamp()
                         });
                     });
@@ -3559,17 +3605,28 @@
             
             console.log('[Sync] 本地覆盖云端...');
             
-            // 先清空云端数据
+            // 先清空当前同步密钥对应的云端数据
+            const syncKey = getSyncKey();
             const collections = ['orders', 'customers', 'expenses', 'suppliers', 'trash', 'todos'];
             
             for (const collection of collections) {
-                const snapshot = await firebaseDb.collection(collection).get();
-                const batch = firebaseDb.batch();
-                snapshot.docs.forEach(doc => {
-                    batch.delete(doc.ref);
-                });
-                await batch.commit();
-                console.log(`[Sync] 清空云端 ${collection}`);
+                try {
+                    // 查询当前同步密钥的数据
+                    const snapshot = await firebaseDb.collection(collection)
+                        .where('_syncKey', '==', syncKey)
+                        .get();
+                    
+                    if (!snapshot.empty) {
+                        const batch = firebaseDb.batch();
+                        snapshot.docs.forEach(doc => {
+                            batch.delete(doc.ref);
+                        });
+                        await batch.commit();
+                        console.log(`[Sync] 清空云端 ${collection} (${snapshot.docs.length} 条)`);
+                    }
+                } catch (error) {
+                    console.warn(`[Sync] 清空 ${collection} 失败:`, error);
+                }
             }
             
             // 上传本地数据
@@ -3603,27 +3660,54 @@
                 { name: 'memos', stateKey: 'memos', validator: null }
             ];
             
+            const syncKey = getSyncKey();
+            console.log(`[Sync] 使用同步密钥: ${syncKey}`);
+            
             for (const { name, stateKey, validator } of collections) {
-                const snapshot = await firebaseDb.collection(name).get();
-                
-                // 如果云端没有数据，保留本地数据不变
-                if (snapshot.empty) {
-                    console.log(`[Sync] 云端 ${name} 为空，保留本地数据: ${state[stateKey].length} 条`);
-                    continue;
-                }
-                
-                const cloudData = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    delete data._syncedAt;
-                    if (!validator || validator(data)) {
-                        cloudData.push(data);
+                try {
+                    // 首先尝试使用 _syncKey 字段查询（新格式）
+                    let snapshot = await firebaseDb.collection(name)
+                        .where('_syncKey', '==', syncKey)
+                        .get();
+                    
+                    // 如果没找到数据，尝试获取所有数据（兼容旧格式）
+                    if (snapshot.empty) {
+                        console.log(`[Sync] 使用 _syncKey 查询 ${name} 无结果，尝试获取所有文档...`);
+                        snapshot = await firebaseDb.collection(name).get();
                     }
-                });
-                
-                state[stateKey] = cloudData;
-                localStorage.setItem(CONFIG.storagePrefix + stateKey, JSON.stringify(cloudData));
-                console.log(`[Sync] 从云端加载 ${name}: ${cloudData.length} 条`);
+                    
+                    // 如果云端没有数据，保留本地数据不变
+                    if (snapshot.empty) {
+                        console.log(`[Sync] 云端 ${name} 为空，保留本地数据: ${state[stateKey].length} 条`);
+                        continue;
+                    }
+                    
+                    const cloudData = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        delete data._syncedAt;
+                        delete data._syncKey;
+                        
+                        // 如果是旧格式数据（没有 _syncKey），检查文档ID是否包含同步密钥
+                        if (!data._syncKey && !doc.id.startsWith(syncKey) && syncKey !== 'v5medical_default') {
+                            return; // 跳过不属于当前同步密钥的数据
+                        }
+                        
+                        if (!validator || validator(data)) {
+                            cloudData.push(data);
+                        }
+                    });
+                    
+                    if (cloudData.length > 0) {
+                        state[stateKey] = cloudData;
+                        localStorage.setItem(CONFIG.storagePrefix + stateKey, JSON.stringify(cloudData));
+                        console.log(`[Sync] 从云端加载 ${name}: ${cloudData.length} 条`);
+                    } else {
+                        console.log(`[Sync] 云端 ${name} 无有效数据，保留本地数据`);
+                    }
+                } catch (error) {
+                    console.error(`[Sync] 加载 ${name} 失败:`, error);
+                }
             }
             
             // 刷新界面

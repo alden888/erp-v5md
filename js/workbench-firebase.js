@@ -1046,7 +1046,7 @@ const WorkbenchFirebase = (() => {
         const results = {
             success: [],
             failed: [],
-            skipped: [], // 新增：跳过的项（本地有新数据）
+            skipped: [], // 跳过的项（本地有新数据）
             total: 0
         };
 
@@ -1054,18 +1054,21 @@ const WorkbenchFirebase = (() => {
             validateInitialization();
             
             const userId = getCurrentUserId();
+            console.log('[Firebase] 当前用户ID:', userId);
 
             // 查询所有用户数据
             const collections = Object.values(COLLECTIONS);
             
             for (const collection of collections) {
                 try {
+                    console.log(`[Firebase] 查询集合: ${collection}`);
                     const docs = await query(collection, [['userId', '==', userId]]);
+                    console.log(`[Firebase] 集合 ${collection} 返回 ${docs.length} 条文档`);
                     results.total += docs.length;
 
                     for (const doc of docs) {
+                        // 处理格式1: syncLocalStorageToCloud 存储的数据（包含 key 和 rawValue）
                         if (doc.key && doc.rawValue) {
-                            // 检查本地是否有数据，且是否允许覆盖
                             const localValue = localStorage.getItem(doc.key);
                             if (!overwrite && localValue) {
                                 results.skipped.push(doc.key);
@@ -1076,6 +1079,70 @@ const WorkbenchFirebase = (() => {
                             localStorage.setItem(doc.key, doc.rawValue);
                             results.success.push(doc.key);
                             console.log(`[Firebase] ✅ 已恢复: ${doc.key}`);
+                        }
+                        // 处理格式2: syncOrders/syncSuppliers/syncCustomers/syncExpenses 存储的数据
+                        else if (doc.orders && Array.isArray(doc.orders)) {
+                            const key = 'workbench_orders';
+                            const localValue = localStorage.getItem(key);
+                            if (!overwrite && localValue) {
+                                results.skipped.push(key);
+                                console.log(`[Firebase] ⏭️ 跳过恢复（本地已有数据）: ${key}`);
+                                continue;
+                            }
+                            localStorage.setItem(key, JSON.stringify(doc.orders));
+                            results.success.push(key);
+                            console.log(`[Firebase] ✅ 已恢复订单数据: ${doc.orders.length} 条`);
+                        }
+                        else if (doc.suppliers && Array.isArray(doc.suppliers)) {
+                            const key = 'workbench_suppliers';
+                            const localValue = localStorage.getItem(key);
+                            if (!overwrite && localValue) {
+                                results.skipped.push(key);
+                                console.log(`[Firebase] ⏭️ 跳过恢复（本地已有数据）: ${key}`);
+                                continue;
+                            }
+                            localStorage.setItem(key, JSON.stringify(doc.suppliers));
+                            results.success.push(key);
+                            console.log(`[Firebase] ✅ 已恢复供应商数据: ${doc.suppliers.length} 条`);
+                        }
+                        else if (doc.customers && Array.isArray(doc.customers)) {
+                            const key = 'workbench_customers';
+                            const localValue = localStorage.getItem(key);
+                            if (!overwrite && localValue) {
+                                results.skipped.push(key);
+                                console.log(`[Firebase] ⏭️ 跳过恢复（本地已有数据）: ${key}`);
+                                continue;
+                            }
+                            localStorage.setItem(key, JSON.stringify(doc.customers));
+                            results.success.push(key);
+                            console.log(`[Firebase] ✅ 已恢复客户数据: ${doc.customers.length} 条`);
+                        }
+                        else if (doc.expenses && Array.isArray(doc.expenses)) {
+                            const key = 'workbench_expenses';
+                            const localValue = localStorage.getItem(key);
+                            if (!overwrite && localValue) {
+                                results.skipped.push(key);
+                                console.log(`[Firebase] ⏭️ 跳过恢复（本地已有数据）: ${key}`);
+                                continue;
+                            }
+                            localStorage.setItem(key, JSON.stringify(doc.expenses));
+                            results.success.push(key);
+                            console.log(`[Firebase] ✅ 已恢复收支记录: ${doc.expenses.length} 条`);
+                        }
+                        else if (doc.actions && Array.isArray(doc.actions)) {
+                            const key = 'workbench_today_actions';
+                            const localValue = localStorage.getItem(key);
+                            if (!overwrite && localValue) {
+                                results.skipped.push(key);
+                                console.log(`[Firebase] ⏭️ 跳过恢复（本地已有数据）: ${key}`);
+                                continue;
+                            }
+                            localStorage.setItem(key, JSON.stringify(doc.actions));
+                            results.success.push(key);
+                            console.log(`[Firebase] ✅ 已恢复今日行动: ${doc.actions.length} 条`);
+                        }
+                        else {
+                            console.log(`[Firebase] ⚠️ 无法识别的数据格式:`, Object.keys(doc));
                         }
                     }
                 } catch (error) {
