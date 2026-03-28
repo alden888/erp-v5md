@@ -922,6 +922,74 @@ const WorkbenchFirebase = (() => {
     }
 
     /**
+     * 同步客户数据
+     * @param {Array} customers - 客户数组
+     * @returns {Promise<boolean>}
+     */
+    async function syncCustomers(customers) {
+        try {
+            validateInitialization();
+            
+            if (!Array.isArray(customers)) {
+                throw new Error('客户数据必须是数组');
+            }
+
+            // 数据清洗
+            const cleanCustomers = customers.filter(customer => customer && typeof customer === 'object');
+
+            const userId = getCurrentUserId();
+            const docId = `${userId}_customers`;
+
+            await save(COLLECTIONS.CUSTOMERS, docId, {
+                customers: cleanCustomers,
+                count: cleanCustomers.length,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                userId: userId
+            });
+
+            console.log(`[Firebase] ✅ 已同步 ${cleanCustomers.length} 个客户`);
+            return true;
+        } catch (error) {
+            console.error('[Firebase] ❌ 客户同步失败:', error);
+            return false;
+        }
+    }
+
+    /**
+     * 同步收支记录数据
+     * @param {Array} expenses - 收支记录数组
+     * @returns {Promise<boolean>}
+     */
+    async function syncExpenses(expenses) {
+        try {
+            validateInitialization();
+            
+            if (!Array.isArray(expenses)) {
+                throw new Error('收支记录数据必须是数组');
+            }
+
+            // 数据清洗
+            const cleanExpenses = expenses.filter(expense => expense && typeof expense === 'object');
+
+            const userId = getCurrentUserId();
+            const docId = `${userId}_expenses`;
+
+            await save(COLLECTIONS.EXPENSES, docId, {
+                expenses: cleanExpenses,
+                count: cleanExpenses.length,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                userId: userId
+            });
+
+            console.log(`[Firebase] ✅ 已同步 ${cleanExpenses.length} 条收支记录`);
+            return true;
+        } catch (error) {
+            console.error('[Firebase] ❌ 收支记录同步失败:', error);
+            return false;
+        }
+    }
+
+    /**
      * 同步所有本地数据到云端（优化并发处理）
      * @returns {Promise<Object>} 同步结果
      */
@@ -1271,6 +1339,8 @@ const WorkbenchFirebase = (() => {
         syncTodayActions,
         syncOrders,
         syncSuppliers,
+        syncCustomers,
+        syncExpenses,
         syncAllLocalData,
         restoreFromCloud,
         

@@ -359,6 +359,16 @@ const WorkbenchState = (() => {
                     await retrySync(() => WorkbenchFirebase.syncSuppliers(state.data.suppliers));
                 }
 
+                // 同步客户
+                if (state.data.customers && state.data.customers.length > 0) {
+                    await retrySync(() => WorkbenchFirebase.syncCustomers(state.data.customers));
+                }
+
+                // 同步收支记录
+                if (state.data.expenses && state.data.expenses.length > 0) {
+                    await retrySync(() => WorkbenchFirebase.syncExpenses(state.data.expenses));
+                }
+
             } catch (error) {
                 console.warn('[State] Firebase同步最终失败:', error);
                 showErrorToast('云端同步失败：' + error.message);
