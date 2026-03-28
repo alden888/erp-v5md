@@ -3052,8 +3052,6 @@
                 if (typeof firebase === 'undefined') {
                     console.warn('[Firebase] SDK 未加载');
                     updateSyncStatus('offline');
-                    // 显示登录界面，允许离线使用
-                    document.getElementById('login-screen').classList.remove('hidden');
                     return;
                 }
                 
@@ -3068,31 +3066,28 @@
                 
                 console.log('[Firebase] 初始化成功');
                 
-                // 启用离线持久化（移动端不启用 synchronizeTabs）
-                const persistenceOptions = isMobile ? {} : { synchronizeTabs: true };
-                firebaseDb.enablePersistence(persistenceOptions).catch((err) => {
+                // 启用离线持久化
+                try {
+                    await firebaseDb.enablePersistence({ synchronizeTabs: true });
+                    console.log('[Firebase] 离线持久化已启用');
+                } catch (err) {
                     console.warn('[Firebase] 持久化启用失败:', err.code);
-                });
+                }
                 
-                // 监听认证状态
-                firebaseAuth.onAuthStateChanged((user) => {
-                    if (user && !user.isAnonymous) {
-                        console.log('[Firebase] 用户已登录:', user.uid);
-                        state.isOnline = true;
-                        updateSyncStatus('online');
-                        updateUserInfo(user);
-                        // 隐藏登录界面，显示主应用
-                        document.getElementById('login-screen').classList.add('hidden');
-                        // 加载云端数据
-                        loadFromCloud();
-                    } else {
-                        console.warn('[Firebase] 用户未登录，显示登录界面');
-                        state.isOnline = false;
-                        updateSyncStatus('offline');
-                        // 显示登录界面
-                        document.getElementById('login-screen').classList.remove('hidden');
-                    }
-                });
+                // 自动匿名登录（无需用户手动登录）
+                try {
+                    const userCredential = await firebaseAuth.signInAnonymously();
+                    console.log('[Firebase] 匿名登录成功:', userCredential.user.uid);
+                    state.isOnline = true;
+                    updateSyncStatus('online');
+                    
+                    // 加载云端数据
+                    await loadFromCloud();
+                } catch (authError) {
+                    console.warn('[Firebase] 匿名登录失败:', authError);
+                    state.isOnline = false;
+                    updateSyncStatus('offline');
+                }
                 
                 // 启动自动同步
                 startAutoSync();
@@ -3173,138 +3168,6 @@
                    supplier.name && 
                    typeof supplier.name === 'string' &&
                    supplier.name.trim() !== '';
-        }
-        
-        async function loadFromCloud() {
-            if (!firebaseDb) return;
-            
-            try {
-                console.log('[Firebase] 从云端加载数据...');
-                
-                // 加载订单 - 带验证
-                const ordersSnapshot = await firebaseDb.collection('orders').get();
-                if (!ordersSnapshot.empty) {
-                    const cloudOrders = [];
-                    ordersSnapshot.forEach(doc => {
-                        const data = doc.data();
-                        delete data._syncedAt;
-                        // 验证数据有效性
-                        if (isValidOrder(data)) {
-                            cloudOrders.push(data);
-                        } else {
-                            console.warn('[Firebase] 跳过无效订单:', doc.id, data);
-                        }
-                    });
-                    
-                    console.log('[Firebase] 云端有效订单:', cloudOrders.length);
-                    
-                    // 合并本地和云端数据
-                    const cloudIds = new Set(cloudOrders.map(o => o.id));
-                    const localOnly = state.orders.filter(o => o.id && !cloudIds.has(o.id));
-                    state.orders = [...cloudOrders, ...localOnly];
-                    
-                    // 清理无效订单
-                    const validOrders = state.orders.filter(isValidOrder);
-                    if (validOrders.length !== state.orders.length) {
-                        console.warn('[Firebase] 清理无效订单:', state.orders.length - validOrders.length);
-                        state.orders = validOrders;
-                    }
-                    
-                    // 排序：最新的在前
-                    state.orders.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-                    
-                    // 直接保存到localStorage，避免触发云端同步
-                    localStorage.setItem(CONFIG.storagePrefix + 'orders', JSON.stringify(state.orders));
-                    updateSyncCounts();
-                    console.log('[Firebase] 订单同步完成:', state.orders.length);
-                }
-                
-                // 加载客户 - 带验证
-                const customersSnapshot = await firebaseDb.collection('customers').get();
-                if (!customersSnapshot.empty) {
-                    const cloudCustomers = [];
-                    customersSnapshot.forEach(doc => {
-                        const data = doc.data();
-                        delete data._syncedAt;
-                        if (isValidCustomer(data)) {
-                            cloudCustomers.push(data);
-                        } else {
-                            console.warn('[Firebase] 跳过无效客户:', doc.id, data);
-                        }
-                    });
-                    
-                    console.log('[Firebase] 云端有效客户:', cloudCustomers.length);
-                    
-                    const cloudIds = new Set(cloudCustomers.map(c => c.id));
-                    const localOnly = state.customers.filter(c => c.id && !cloudIds.has(c.id));
-                    state.customers = [...cloudCustomers, ...localOnly];
-                    
-                    // 清理无效客户
-                    const validCustomers = state.customers.filter(isValidCustomer);
-                    if (validCustomers.length !== state.customers.length) {
-                        state.customers = validCustomers;
-                    }
-                    
-                    localStorage.setItem(CONFIG.storagePrefix + 'customers', JSON.stringify(state.customers));
-                    updateSyncCounts();
-                    console.log('[Firebase] 客户同步完成:', state.customers.length);
-                }
-                
-                // 加载供应商 - 带验证
-                const suppliersSnapshot = await firebaseDb.collection('suppliers').get();
-                if (!suppliersSnapshot.empty) {
-                    const cloudSuppliers = [];
-                    suppliersSnapshot.forEach(doc => {
-                        const data = doc.data();
-                        delete data._syncedAt;
-                        if (isValidSupplier(data)) {
-                            cloudSuppliers.push(data);
-                        }
-                    });
-                    
-                    const cloudIds = new Set(cloudSuppliers.map(s => s.id));
-                    const localOnly = state.suppliers.filter(s => s.id && !cloudIds.has(s.id));
-                    state.suppliers = [...cloudSuppliers, ...localOnly];
-                    
-                    const validSuppliers = state.suppliers.filter(isValidSupplier);
-                    state.suppliers = validSuppliers;
-                    
-                    localStorage.setItem(CONFIG.storagePrefix + 'suppliers', JSON.stringify(state.suppliers));
-                    console.log('[Firebase] 供应商同步完成:', state.suppliers.length);
-                }
-                
-                // 加载收支记录
-                const expensesSnapshot = await firebaseDb.collection('expenses').get();
-                if (!expensesSnapshot.empty) {
-                    const cloudExpenses = [];
-                    expensesSnapshot.forEach(doc => {
-                        const data = doc.data();
-                        delete data._syncedAt;
-                        cloudExpenses.push(data);
-                    });
-                    
-                    const cloudIds = new Set(cloudExpenses.map(e => e.id));
-                    const localOnly = state.expenses.filter(e => e.id && !cloudIds.has(e.id));
-                    state.expenses = [...cloudExpenses, ...localOnly];
-                    
-                    localStorage.setItem(CONFIG.storagePrefix + 'expenses', JSON.stringify(state.expenses));
-                    console.log('[Firebase] 收支记录同步完成:', state.expenses.length);
-                }
-                
-                // 刷新界面
-                updateDashboard();
-                renderOrdersKanban();
-                renderOrdersList();
-                renderCustomers();
-                renderSuppliers();
-                renderExpenses();
-                
-                showToast('云端数据已同步', 'success');
-                
-            } catch (error) {
-                console.error('[Firebase] 加载云端数据失败:', error);
-                showToast('同步失败，使用本地数据', 'warning');
-            }
         }
         
         // ==================== 紧急数据恢复 ====================
@@ -3437,85 +3300,143 @@
         }
         
         // 在文档中存储同步密钥标识
-        function getSyncDocId(itemId) {
-            const syncKey = getSyncKey();
-            return `${syncKey}_${itemId}`;
+        // ==================== 简化的云同步机制 V2 ====================
+        // 每个集合只存储一个文档，包含所有数据，更简单可靠
+        
+        function getSyncDocId() {
+            // 使用同步密钥作为文档ID，确保同一密钥的设备共享数据
+            return getSyncKey() || 'v5medical_default';
         }
         
+        // 上传数据到云端（单个文档存储所有数据）
         async function syncToCloud(collection, data) {
             if (!firebaseDb || !state.isOnline) {
                 console.warn('[Sync] 无法同步：未连接', { firebaseDb: !!firebaseDb, isOnline: state.isOnline });
-                return;
-            }
-            
-            if (state.isSyncing) {
-                console.warn('[Sync] 正在同步中，跳过');
-                return;
+                return false;
             }
             
             // 过滤掉无效数据
             const validData = data.filter(item => item && item.id);
             if (validData.length === 0) {
                 console.log(`[Sync] ${collection} 没有有效数据需要同步`);
-                return;
-            }
-            
-            if (validData.length !== data.length) {
-                console.warn(`[Sync] ${collection} 过滤了 ${data.length - validData.length} 条无效数据`);
+                return true;
             }
             
             try {
-                state.isSyncing = true;
-                updateSyncStatus('syncing');
-                console.log(`[Sync] 开始同步 ${collection}，共 ${validData.length} 条`);
+                console.log(`[Sync] 开始上传 ${collection}，共 ${validData.length} 条`);
                 
-                // Firestore 批处理限制为 500 个操作
-                const BATCH_SIZE = 450;
-                const batches = [];
+                const docId = getSyncDocId();
+                const docRef = firebaseDb.collection(collection).doc(docId);
                 
-                for (let i = 0; i < validData.length; i += BATCH_SIZE) {
-                    const batchData = validData.slice(i, i + BATCH_SIZE);
-                    const batch = firebaseDb.batch();
-                    
-                    batchData.forEach(item => {
-                        const docId = getSyncDocId(item.id);
-                        const docRef = firebaseDb.collection(collection).doc(docId);
-                        // 移除可能导致序列化问题的字段
-                        const cleanItem = { ...item };
-                        delete cleanItem._syncedAt; // 会重新添加
-                        batch.set(docRef, {
-                            ...cleanItem,
-                            _syncKey: getSyncKey(),
-                            _syncedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    });
-                    
-                    batches.push(batch.commit());
-                }
-                
-                // 等待所有批处理完成
-                await Promise.all(batches);
+                await docRef.set({
+                    data: validData,
+                    count: validData.length,
+                    _syncKey: getSyncKey(),
+                    _deviceId: localStorage.getItem('v5_device_id') || 'unknown',
+                    _syncedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
                 
                 state.lastSync = new Date();
-                updateSyncStatus('online');
-                console.log(`[Sync] ${collection} 同步成功，共 ${validData.length} 条`);
+                console.log(`[Sync] ${collection} 上传成功`);
+                return true;
                 
             } catch (error) {
-                console.error('[Sync] 同步失败:', error);
-                updateSyncStatus('offline');
-                
-                // 如果是权限错误，尝试重新登录
-                if (error.code === 'permission-denied') {
-                    console.log('[Sync] 权限错误，尝试重新登录...');
-                    try {
-                        await firebaseAuth.signInAnonymously();
-                    } catch (authError) {
-                        console.error('[Sync] 重新登录失败:', authError);
+                console.error(`[Sync] ${collection} 上传失败:`, error);
+                return false;
+            }
+        }
+        
+        // 从云端下载数据
+        async function loadFromCloud() {
+            if (!firebaseDb) {
+                console.warn('[Sync] Firebase 未初始化');
+                return;
+            }
+            
+            const docId = getSyncDocId();
+            console.log('[Sync] 从云端加载数据，文档ID:', docId);
+            
+            const collections = [
+                { name: 'orders', stateKey: 'orders' },
+                { name: 'customers', stateKey: 'customers' },
+                { name: 'suppliers', stateKey: 'suppliers' },
+                { name: 'expenses', stateKey: 'expenses' },
+                { name: 'trash', stateKey: 'trash' },
+                { name: 'todos', stateKey: 'todos' }
+            ];
+            
+            let hasNewData = false;
+            
+            for (const { name, stateKey } of collections) {
+                try {
+                    const doc = await firebaseDb.collection(name).doc(docId).get();
+                    
+                    if (doc.exists) {
+                        const cloudData = doc.data();
+                        if (cloudData.data && Array.isArray(cloudData.data)) {
+                            // 合并云端数据和本地数据（去重）
+                            const localData = state[stateKey] || [];
+                            const mergedData = mergeData(localData, cloudData.data);
+                            
+                            if (mergedData.length !== localData.length) {
+                                hasNewData = true;
+                                state[stateKey] = mergedData;
+                                localStorage.setItem(CONFIG.storagePrefix + stateKey, JSON.stringify(mergedData));
+                                console.log(`[Sync] ${name}: 从云端合并 ${cloudData.data.length} 条，本地 ${localData.length} 条，合并后 ${mergedData.length} 条`);
+                            } else {
+                                console.log(`[Sync] ${name}: 数据已是最新`);
+                            }
+                        }
+                    } else {
+                        console.log(`[Sync] ${name}: 云端无数据`);
+                    }
+                } catch (error) {
+                    console.error(`[Sync] 加载 ${name} 失败:`, error);
+                }
+            }
+            
+            if (hasNewData) {
+                // 刷新界面
+                updateSyncCounts();
+                updateDashboard();
+                renderOrdersKanban();
+                renderOrdersList();
+                renderCustomers();
+                renderSuppliers();
+                renderExpenses();
+                renderTrash();
+                renderTodos();
+                showToast('已从云端同步数据', 'success');
+            }
+            
+            updateSyncStatus('online');
+        }
+        
+        // 合并数据（根据 id 去重，保留最新）
+        function mergeData(localData, cloudData) {
+            const merged = {};
+            
+            // 先添加本地数据
+            localData.forEach(item => {
+                if (item && item.id) {
+                    merged[item.id] = item;
+                }
+            });
+            
+            // 再添加云端数据（覆盖或新增）
+            cloudData.forEach(item => {
+                if (item && item.id) {
+                    // 如果云端数据更新，则覆盖
+                    const cloudTime = item.updatedAt || item.createdAt || 0;
+                    const localTime = merged[item.id]?.updatedAt || merged[item.id]?.createdAt || 0;
+                    
+                    if (cloudTime >= localTime) {
+                        merged[item.id] = item;
                     }
                 }
-            } finally {
-                state.isSyncing = false;
-            }
+            });
+            
+            return Object.values(merged);
         }
         
         function startAutoSync() {
@@ -3528,24 +3449,78 @@
             }, 3 * 60 * 1000);
         }
         
+        // 双向同步：先下载云端数据合并，再上传合并后的数据
         async function syncAllData() {
-            if (!state.isOnline) return;
+            if (!state.isOnline || !firebaseDb) {
+                console.warn('[Sync] 无法同步：离线或未初始化');
+                return;
+            }
+            
+            console.log('[Sync] 开始双向同步...');
+            updateSyncStatus('syncing');
             
             try {
-                await Promise.all([
-                    syncToCloud('orders', state.orders),
-                    syncToCloud('customers', state.customers),
-                    syncToCloud('expenses', state.expenses),
-                    syncToCloud('suppliers', state.suppliers),
-                    syncToCloud('trash', state.trash),
-                    syncToCloud('todos', state.todos || []),
-                    syncToCloud('memos', state.memos || [])
-                ]);
+                const docId = getSyncDocId();
+                const collections = [
+                    { name: 'orders', stateKey: 'orders' },
+                    { name: 'customers', stateKey: 'customers' },
+                    { name: 'suppliers', stateKey: 'suppliers' },
+                    { name: 'expenses', stateKey: 'expenses' },
+                    { name: 'trash', stateKey: 'trash' },
+                    { name: 'todos', stateKey: 'todos' }
+                ];
                 
-                console.log('[Sync] 全部数据同步完成');
+                for (const { name, stateKey } of collections) {
+                    try {
+                        // 1. 下载云端数据
+                        const doc = await firebaseDb.collection(name).doc(docId).get();
+                        let cloudData = [];
+                        
+                        if (doc.exists) {
+                            const data = doc.data();
+                            if (data.data && Array.isArray(data.data)) {
+                                cloudData = data.data;
+                            }
+                        }
+                        
+                        // 2. 合并本地和云端数据
+                        const localData = state[stateKey] || [];
+                        const mergedData = mergeData(localData, cloudData);
+                        
+                        // 3. 更新本地状态
+                        if (mergedData.length !== localData.length || JSON.stringify(mergedData) !== JSON.stringify(localData)) {
+                            state[stateKey] = mergedData;
+                            localStorage.setItem(CONFIG.storagePrefix + stateKey, JSON.stringify(mergedData));
+                            console.log(`[Sync] ${name}: 合并完成，${localData.length} 本地 + ${cloudData.length} 云端 = ${mergedData.length} 合并`);
+                        }
+                        
+                        // 4. 上传合并后的数据
+                        await syncToCloud(name, mergedData);
+                        
+                    } catch (error) {
+                        console.error(`[Sync] ${name} 同步失败:`, error);
+                    }
+                }
+                
+                // 刷新界面
+                updateSyncCounts();
+                updateDashboard();
+                renderOrdersKanban();
+                renderOrdersList();
+                renderCustomers();
+                renderSuppliers();
+                renderExpenses();
+                renderTrash();
+                renderTodos();
+                renderCalendar();
+                
+                state.lastSync = new Date();
+                updateSyncStatus('online');
+                console.log('[Sync] 双向同步完成');
                 
             } catch (error) {
-                console.error('[Sync] 自动同步失败:', error);
+                console.error('[Sync] 双向同步失败:', error);
+                updateSyncStatus('offline');
             }
         }
         
@@ -3599,131 +3574,98 @@
             }
         }
         
-        // 本地覆盖云端
+        // 本地覆盖云端（使用简化V2机制）
         async function syncLocalToCloud() {
-            if (!firebaseDb) return;
-            
-            console.log('[Sync] 本地覆盖云端...');
-            
-            // 先清空当前同步密钥对应的云端数据
-            const syncKey = getSyncKey();
-            const collections = ['orders', 'customers', 'expenses', 'suppliers', 'trash', 'todos'];
-            
-            for (const collection of collections) {
-                try {
-                    // 查询当前同步密钥的数据
-                    const snapshot = await firebaseDb.collection(collection)
-                        .where('_syncKey', '==', syncKey)
-                        .get();
-                    
-                    if (!snapshot.empty) {
-                        const batch = firebaseDb.batch();
-                        snapshot.docs.forEach(doc => {
-                            batch.delete(doc.ref);
-                        });
-                        await batch.commit();
-                        console.log(`[Sync] 清空云端 ${collection} (${snapshot.docs.length} 条)`);
-                    }
-                } catch (error) {
-                    console.warn(`[Sync] 清空 ${collection} 失败:`, error);
-                }
+            if (!firebaseDb) {
+                console.error('[Sync] Firebase 未初始化');
+                throw new Error('Firebase 未连接');
             }
             
-            // 上传本地数据
-            await Promise.all([
+            console.log('[Sync] 开始本地覆盖云端...');
+            updateSyncStatus('syncing');
+            
+            const results = await Promise.all([
                 syncToCloud('orders', state.orders),
                 syncToCloud('customers', state.customers),
                 syncToCloud('expenses', state.expenses),
                 syncToCloud('suppliers', state.suppliers),
                 syncToCloud('trash', state.trash),
-                syncToCloud('todos', state.todos || []),
-                syncToCloud('memos', state.memos || [])
+                syncToCloud('todos', state.todos || [])
             ]);
             
-            console.log('[Sync] 本地覆盖云端完成');
+            const successCount = results.filter(r => r).length;
+            console.log(`[Sync] 本地覆盖云端完成: ${successCount}/6 成功`);
+            updateSyncStatus('online');
+            
+            if (successCount < 6) {
+                throw new Error(`${6 - successCount} 个集合同步失败`);
+            }
         }
         
-        // 云端覆盖本地
+        // 云端覆盖本地（使用简化V2机制）
         async function syncCloudToLocal() {
-            if (!firebaseDb) return;
+            if (!firebaseDb) {
+                console.error('[Sync] Firebase 未初始化');
+                throw new Error('Firebase 未连接');
+            }
             
-            console.log('[Sync] 云端覆盖本地...');
+            console.log('[Sync] 开始云端覆盖本地...');
+            updateSyncStatus('syncing');
             
-            // 加载所有云端数据
+            const docId = getSyncDocId();
+            console.log('[Sync] 文档ID:', docId);
+            
             const collections = [
-                { name: 'orders', stateKey: 'orders', validator: isValidOrder },
-                { name: 'customers', stateKey: 'customers', validator: isValidCustomer },
-                { name: 'suppliers', stateKey: 'suppliers', validator: isValidSupplier },
-                { name: 'expenses', stateKey: 'expenses', validator: null },
-                { name: 'trash', stateKey: 'trash', validator: null },
-                { name: 'todos', stateKey: 'todos', validator: null },
-                { name: 'memos', stateKey: 'memos', validator: null }
+                { name: 'orders', stateKey: 'orders' },
+                { name: 'customers', stateKey: 'customers' },
+                { name: 'suppliers', stateKey: 'suppliers' },
+                { name: 'expenses', stateKey: 'expenses' },
+                { name: 'trash', stateKey: 'trash' },
+                { name: 'todos', stateKey: 'todos' }
             ];
             
-            const syncKey = getSyncKey();
-            console.log(`[Sync] 使用同步密钥: ${syncKey}`);
+            let hasData = false;
             
-            for (const { name, stateKey, validator } of collections) {
+            for (const { name, stateKey } of collections) {
                 try {
-                    // 首先尝试使用 _syncKey 字段查询（新格式）
-                    let snapshot = await firebaseDb.collection(name)
-                        .where('_syncKey', '==', syncKey)
-                        .get();
+                    const doc = await firebaseDb.collection(name).doc(docId).get();
                     
-                    // 如果没找到数据，尝试获取所有数据（兼容旧格式）
-                    if (snapshot.empty) {
-                        console.log(`[Sync] 使用 _syncKey 查询 ${name} 无结果，尝试获取所有文档...`);
-                        snapshot = await firebaseDb.collection(name).get();
-                    }
-                    
-                    // 如果云端没有数据，保留本地数据不变
-                    if (snapshot.empty) {
-                        console.log(`[Sync] 云端 ${name} 为空，保留本地数据: ${state[stateKey].length} 条`);
-                        continue;
-                    }
-                    
-                    const cloudData = [];
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        delete data._syncedAt;
-                        delete data._syncKey;
-                        
-                        // 如果是旧格式数据（没有 _syncKey），检查文档ID是否包含同步密钥
-                        if (!data._syncKey && !doc.id.startsWith(syncKey) && syncKey !== 'v5medical_default') {
-                            return; // 跳过不属于当前同步密钥的数据
+                    if (doc.exists) {
+                        const cloudData = doc.data();
+                        if (cloudData.data && Array.isArray(cloudData.data) && cloudData.data.length > 0) {
+                            state[stateKey] = cloudData.data;
+                            localStorage.setItem(CONFIG.storagePrefix + stateKey, JSON.stringify(cloudData.data));
+                            console.log(`[Sync] ${name}: 从云端加载 ${cloudData.data.length} 条`);
+                            hasData = true;
+                        } else {
+                            console.log(`[Sync] ${name}: 云端数据为空`);
                         }
-                        
-                        if (!validator || validator(data)) {
-                            cloudData.push(data);
-                        }
-                    });
-                    
-                    if (cloudData.length > 0) {
-                        state[stateKey] = cloudData;
-                        localStorage.setItem(CONFIG.storagePrefix + stateKey, JSON.stringify(cloudData));
-                        console.log(`[Sync] 从云端加载 ${name}: ${cloudData.length} 条`);
                     } else {
-                        console.log(`[Sync] 云端 ${name} 无有效数据，保留本地数据`);
+                        console.log(`[Sync] ${name}: 云端无此文档`);
                     }
                 } catch (error) {
                     console.error(`[Sync] 加载 ${name} 失败:`, error);
                 }
             }
             
-            // 刷新界面
-            updateSyncCounts();
-            updateDashboard();
-            renderOrdersKanban();
-            renderOrdersList();
-            renderCustomers();
-            renderSuppliers();
-            renderExpenses();
-            renderTrash();
-            renderTodos();
-            renderMemos();
-            renderCalendar();
+            if (hasData) {
+                // 刷新界面
+                updateSyncCounts();
+                updateDashboard();
+                renderOrdersKanban();
+                renderOrdersList();
+                renderCustomers();
+                renderSuppliers();
+                renderExpenses();
+                renderTrash();
+                renderTodos();
+                renderCalendar();
+                console.log('[Sync] 云端覆盖本地完成，已刷新界面');
+            } else {
+                console.log('[Sync] 云端无数据，保留本地数据');
+            }
             
-            console.log('[Sync] 云端覆盖本地完成');
+            updateSyncStatus('online');
         }
         
         // ==================== 数据导入导出 ====================
