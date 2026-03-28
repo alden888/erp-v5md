@@ -363,32 +363,7 @@
             <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
                 <h2 class="text-xl font-bold text-white mb-6 text-center">安全登录</h2>
                 
-                <!-- 登录方式选择 -->
-                <div id="login-options">
-                    <div class="grid grid-cols-2 gap-3 mb-6">
-                        <button onclick="showEmailLogin()" class="bg-white/20 hover:bg-white/30 text-white py-3 px-4 rounded-lg transition flex flex-col items-center gap-2">
-                            <i class="fas fa-envelope text-2xl"></i>
-                            <span class="text-sm">邮箱登录</span>
-                        </button>
-                        <button onclick="loginWithSyncKey()" class="bg-success/80 hover:bg-success text-white py-3 px-4 rounded-lg transition flex flex-col items-center gap-2">
-                            <i class="fas fa-sync text-2xl"></i>
-                            <span class="text-sm">同步密钥<br><span class="text-xs opacity-75">免注册跨设备</span></span>
-                        </button>
-                    </div>
-                    
-                    <div class="bg-white/5 rounded-lg p-4">
-                        <p class="text-sm text-slate-300 mb-2">
-                            <i class="fas fa-info-circle mr-1"></i>
-                            <strong>同步密钥登录</strong>
-                        </p>
-                        <p class="text-xs text-slate-400">
-                            无需注册账号，输入任意密钥即可在不同设备间同步数据。建议设置复杂密钥确保数据私密性。
-                        </p>
-                    </div>
-                </div>
-                
-                <!-- 邮箱登录表单 -->
-                <form id="login-form" onsubmit="handleLogin(event)" class="hidden">
+                <form id="login-form" onsubmit="handleLogin(event)">
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm text-slate-300 mb-2">邮箱 / 用户名</label>
@@ -413,31 +388,7 @@
                         <i class="fas fa-sign-in-alt"></i>
                         <span>登录系统</span>
                     </button>
-                    
-                    <button type="button" onclick="backToLoginOptions()" class="w-full bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg mt-3 transition">
-                        <i class="fas fa-arrow-left mr-1"></i> 返回选择
-                    </button>
                 </form>
-                
-                <!-- 同步密钥登录表单 -->
-                <div id="synckey-login-form" class="hidden">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm text-slate-300 mb-2">同步密钥</label>
-                            <input type="text" id="synckey-input" class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:border-success transition" placeholder="输入任意密钥，如 v5team2024" value="v5medical">
-                            <p class="text-xs text-slate-400 mt-1">所有使用相同密钥的设备将共享数据</p>
-                        </div>
-                    </div>
-                    
-                    <button type="button" onclick="handleSyncKeyLogin()" class="w-full bg-success hover:bg-green-600 text-white font-bold py-3 rounded-lg mt-6 transition flex items-center justify-center gap-2">
-                        <i class="fas fa-cloud"></i>
-                        <span>开始同步</span>
-                    </button>
-                    
-                    <button type="button" onclick="backToLoginOptions()" class="w-full bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg mt-3 transition">
-                        <i class="fas fa-arrow-left mr-1"></i> 返回选择
-                    </button>
-                </div>
                 
                 <div class="mt-6 pt-6 border-t border-white/10 text-center">
                     <p class="text-sm text-slate-400">
@@ -3013,68 +2964,12 @@
             }
         }
         
-        // ==================== 登录界面控制 ====================
-        function showEmailLogin() {
-            document.getElementById('login-options').classList.add('hidden');
-            document.getElementById('login-form').classList.remove('hidden');
-            document.getElementById('synckey-login-form').classList.add('hidden');
-        }
-        
-        function showSyncKeyLogin() {
-            document.getElementById('login-options').classList.add('hidden');
-            document.getElementById('login-form').classList.add('hidden');
-            document.getElementById('synckey-login-form').classList.remove('hidden');
-        }
-        
-        function backToLoginOptions() {
-            document.getElementById('login-options').classList.remove('hidden');
-            document.getElementById('login-form').classList.add('hidden');
-            document.getElementById('synckey-login-form').classList.add('hidden');
-        }
-        
-        // 使用同步密钥登录（匿名登录）
-        async function loginWithSyncKey() {
-            showSyncKeyLogin();
-        }
-        
-        async function handleSyncKeyLogin() {
-            const syncKey = document.getElementById('synckey-input').value.trim();
-            
-            if (!syncKey) {
-                showToast('请输入同步密钥', 'warning');
-                return;
-            }
-            
-            // 保存同步密钥
-            localStorage.setItem(SYNC_KEY_STORAGE, syncKey);
-            console.log('[Auth] 使用同步密钥:', syncKey);
-            
-            // 显示加载状态
-            const btn = document.querySelector('#synckey-login-form button[onclick="handleSyncKeyLogin()"]');
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 连接中...';
-            
-            try {
-                // 匿名登录
-                await firebaseAuth.signInAnonymously();
-                console.log('[Auth] 匿名登录成功');
-                showToast('已使用同步密钥登录', 'success');
-                
-            } catch (error) {
-                console.error('[Auth] 匿名登录失败:', error);
-                showToast('登录失败: ' + error.message, 'error');
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            }
-        }
-        
         async function logout() {
             // 关闭下拉菜单
             const dropdown = document.getElementById('user-menu-dropdown');
             if (dropdown) dropdown.classList.add('hidden');
             
-            if (!confirm('确定要退出登录吗？\n\n注意：退出后需要重新登录才能同步数据。')) {
+            if (!confirm('确定要退出登录吗？')) {
                 return;
             }
             
@@ -3083,20 +2978,16 @@
                 console.log('[Auth] 已退出登录');
                 showToast('已安全退出', 'success');
                 
-                // 清除保存的用户信息（但保留同步密钥）
+                // 清除保存的用户信息
                 localStorage.removeItem(CONFIG.storagePrefix + 'last_user');
                 
-                // 不再清空数据，让用户可以继续在离线模式查看
-                // 刷新页面会触发 onAuthStateChanged，显示登录界面
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
+                // 清空敏感数据
+                state.orders = [];
+                state.customers = [];
+                state.suppliers = [];
+                state.expenses = [];
                 
-            } catch (error) {
-                console.error('[Auth] 退出失败:', error);
-                showToast('退出失败: ' + error.message, 'error');
-            }
-        }
+                // 刷新页面
                 setTimeout(() => {
                     location.reload();
                 }, 500);
@@ -3183,31 +3074,23 @@
                     console.warn('[Firebase] 持久化启用失败:', err.code);
                 }
                 
-                // 监听认证状态变化
-                firebaseAuth.onAuthStateChanged(async (user) => {
-                    if (user) {
-                        console.log('[Firebase] 用户已登录:', user.uid, user.isAnonymous ? '(匿名)' : '(邮箱)');
-                        state.isOnline = true;
-                        updateSyncStatus('online');
-                        updateUserInfo(user);
-                        
-                        // 隐藏登录界面
-                        document.getElementById('login-screen').classList.add('hidden');
-                        
-                        // 加载云端数据
-                        await loadFromCloud();
-                        
-                        // 启动自动同步
-                        startAutoSync();
-                    } else {
-                        console.log('[Firebase] 用户未登录，显示登录界面');
-                        state.isOnline = false;
-                        updateSyncStatus('offline');
-                        
-                        // 显示登录界面
-                        document.getElementById('login-screen').classList.remove('hidden');
-                    }
-                });
+                // 自动匿名登录（无需用户手动登录）
+                try {
+                    const userCredential = await firebaseAuth.signInAnonymously();
+                    console.log('[Firebase] 匿名登录成功:', userCredential.user.uid);
+                    state.isOnline = true;
+                    updateSyncStatus('online');
+                    
+                    // 加载云端数据
+                    await loadFromCloud();
+                } catch (authError) {
+                    console.warn('[Firebase] 匿名登录失败:', authError);
+                    state.isOnline = false;
+                    updateSyncStatus('offline');
+                }
+                
+                // 启动自动同步
+                startAutoSync();
                 
             } catch (error) {
                 console.error('[Firebase] 初始化失败:', error);
