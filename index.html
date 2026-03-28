@@ -350,7 +350,7 @@
 <body class="bg-slate-50 text-slate-700 font-sans antialiased">
     
     <!-- 登录界面 -->
-    <div id="login-screen" class="fixed inset-0 z-50 bg-gradient-to-br from-slate-900 via-slate-800 to-primary flex items-center justify-center hidden overflow-y-auto">
+    <div id="login-screen" class="fixed inset-0 z-50 bg-gradient-to-br from-slate-900 via-slate-800 to-primary flex items-center justify-center overflow-y-auto">
         <div class="w-full max-w-md p-4 md:p-8 min-h-screen flex flex-col justify-center">
             <div class="text-center mb-8">
                 <div class="w-20 h-20 bg-white rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
@@ -3074,23 +3074,31 @@
                     console.warn('[Firebase] 持久化启用失败:', err.code);
                 }
                 
-                // 自动匿名登录（无需用户手动登录）
-                try {
-                    const userCredential = await firebaseAuth.signInAnonymously();
-                    console.log('[Firebase] 匿名登录成功:', userCredential.user.uid);
-                    state.isOnline = true;
-                    updateSyncStatus('online');
-                    
-                    // 加载云端数据
-                    await loadFromCloud();
-                } catch (authError) {
-                    console.warn('[Firebase] 匿名登录失败:', authError);
-                    state.isOnline = false;
-                    updateSyncStatus('offline');
-                }
-                
-                // 启动自动同步
-                startAutoSync();
+                // 监听认证状态变化
+                firebaseAuth.onAuthStateChanged(async (user) => {
+                    if (user) {
+                        console.log('[Firebase] 用户已登录:', user.uid, user.isAnonymous ? '(匿名)' : '(邮箱)');
+                        state.isOnline = true;
+                        updateSyncStatus('online');
+                        updateUserInfo(user);
+                        
+                        // 隐藏登录界面，显示主应用
+                        document.getElementById('login-screen').classList.add('hidden');
+                        
+                        // 加载云端数据
+                        await loadFromCloud();
+                        
+                        // 启动自动同步
+                        startAutoSync();
+                    } else {
+                        console.log('[Firebase] 用户未登录，显示登录界面');
+                        state.isOnline = false;
+                        updateSyncStatus('offline');
+                        
+                        // 显示登录界面
+                        document.getElementById('login-screen').classList.remove('hidden');
+                    }
+                });
                 
             } catch (error) {
                 console.error('[Firebase] 初始化失败:', error);
