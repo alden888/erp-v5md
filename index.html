@@ -54,6 +54,11 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
+        /* 10节点看板横向滚动 */
+        #orders-kanban::-webkit-scrollbar { height: 6px; }
+        #orders-kanban::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+        #orders-kanban::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-radius: 3px; }
+        
         /* 侧边栏样式 */
         .sidebar {
             position: fixed;
@@ -836,56 +841,106 @@
                             <i class="fas fa-plus"></i> 新建订单
                         </button>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4" id="orders-kanban">
-                        <!-- 新询盘 -->
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div class="bg-blue-50 px-4 py-3 border-b border-blue-100">
+                    <div class="flex gap-3 overflow-x-auto pb-4 px-1" id="orders-kanban">
+                        <!-- 1-新询盘 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-w-[15rem] w-60 flex-shrink-0">
+                            <div class="bg-blue-50 px-3 py-2.5 border-b border-blue-100">
                                 <div class="flex justify-between items-center">
-                                    <span class="text-blue-700 text-sm font-bold">新询盘</span>
-                                    <span class="bg-blue-200 text-blue-800 text-xs px-2 py-0.5 rounded-full" id="count-inquiry">0</span>
+                                    <span class="text-blue-700 text-xs font-bold"><i class="fas fa-search mr-1"></i>1-新询盘</span>
+                                    <span class="bg-blue-200 text-blue-800 text-xs px-1.5 py-0.5 rounded-full" id="count-inquiry">0</span>
                                 </div>
                             </div>
-                            <div class="p-3 space-y-3 min-h-[200px]" id="kanban-inquiry"></div>
+                            <div class="p-2 space-y-2 min-h-[180px] max-h-[60vh] overflow-y-auto" id="kanban-inquiry"></div>
                         </div>
-                        <!-- PI已发 -->
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div class="bg-yellow-50 px-4 py-3 border-b border-yellow-100">
+                        <!-- 2-报价中 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-w-[15rem] w-60 flex-shrink-0">
+                            <div class="bg-indigo-50 px-3 py-2.5 border-b border-indigo-100">
                                 <div class="flex justify-between items-center">
-                                    <span class="text-yellow-700 text-sm font-bold">PI已发</span>
-                                    <span class="bg-yellow-200 text-yellow-800 text-xs px-2 py-0.5 rounded-full" id="count-pi">0</span>
+                                    <span class="text-indigo-700 text-xs font-bold"><i class="fas fa-file-invoice-dollar mr-1"></i>2-报价中</span>
+                                    <span class="bg-indigo-200 text-indigo-800 text-xs px-1.5 py-0.5 rounded-full" id="count-quote">0</span>
                                 </div>
                             </div>
-                            <div class="p-3 space-y-3 min-h-[200px]" id="kanban-pi"></div>
+                            <div class="p-2 space-y-2 min-h-[180px] max-h-[60vh] overflow-y-auto" id="kanban-quote"></div>
                         </div>
-                        <!-- 生产中 -->
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div class="bg-purple-50 px-4 py-3 border-b border-purple-100">
+                        <!-- 3-PI已发 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-w-[15rem] w-60 flex-shrink-0">
+                            <div class="bg-amber-50 px-3 py-2.5 border-b border-amber-100">
                                 <div class="flex justify-between items-center">
-                                    <span class="text-purple-700 text-sm font-bold">生产中</span>
-                                    <span class="bg-purple-200 text-purple-800 text-xs px-2 py-0.5 rounded-full" id="count-production">0</span>
+                                    <span class="text-amber-700 text-xs font-bold"><i class="fas fa-file-signature mr-1"></i>3-PI已发</span>
+                                    <span class="bg-amber-200 text-amber-800 text-xs px-1.5 py-0.5 rounded-full" id="count-pi_sent">0</span>
                                 </div>
                             </div>
-                            <div class="p-3 space-y-3 min-h-[200px]" id="kanban-production"></div>
+                            <div class="p-2 space-y-2 min-h-[180px] max-h-[60vh] overflow-y-auto" id="kanban-pi_sent"></div>
                         </div>
-                        <!-- 已发货 -->
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div class="bg-cyan-50 px-4 py-3 border-b border-cyan-100">
+                        <!-- 4-预付到账 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-w-[15rem] w-60 flex-shrink-0">
+                            <div class="bg-emerald-50 px-3 py-2.5 border-b border-emerald-100">
                                 <div class="flex justify-between items-center">
-                                    <span class="text-cyan-700 text-sm font-bold">已发货</span>
-                                    <span class="bg-cyan-200 text-cyan-800 text-xs px-2 py-0.5 rounded-full" id="count-shipped">0</span>
+                                    <span class="text-emerald-700 text-xs font-bold"><i class="fas fa-money-bill-wave mr-1"></i>4-预付到账</span>
+                                    <span class="bg-emerald-200 text-emerald-800 text-xs px-1.5 py-0.5 rounded-full" id="count-prepaid">0</span>
                                 </div>
                             </div>
-                            <div class="p-3 space-y-3 min-h-[200px]" id="kanban-shipped"></div>
+                            <div class="p-2 space-y-2 min-h-[180px] max-h-[60vh] overflow-y-auto" id="kanban-prepaid"></div>
                         </div>
-                        <!-- 已完成 -->
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div class="bg-green-50 px-4 py-3 border-b border-green-100">
+                        <!-- 5-生产中 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-w-[15rem] w-60 flex-shrink-0">
+                            <div class="bg-purple-50 px-3 py-2.5 border-b border-purple-100">
                                 <div class="flex justify-between items-center">
-                                    <span class="text-green-700 text-sm font-bold">已完成</span>
-                                    <span class="bg-green-200 text-green-800 text-xs px-2 py-0.5 rounded-full" id="count-paid">0</span>
+                                    <span class="text-purple-700 text-xs font-bold"><i class="fas fa-industry mr-1"></i>5-生产中</span>
+                                    <span class="bg-purple-200 text-purple-800 text-xs px-1.5 py-0.5 rounded-full" id="count-production">0</span>
                                 </div>
                             </div>
-                            <div class="p-3 space-y-3 min-h-[200px]" id="kanban-paid"></div>
+                            <div class="p-2 space-y-2 min-h-[180px] max-h-[60vh] overflow-y-auto" id="kanban-production"></div>
+                        </div>
+                        <!-- 6-质检 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-w-[15rem] w-60 flex-shrink-0">
+                            <div class="bg-orange-50 px-3 py-2.5 border-b border-orange-100">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-orange-700 text-xs font-bold"><i class="fas fa-check-double mr-1"></i>6-质检</span>
+                                    <span class="bg-orange-200 text-orange-800 text-xs px-1.5 py-0.5 rounded-full" id="count-qc">0</span>
+                                </div>
+                            </div>
+                            <div class="p-2 space-y-2 min-h-[180px] max-h-[60vh] overflow-y-auto" id="kanban-qc"></div>
+                        </div>
+                        <!-- 7-物流安排 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-w-[15rem] w-60 flex-shrink-0">
+                            <div class="bg-teal-50 px-3 py-2.5 border-b border-teal-100">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-teal-700 text-xs font-bold"><i class="fas fa-truck-loading mr-1"></i>7-物流安排</span>
+                                    <span class="bg-teal-200 text-teal-800 text-xs px-1.5 py-0.5 rounded-full" id="count-shipping">0</span>
+                                </div>
+                            </div>
+                            <div class="p-2 space-y-2 min-h-[180px] max-h-[60vh] overflow-y-auto" id="kanban-shipping"></div>
+                        </div>
+                        <!-- 8-已发货 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-w-[15rem] w-60 flex-shrink-0">
+                            <div class="bg-cyan-50 px-3 py-2.5 border-b border-cyan-100">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-cyan-700 text-xs font-bold"><i class="fas fa-shipping-fast mr-1"></i>8-已发货</span>
+                                    <span class="bg-cyan-200 text-cyan-800 text-xs px-1.5 py-0.5 rounded-full" id="count-shipped">0</span>
+                                </div>
+                            </div>
+                            <div class="p-2 space-y-2 min-h-[180px] max-h-[60vh] overflow-y-auto" id="kanban-shipped"></div>
+                        </div>
+                        <!-- 9-尾款结清 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-w-[15rem] w-60 flex-shrink-0">
+                            <div class="bg-lime-50 px-3 py-2.5 border-b border-lime-100">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-lime-700 text-xs font-bold"><i class="fas fa-coins mr-1"></i>9-尾款结清</span>
+                                    <span class="bg-lime-200 text-lime-800 text-xs px-1.5 py-0.5 rounded-full" id="count-final_pay">0</span>
+                                </div>
+                            </div>
+                            <div class="p-2 space-y-2 min-h-[180px] max-h-[60vh] overflow-y-auto" id="kanban-final_pay"></div>
+                        </div>
+                        <!-- 10-结案 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-w-[15rem] w-60 flex-shrink-0">
+                            <div class="bg-green-50 px-3 py-2.5 border-b border-green-100">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-green-700 text-xs font-bold"><i class="fas fa-check-circle mr-1"></i>10-结案</span>
+                                    <span class="bg-green-200 text-green-800 text-xs px-1.5 py-0.5 rounded-full" id="count-completed">0</span>
+                                </div>
+                            </div>
+                            <div class="p-2 space-y-2 min-h-[180px] max-h-[60vh] overflow-y-auto" id="kanban-completed"></div>
                         </div>
                     </div>
                 </div>
@@ -895,13 +950,18 @@
                     <div class="card-header">
                         <span class="font-bold text-slate-800">订单列表</span>
                         <div class="flex gap-2">
-                            <select id="order-filter-status" class="input-field text-xs py-1 w-32" onchange="renderOrdersList()">
+                            <select id="order-filter-status" class="input-field text-xs py-1 w-40" onchange="renderOrdersList()">
                                 <option value="all">全部状态</option>
-                                <option value="inquiry">新询盘</option>
-                                <option value="pi">PI已发</option>
-                                <option value="production">生产中</option>
-                                <option value="shipped">已发货</option>
-                                <option value="paid">已完成</option>
+                                <option value="inquiry">1-新询盘</option>
+                                <option value="quote">2-报价中</option>
+                                <option value="pi_sent">3-PI已发</option>
+                                <option value="prepaid">4-预付到账</option>
+                                <option value="production">5-生产中</option>
+                                <option value="qc">6-质检</option>
+                                <option value="shipping">7-物流安排</option>
+                                <option value="shipped">8-已发货</option>
+                                <option value="final_pay">9-尾款结清</option>
+                                <option value="completed">10-结案</option>
                             </select>
                         </div>
                     </div>
@@ -2005,11 +2065,16 @@
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 mb-1">当前状态</label>
                             <select id="order-status" class="input-field">
-                                <option value="inquiry">新询盘</option>
-                                <option value="pi">PI已发</option>
-                                <option value="production">生产中</option>
-                                <option value="shipped">已发货</option>
-                                <option value="paid">已完成</option>
+                                <option value="inquiry">1-新询盘</option>
+                                <option value="quote">2-报价中</option>
+                                <option value="pi_sent">3-PI已发</option>
+                                <option value="prepaid">4-预付到账</option>
+                                <option value="production">5-生产中</option>
+                                <option value="qc">6-质检</option>
+                                <option value="shipping">7-物流安排</option>
+                                <option value="shipped">8-已发货</option>
+                                <option value="final_pay">9-尾款结清</option>
+                                <option value="completed">10-结案</option>
                             </select>
                         </div>
                         <div>
@@ -2039,6 +2104,39 @@
                     </div>
                 </div>
                 
+                <!-- 订单追踪 -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3"><i class="fas fa-route mr-1"></i>订单追踪</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">目的地</label>
+                            <input id="order-destination" type="text" placeholder="例如：USA / 马尼拉" class="input-field">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">负责人</label>
+                            <input id="order-responsible" type="text" placeholder="例如：程荣亮" class="input-field">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">风险等级</label>
+                            <select id="order-risk-level" class="input-field">
+                                <option value="low">🟢 正常</option>
+                                <option value="medium">🟡 预警</option>
+                                <option value="high">🔴 紧急</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">已收款金额</label>
+                            <input id="order-amount-received" type="number" step="0.01" min="0" placeholder="0.00" class="input-field">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">备注 / 风险说明</label>
+                        <textarea id="order-remark" rows="2" class="input-field" placeholder="订单备注、风险提示等"></textarea>
+                    </div>
+                </div>
+
                 <!-- 产品信息 -->
                 <div class="mb-6">
                     <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">产品信息</h4>
@@ -3771,6 +3869,12 @@
             document.getElementById('order-ship-date').value = '';
             // payment method is set by updatePaymentMethods()
             document.getElementById('order-note').value = '';
+            // 新增: 清空追踪字段
+            if (document.getElementById('order-destination')) document.getElementById('order-destination').value = '';
+            if (document.getElementById('order-risk-level')) document.getElementById('order-risk-level').value = 'low';
+            if (document.getElementById('order-responsible')) document.getElementById('order-responsible').value = '';
+            if (document.getElementById('order-amount-received')) document.getElementById('order-amount-received').value = '';
+            if (document.getElementById('order-remark')) document.getElementById('order-remark').value = '';
             
             // 初始化汇款路径
             updatePaymentMethods();
@@ -3883,6 +3987,13 @@
             document.getElementById('order-ship-date').value = order.shipDate || '';
             // payment method is set after updatePaymentMethods()
             document.getElementById('order-note').value = order.note || '';
+            
+            // 新增: 订单追踪字段
+            if (document.getElementById('order-destination')) document.getElementById('order-destination').value = order.destination || '';
+            if (document.getElementById('order-risk-level')) document.getElementById('order-risk-level').value = order.riskLevel || 'low';
+            if (document.getElementById('order-responsible')) document.getElementById('order-responsible').value = order.responsible || '';
+            if (document.getElementById('order-amount-received')) document.getElementById('order-amount-received').value = order.amountReceived || '';
+            if (document.getElementById('order-remark')) document.getElementById('order-remark').value = order.remark || '';
             
             // 更新汇款路径选项并设置值
             updatePaymentMethods();
@@ -4054,14 +4165,21 @@
                 id: orderId,
                 title: title,
                 piNumber: piNumber,
+                orderNumber: document.getElementById('order-number-display')?.value || piNumber,
                 customer: customer,
                 amount: amount,
+                totalAmount: amount,
+                amountReceived: parseFloat(document.getElementById('order-amount-received')?.value) || 0,
                 currency: currency,
                 status: document.getElementById('order-status').value,
                 term: document.getElementById('order-term').value,
                 shipDate: document.getElementById('order-ship-date').value,
                 paymentMethod: paymentMethod,
                 products: products,
+                destination: document.getElementById('order-destination')?.value?.trim() || '',
+                riskLevel: document.getElementById('order-risk-level')?.value || 'low',
+                responsible: document.getElementById('order-responsible')?.value?.trim() || '',
+                remark: document.getElementById('order-remark')?.value?.trim() || '',
                 note: document.getElementById('order-note').value.trim(),
                 updatedAt: new Date().toISOString()
             };
@@ -4280,7 +4398,7 @@
             const order = state.orders.find(o => o.id === id);
             if (!order) return;
             
-            const statusFlow = ['inquiry', 'pi', 'production', 'shipped', 'paid'];
+            const statusFlow = ['inquiry','quote','pi_sent','prepaid','production','qc','shipping','shipped','final_pay','completed'];
             const currentIdx = statusFlow.indexOf(order.status);
             
             let newIdx;
@@ -4303,99 +4421,64 @@
         }
         
         function renderOrdersKanban() {
-            // 过滤有效订单
+            // 委托给 WorkbenchOrders 模块 (10节点版)
+            if (window.WorkbenchOrders?.renderOrdersKanban) {
+                return WorkbenchOrders.renderOrdersKanban();
+            }
+            // 降级: 基础渲染
             const validOrders = (state.orders || []).filter(isValidOrder);
-            console.log('[renderOrdersKanban] 开始渲染，有效订单数:', validOrders.length, '总数:', state.orders?.length || 0);
-            
-            const containers = {
-                inquiry: document.getElementById('kanban-inquiry'),
-                pi: document.getElementById('kanban-pi'),
-                production: document.getElementById('kanban-production'),
-                shipped: document.getElementById('kanban-shipped'),
-                paid: document.getElementById('kanban-paid')
-            };
-            
-            const counts = {
-                inquiry: document.getElementById('count-inquiry'),
-                pi: document.getElementById('count-pi'),
-                production: document.getElementById('count-production'),
-                shipped: document.getElementById('count-shipped'),
-                paid: document.getElementById('count-paid')
-            };
-            
-            // 清空容器
-            Object.values(containers).forEach(c => { if (c) c.innerHTML = ''; });
-            
-            // 按状态分组
-            const grouped = { inquiry: [], pi: [], production: [], shipped: [], paid: [] };
+            const statuses = ['inquiry','quote','pi_sent','prepaid','production','qc','shipping','shipped','final_pay','completed'];
+            const grouped = {};
+            statuses.forEach(s => grouped[s] = []);
             validOrders.forEach(order => {
-                const status = order.status || 'inquiry';
-                if (grouped[status]) grouped[status].push(order);
+                const s = order.status || 'inquiry';
+                if (grouped[s]) grouped[s].push(order);
             });
-            
-            // 渲染每个列
-            Object.keys(grouped).forEach(status => {
-                const list = grouped[status];
-                if (counts[status]) counts[status].textContent = list.length;
-                
-                if (containers[status]) {
-                    if (list.length === 0) {
-                        containers[status].innerHTML = '<div class="text-center text-slate-400 py-4 text-xs">暂无订单</div>';
-                    } else {
-                        containers[status].innerHTML = list.map(order => renderOrderCard(order)).join('');
-                    }
+            statuses.forEach(status => {
+                const container = document.getElementById('kanban-' + status);
+                const countEl = document.getElementById('count-' + status);
+                if (countEl) countEl.textContent = grouped[status].length;
+                if (container) {
+                    container.innerHTML = grouped[status].length === 0
+                        ? '<div class="text-center text-slate-400 py-4 text-xs">暂无订单</div>'
+                        : grouped[status].map(o => renderOrderCard(o)).join('');
                 }
-            });
-            
-            console.log('[renderOrdersKanban] 渲染完成，各状态数量:', {
-                inquiry: grouped.inquiry.length,
-                pi: grouped.pi.length,
-                production: grouped.production.length,
-                shipped: grouped.shipped.length,
-                paid: grouped.paid.length
             });
         }
         
         function renderOrderCard(order) {
+            // 委托给 WorkbenchOrders 模块 (增强版卡片)
+            if (window.WorkbenchOrders?.renderOrderCard) {
+                return WorkbenchOrders.renderOrderCard(order);
+            }
+            // 降级: 基础卡片
             const statusColors = {
-                'inquiry': 'border-l-blue-500',
-                'pi': 'border-l-yellow-500',
-                'production': 'border-l-purple-500',
-                'shipped': 'border-l-cyan-500',
-                'paid': 'border-l-green-500'
+                'inquiry': 'border-l-blue-500', 'quote': 'border-l-indigo-500',
+                'pi_sent': 'border-l-amber-500', 'prepaid': 'border-l-emerald-500',
+                'production': 'border-l-purple-500', 'qc': 'border-l-orange-500',
+                'shipping': 'border-l-teal-500', 'shipped': 'border-l-cyan-500',
+                'final_pay': 'border-l-lime-500', 'completed': 'border-l-green-500'
             };
-            
             const statusNames = {
-                'inquiry': '新询盘',
-                'pi': 'PI已发',
-                'production': '生产中',
-                'shipped': '已发货',
-                'paid': '已完成'
+                'inquiry': '1-新询盘', 'quote': '2-报价中', 'pi_sent': '3-PI已发',
+                'prepaid': '4-预付到账', 'production': '5-生产中', 'qc': '6-质检',
+                'shipping': '7-物流安排', 'shipped': '8-已发货', 'final_pay': '9-尾款结清',
+                'completed': '10-结案'
             };
-            
-            const currencySymbols = {
-                'USD': '$',
-                'CNY': '¥',
-                'EUR': '€',
-                'GBP': '£'
-            };
-            
-            const currency = order.currency || 'USD';
-            const symbol = currencySymbols[currency] || '$';
-            
+            const symbol = {'USD':'$','CNY':'¥','EUR':'€','GBP':'£'}[order.currency||'USD'] || '$';
             return `
-                <div class="bg-white rounded-lg border border-slate-200 border-l-4 ${statusColors[order.status] || 'border-l-slate-500'} p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onclick="showEditOrderModal('${order.id}')">
-                    <div class="font-semibold text-slate-800 text-sm mb-1 truncate">${escapeHtml(order.title)}</div>
+                <div class="bg-white rounded-lg border border-slate-200 border-l-4 ${statusColors[order.status]||'border-l-slate-500'} p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onclick="showEditOrderModal('${order.id}')">
+                    <div class="font-semibold text-slate-800 text-sm mb-1 truncate">${escapeHtml(order.title||order.customer)}</div>
                     <div class="flex justify-between items-center text-xs text-slate-500 mb-2">
                         <span>${escapeHtml(order.customer)}</span>
-                        <span class="font-mono text-primary font-bold">${symbol}${order.amount?.toLocaleString() || 0} <span class="text-slate-400">${currency}</span></span>
+                        <span class="font-mono text-primary font-bold">${symbol}${(order.totalAmount||order.amount||0).toLocaleString()}</span>
                     </div>
                     <div class="flex justify-between items-center pt-2 border-t border-slate-100">
-                        <span class="text-xs text-slate-400">${statusNames[order.status] || order.status}</span>
+                        <span class="text-xs text-slate-400">${statusNames[order.status]||order.status}</span>
                         <div class="flex gap-1">
-                            ${order.status !== 'inquiry' ? `<button onclick="event.stopPropagation(); updateOrderStatus('${order.id}', 'prev')" class="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200"><i class="fas fa-arrow-left"></i></button>` : ''}
-                            ${order.status !== 'paid' ? `<button onclick="event.stopPropagation(); updateOrderStatus('${order.id}', 'next')" class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"><i class="fas fa-arrow-right"></i></button>` : ''}
-                            <button onclick="event.stopPropagation(); deleteOrder('${order.id}')" class="text-xs px-1.5 py-0.5 bg-red-100 text-red-600 rounded hover:bg-red-200"><i class="fas fa-trash"></i></button>
+                            ${order.status!=='inquiry'?`<button onclick="event.stopPropagation();updateOrderStatus('${order.id}','prev')" class="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200"><i class="fas fa-arrow-left"></i></button>`:''}
+                            ${order.status!=='completed'?`<button onclick="event.stopPropagation();updateOrderStatus('${order.id}','next')" class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"><i class="fas fa-arrow-right"></i></button>`:''}
+                            <button onclick="event.stopPropagation();deleteOrder('${order.id}')" class="text-xs px-1.5 py-0.5 bg-red-100 text-red-600 rounded hover:bg-red-200"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 </div>
@@ -4422,19 +4505,18 @@
             }
             
             const statusColors = {
-                'inquiry': 'bg-blue-100 text-blue-700',
-                'pi': 'bg-yellow-100 text-yellow-700',
-                'production': 'bg-purple-100 text-purple-700',
-                'shipped': 'bg-cyan-100 text-cyan-700',
-                'paid': 'bg-green-100 text-green-700'
+                'inquiry': 'bg-blue-100 text-blue-700', 'quote': 'bg-indigo-100 text-indigo-700',
+                'pi_sent': 'bg-amber-100 text-amber-700', 'prepaid': 'bg-emerald-100 text-emerald-700',
+                'production': 'bg-purple-100 text-purple-700', 'qc': 'bg-orange-100 text-orange-700',
+                'shipping': 'bg-teal-100 text-teal-700', 'shipped': 'bg-cyan-100 text-cyan-700',
+                'final_pay': 'bg-lime-100 text-lime-700', 'completed': 'bg-green-100 text-green-700'
             };
             
             const statusNames = {
-                'inquiry': '新询盘',
-                'pi': 'PI已发',
-                'production': '生产中',
-                'shipped': '已发货',
-                'paid': '已完成'
+                'inquiry': '1-新询盘', 'quote': '2-报价中', 'pi_sent': '3-PI已发',
+                'prepaid': '4-预付到账', 'production': '5-生产中', 'qc': '6-质检',
+                'shipping': '7-物流安排', 'shipped': '8-已发货', 'final_pay': '9-尾款结清',
+                'completed': '10-结案'
             };
             
             const currencySymbols = {
