@@ -89,11 +89,11 @@ bench new-site v5.localhost \
   --install-app erpnext
 
 # 添加多站点域名
-bench new-site 192.168.3.149 --mariadb-root-password [REDACTED]
+bench new-site 192.168.3.197 --mariadb-root-password [REDACTED]
 bench new-site erp.12888.de --mariadb-root-password [REDACTED]
 
 # 设置站点路由
-bench set-site-hostname v5.localhost 192.168.3.149
+bench set-site-hostname v5.localhost 192.168.3.197
 bench set-site-hostname v5.localhost erp.12888.de
 ```
 
@@ -348,7 +348,7 @@ python3 scripts/feishu_to_erp_migration.py cmd@v5medical.ai [password] items /tm
 | 方式 | 地址 | 用途 |
 |------|------|------|
 | 公网 | https://erp.12888.de | 浏览器/API |
-| 局域网 | http://192.168.3.149:8080 | A机直接访问 |
+| 局域网 | http://192.168.3.197:8080 | A机直接访问 |
 | lima内部 | http://v5.localhost:8080 | 容器内API（需limactl shell） |
 
 ## 9. 维护命令
